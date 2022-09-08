@@ -48,6 +48,29 @@ char * get_dev_name(int major, int minor) {
     return NULL;
 }
 
+int get_zone_size(char *dev_name) {
+    char *sys_path = NULL;
+    FILE *info;
+    char read_buf[20];
+
+    sys_path = malloc(sizeof(char *) * (strlen(dev_name) + 4));
+    snprintf(sys_path, strlen(dev_name) + 31, "/sys/block/%s/queue/chunk_sectors", dev_name);
+
+    info = fopen(sys_path, "r");
+    if(!info) {
+        printf("Error finding Zone size for %s\n", dev_name);
+        return -1;
+    }
+
+    free(sys_path);
+
+    if(fgets(read_buf, sizeof(read_buf), info) != NULL) {
+        return atoi(read_buf);
+    }
+
+    return -1;
+}
+
 int get_pbas(int fd, int nr_blocks) {
     int pba = 0;
 
@@ -63,7 +86,6 @@ int get_pbas(int fd, int nr_blocks) {
             printf("LBA %d -> PBA %d\n", lba, pba);
     }
 
-
     
 }
 
@@ -73,8 +95,8 @@ int main(int argc, char *argv[])
     char *filename = NULL;
     struct stat *stats;
     unsigned long zonesize;
-    char *dev_name;
-    char *dev_path;
+    char *dev_name = NULL;
+    int zonemask = 0;
 
     if(argc != 2) {
         printf("Missing argument.\nUsage:\n\tfileviz [file path]");
@@ -96,19 +118,21 @@ int main(int argc, char *argv[])
     dev_name = get_dev_name(major(stats->st_dev), minor(stats->st_dev));
     printf("File Location Information\nDevice ID <major:minor>: %u:%u\nDevice name: %s\n\n", major(stats->st_dev), minor(stats->st_dev), dev_name);
 
-    dev_path = malloc(sizeof(char *) * strlen(dev_name) + 4);
-    snprintf(dev_path, strlen(dev_name) + 4, "/dev/%s", dev_name);
-
-    zonesize = blkdev_chunk_sectors(dev_path);
+    zonesize = get_zone_size(dev_name);
     if(!zonesize) {
-        printf("Error determining zone size for %s\n", dev_path);
+        printf("Error determining zone size for %s\n", dev_name);
         return 1;
     }
+
+    zonemask = ~(zonesize - 1);
+    printf("Zone Size: 0x%lx\n Zone Mask: 0x%x\n\n", zonesize, zonemask);
 
     printf("Number of Logically Allocated Blocks: %ld\n", stats->st_blocks);
     get_pbas(fd, stats->st_blocks);
     
     // TODO print physicall mapped blocks number
+    
+    // TODO free all mallocs
 
     return 0;
 }
