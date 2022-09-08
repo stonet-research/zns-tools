@@ -1,3 +1,4 @@
+#include "filemap.h"
 #include <stdio.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -32,7 +33,7 @@ char * get_dev_name(int major, int minor) {
 
     dev_info = fopen(file_path, "r");
     if (!dev_info) {
-        printf("Error finding device for %u:%u in /sys/dev/block/", major, minor);
+        printf("\033[0;31mError\033[0m finding device for %u:%u in /sys/dev/block/", major, minor);
         return NULL;
     }
     
@@ -60,8 +61,7 @@ int get_zone_size(char *dev_name) {
 
     info = fopen(sys_path, "r");
     if (!info) {
-        printf("Error finding Zone size for %s\n", dev_name);
-        return -1;
+        return 0;
     }
 
     free(sys_path);
@@ -72,7 +72,7 @@ int get_zone_size(char *dev_name) {
 
     fclose(info);
 
-    return -1;
+    return 0;
 }
 
 int check_if_zoned(char *dev_name) {
@@ -85,14 +85,13 @@ int check_if_zoned(char *dev_name) {
 
     info = fopen(sys_path, "r");
     if (!info) {
-        printf("Error finding if %s is zoned\n", dev_name);
-        return -1;
+        return 0;
     }
 
     free(sys_path);
 
     if (fgets(read_buf, sizeof(read_buf), info) == NULL) {
-        printf("Error finding Zone size for %s\n", dev_name);
+        printf("\033[0;31mError\033[0m finding Zone size for %s\n", dev_name);
         return -1;
     }
 
@@ -107,14 +106,13 @@ int check_if_zoned(char *dev_name) {
     return 0;
 }
 
-void check_f2fs_config(char *dev_name) {
-   int logsize;
-   char buf[150];
+/* void check_f2fs_config(char *dev_name) { */
+/*    char buf[150]; */
 
-   klogctl(2, buf, sizeof(buf));
-   printf("buf %s\n", buf);
+/*    klogctl(2, buf, sizeof(buf)); */
+/*    printf("buf %s\n", buf); */
 
-}
+/* } */
 
 int get_pbas(int fd, int nr_blocks) {
     int pba = 0;
@@ -123,7 +121,7 @@ int get_pbas(int fd, int nr_blocks) {
         // get PBA for each LBA of the file
         pba = lba;
         if (ioctl(fd, FIBMAP, &pba)) {
-            printf("Error retrieving PBA for LBA %d\n", lba);
+            printf("\033[0;31mError\033[0m retrieving PBA for LBA %d\n", lba);
         }
 
         // Only write out physically mapped addresses
@@ -131,7 +129,7 @@ int get_pbas(int fd, int nr_blocks) {
             printf("LBA %d -> PBA %d\n", lba, pba);
     }
 
-    
+   return 0; 
 }
 
 int main(int argc, char *argv[])
@@ -142,6 +140,7 @@ int main(int argc, char *argv[])
     unsigned long zonesize;
     char *dev_name = NULL;
     int zonemask = 0;
+    char *zns_dev_name = NULL;
 
     if (argc != 2) {
         printf("Missing argument.\nUsage:\n\tfilemap [file path]");
@@ -161,17 +160,32 @@ int main(int argc, char *argv[])
     stats = get_stats(fd, filename);
 
     dev_name = get_dev_name(major(stats->st_dev), minor(stats->st_dev));
+    dev_name[strcspn(dev_name, "\n")] = 0;
     printf("File Location Information\nDevice ID <major:minor>: %u:%u\nDevice name: %s\n", major(stats->st_dev), minor(stats->st_dev), dev_name);
 
     // TODO check if zoned otherwise exit, and if in f2fs mode check dmesg klogctl to find zns associated
     if (!check_if_zoned(dev_name)) {
-        printf("%s is not a ZNS, checking if used as conventional device with F2FS\n", dev_name);
-        check_f2fs_config(dev_name);
+        printf("\n\033[0;33mWarning\033[0m: %s is not a ZNS, checking if used as conventional device with F2FS\nIf it is used with F2FS as the conventional device, enter the assocaited ZNS device: ", dev_name);
+        zns_dev_name = malloc(sizeof(char *) * 15);
+        int ret = scanf("%s", zns_dev_name);
+        if(!ret) {
+            printf("\033[0;31mError\033[0m reading input\n");
+            return 1;
+        }
+
+        zns_dev_name[strcspn(zns_dev_name, "\n")] = 0;
+
+        // TODO: is there a way we can find the associated ZNS dev in F2FS? it's in the kernel log
+        /* check_f2fs_config(dev_name); */
+
+    } else {
+        zns_dev_name = malloc(sizeof(char *) * strlen(dev_name));
+        memcpy(zns_dev_name, dev_name, strlen(dev_name));
     }
 
-    zonesize = get_zone_size(dev_name);
+    zonesize = get_zone_size(zns_dev_name);
     if (!zonesize) {
-        printf("Error determining zone size for %s\n", dev_name);
+        printf("\033[0;31mError\033[0m determining zone size for %s\n", zns_dev_name);
         return 1;
     }
 
