@@ -50,6 +50,31 @@ char * get_dev_name(int major, int minor) {
     return NULL;
 }
 
+int get_sector_size(char *dev_name) {
+    char *sys_path = NULL;
+    FILE *info;
+    char read_buf[20];
+
+    sys_path = malloc(sizeof(char *) * (strlen(dev_name) + 4));
+    snprintf(sys_path, strlen(dev_name) + 33, "/sys/block/%s/queue/hw_sector_size", dev_name);
+
+    info = fopen(sys_path, "r");
+    if (!info) {
+        return 0;
+    }
+
+    free(sys_path);
+    sys_path = NULL;
+
+    if (fgets(read_buf, sizeof(read_buf), info) != NULL) {
+        return atoi(read_buf);
+    }
+
+    fclose(info);
+
+    return 0;
+}
+
 int get_zone_size(char *dev_name) {
     char *sys_path = NULL;
     FILE *info;
@@ -64,6 +89,7 @@ int get_zone_size(char *dev_name) {
     }
 
     free(sys_path);
+    sys_path = NULL;
 
     if (fgets(read_buf, sizeof(read_buf), info) != NULL) {
         return atoi(read_buf);
@@ -88,6 +114,7 @@ int check_if_zoned(char *dev_name) {
     }
 
     free(sys_path);
+    sys_path = NULL;
 
     if (fgets(read_buf, sizeof(read_buf), info) == NULL) {
         printf("\033[0;31mError\033[0m finding Zone size for %s\n", dev_name);
@@ -138,7 +165,7 @@ int * get_sorted_pbas(int fd, int nr_blocks, int *pba_counter) {
         // Only use physically mapped addresses
         if (pba != 0) {
             pbas[*pba_counter] = pba;
-            *pba_counter = *pba_counter + 1;
+            (*pba_counter)++;
         }
     }
 
@@ -160,7 +187,8 @@ int main(int argc, char *argv[])
     int fd;
     char *filename = NULL;
     struct stat *stats;
-    unsigned long zonesize;
+    unsigned long zone_size;
+    int sector_size = 0;
     char *dev_name = NULL;
     int zonemask = 0;
     char *zns_dev_name = NULL;
@@ -188,7 +216,6 @@ int main(int argc, char *argv[])
     dev_name[strcspn(dev_name, "\n")] = 0;
     printf("Device Information:\nDevice ID <major:minor>: %u:%u\nDevice name: %s\n", major(stats->st_dev), minor(stats->st_dev), dev_name);
 
-    // TODO check if zoned otherwise exit, and if in f2fs mode check dmesg klogctl to find zns associated
     if (!check_if_zoned(dev_name)) {
         printf("\n\033[0;33mWarning\033[0m: %s is not a ZNS, checking if used as conventional device with F2FS\nIf it is used with F2FS as the conventional device, enter the assocaited ZNS device: ", dev_name);
         zns_dev_name = malloc(sizeof(char *) * 15);
@@ -208,23 +235,42 @@ int main(int argc, char *argv[])
         memcpy(zns_dev_name, dev_name, strlen(dev_name));
     }
 
-    zonesize = get_zone_size(zns_dev_name);
-    if (!zonesize) {
+    sector_size = get_sector_size(zns_dev_name);
+    if (!sector_size) {
+        printf("\033[0;31mError\033[0m determining sector size for %s\n", zns_dev_name);
+        return 1;
+    }
+    
+    printf("\n%s Device Information:\nFile system block size: %ld\n", zns_dev_name, stats->st_blksize);
+    printf("Hardware sector size: %d\n", sector_size);
+
+    zone_size = get_zone_size(zns_dev_name);
+    if (!zone_size) {
         printf("\033[0;31mError\033[0m determining zone size for %s\n", zns_dev_name);
         return 1;
     }
 
-    zonemask = ~(zonesize - 1);
-    printf("\nZNS Device Information:\nZone Size: 0x%lx\nZone Mask: 0x%x\n", zonesize, zonemask);
+    zonemask = ~(zone_size - 1);
+    printf("\nZNS Device Information:\nZone Size: 0x%lx\nZone Mask: 0x%x\n", zone_size, zonemask);
 
-    printf("\nFile Information:\nNumber of Logically Allocated Blocks: %ld\n", stats->st_blocks);
-    pbas = get_sorted_pbas(fd, stats->st_blocks);
+    printf("\nFile Information:\nNumber of File System Logically Allocated Blocks: %ld\n", stats->st_blocks);
+    pbas = get_sorted_pbas(fd, stats->st_blocks, &pba_counter);
     
-    printf("Number of Physically Allocated Blocks: %ld\n", pba_counter);
+    printf("Number of Physical Blocks: %d\n", pba_counter);
 
     // TODO print physicall mapped blocks number
     
-    // TODO free all mallocs
+    free(stats);
+    free(dev_name);
+    free(filename);
+    free(zns_dev_name);
+    free(pbas);
+
+    stats = NULL;
+    dev_name = NULL;
+    filename = NULL;
+    zns_dev_name = NULL;
+    pbas = NULL;
 
     return 0;
 }
