@@ -125,9 +125,8 @@ void swap_pbas(int *first, int *second) {
  * in case PBAs are mapped out of order
  *
  * */
-int * get_sorted_pbas(int fd, int nr_blocks) {
+int * get_sorted_pbas(int fd, int nr_blocks, int *pba_counter) {
     int pba = 0;
-    int counter = 0;
     int *pbas = malloc(sizeof(int) * nr_blocks);
 
     for (int lba = 0; lba < nr_blocks; lba++) {
@@ -139,7 +138,8 @@ int * get_sorted_pbas(int fd, int nr_blocks) {
 
         // Only use physically mapped addresses
         if (pba != 0) {
-            pbas[counter] = pba;
+            pbas[*pba_counter] = pba;
+            *pba_counter = *pba_counter + 1;
         }
     }
 
@@ -166,6 +166,7 @@ int main(int argc, char *argv[])
     int zonemask = 0;
     char *zns_dev_name = NULL;
     int *pbas = NULL;
+    int pba_counter = 0;
 
     if (argc != 2) {
         printf("Missing argument.\nUsage:\n\tfilemap [file path]");
@@ -218,8 +219,10 @@ int main(int argc, char *argv[])
     printf("Zone Size: 0x%lx\nZone Mask: 0x%x\n\n", zonesize, zonemask);
 
     printf("Number of Logically Allocated Blocks: %ld\n", stats->st_blocks);
-    pbas = get_sorted_pbas(fd, stats->st_blocks);
+    pbas = get_sorted_pbas(fd, stats->st_blocks, &pba_counter);
     
+    printf("Number of Physically Allocated Blocks: %ld\n", pba_counter);
+
     // TODO print physicall mapped blocks number
     
     // TODO free all mallocs
