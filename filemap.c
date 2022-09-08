@@ -1,4 +1,3 @@
-#include "filemap.h"
 #include <stdio.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -57,7 +56,7 @@ int get_zone_size(char *dev_name) {
     char read_buf[20];
 
     sys_path = malloc(sizeof(char *) * (strlen(dev_name) + 4));
-    snprintf(sys_path, strlen(dev_name) + 31, "/sys/block/%s/queue/chunk_sectors", dev_name);
+    snprintf(sys_path, strlen(dev_name) + 32, "/sys/block/%s/queue/chunk_sectors", dev_name);
 
     info = fopen(sys_path, "r");
     if (!info) {
@@ -187,7 +186,7 @@ int main(int argc, char *argv[])
 
     dev_name = get_dev_name(major(stats->st_dev), minor(stats->st_dev));
     dev_name[strcspn(dev_name, "\n")] = 0;
-    printf("File Location Information\nDevice ID <major:minor>: %u:%u\nDevice name: %s\n", major(stats->st_dev), minor(stats->st_dev), dev_name);
+    printf("Device Information:\nDevice ID <major:minor>: %u:%u\nDevice name: %s\n", major(stats->st_dev), minor(stats->st_dev), dev_name);
 
     // TODO check if zoned otherwise exit, and if in f2fs mode check dmesg klogctl to find zns associated
     if (!check_if_zoned(dev_name)) {
@@ -216,10 +215,10 @@ int main(int argc, char *argv[])
     }
 
     zonemask = ~(zonesize - 1);
-    printf("Zone Size: 0x%lx\nZone Mask: 0x%x\n\n", zonesize, zonemask);
+    printf("\nZNS Device Information:\nZone Size: 0x%lx\nZone Mask: 0x%x\n", zonesize, zonemask);
 
-    printf("Number of Logically Allocated Blocks: %ld\n", stats->st_blocks);
-    pbas = get_sorted_pbas(fd, stats->st_blocks, &pba_counter);
+    printf("\nFile Information:\nNumber of Logically Allocated Blocks: %ld\n", stats->st_blocks);
+    pbas = get_sorted_pbas(fd, stats->st_blocks);
     
     printf("Number of Physically Allocated Blocks: %ld\n", pba_counter);
 
