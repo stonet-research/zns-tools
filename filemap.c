@@ -114,8 +114,21 @@ int check_if_zoned(char *dev_name) {
 
 /* } */
 
-int get_pbas(int fd, int nr_blocks) {
+void swap_pbas(int *first, int *second) {
+    int temp = *first;
+    *first = *second;
+    *second = temp;
+}
+
+/* 
+ * get PBAs from phsycally mapped LBAs and sort them,
+ * in case PBAs are mapped out of order
+ *
+ * */
+int * get_sorted_pbas(int fd, int nr_blocks) {
     int pba = 0;
+    int counter = 0;
+    int *pbas = malloc(sizeof(int) * nr_blocks);
 
     for (int lba = 0; lba < nr_blocks; lba++) {
         // get PBA for each LBA of the file
@@ -124,12 +137,23 @@ int get_pbas(int fd, int nr_blocks) {
             printf("\033[0;31mError\033[0m retrieving PBA for LBA %d\n", lba);
         }
 
-        // Only write out physically mapped addresses
-        if (pba != 0)
-            printf("LBA %d -> PBA %d\n", lba, pba);
+        // Only use physically mapped addresses
+        if (pba != 0) {
+            pbas[counter] = pba;
+        }
     }
 
-   return 0; 
+    int i,j;
+    // Bubble sort the pbas
+    for (i = 0; i < nr_blocks - 1; i++) {
+        for (j = 0; j < nr_blocks - i - 1; j++) {
+            if (pbas[j] > pbas[j + 1]){
+                swap_pbas(&pbas[j], &pbas[j + 1]);
+            }
+        }
+    }
+
+   return pbas; 
 }
 
 int main(int argc, char *argv[])
@@ -141,6 +165,7 @@ int main(int argc, char *argv[])
     char *dev_name = NULL;
     int zonemask = 0;
     char *zns_dev_name = NULL;
+    int *pbas = NULL;
 
     if (argc != 2) {
         printf("Missing argument.\nUsage:\n\tfilemap [file path]");
@@ -193,7 +218,7 @@ int main(int argc, char *argv[])
     printf("Zone Size: 0x%lx\nZone Mask: 0x%x\n\n", zonesize, zonemask);
 
     printf("Number of Logically Allocated Blocks: %ld\n", stats->st_blocks);
-    get_pbas(fd, stats->st_blocks);
+    pbas = get_sorted_pbas(fd, stats->st_blocks);
     
     // TODO print physicall mapped blocks number
     
