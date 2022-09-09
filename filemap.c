@@ -198,7 +198,7 @@ int print_zone_info(char *dev_name, uint32_t zone, uint64_t zone_size) {
 
     zone_size = hdr->zones[0].capacity;
     zone_mask = ~(zone_size - 1);
-    printf("SLBA: 0x%06"PRIx64"  ZONE CAP: 0x%06"PRIx64"  WP: 0x%06"PRIx64"  ZONE MASK: 0x%06"PRIx32"\n\n",
+    printf("LBAS: 0x%06"PRIx64"  ZONE CAP: 0x%06"PRIx64"  WP: 0x%06"PRIx64"  ZONE MASK: 0x%06"PRIx32"\n\n",
             hdr->zones[0].start, hdr->zones[0].capacity, hdr->zones[0].wp, zone_mask);
 
     close(dev_fd);
@@ -236,7 +236,6 @@ int get_extents(int fd, char *dev_name, struct stat *stats) {
 	fiemap->fm_mapped_extents = 0;
 
     if (ioctl(fd, FS_IOC_FIEMAP, fiemap) < 0) {
-		fprintf(stderr, "\033[0;31mError\033[0m getting FIEMAP\n");
 		return -1;
 	}
 
@@ -248,13 +247,13 @@ int get_extents(int fd, char *dev_name, struct stat *stats) {
 	fiemap->fm_mapped_extents = 0;
 
     if (ioctl(fd, FS_IOC_FIEMAP, fiemap) < 0) {
-		fprintf(stderr, "\033[0;31mError\033[0m getting FIEMAP\n");
 		return -1;
 	}
 
     printf("\nNumber of extents: %d\n", fiemap->fm_mapped_extents);
-    
-    if ((zone_size = get_zone_size(dev_name) == 0)) {
+
+    zone_size = get_zone_size(dev_name);
+    if (zone_size == 0) {
 		fprintf(stderr, "\033[0;31mError\033[0m getting Zone Size\n");
         return -1;
     }
@@ -264,7 +263,7 @@ int get_extents(int fd, char *dev_name, struct stat *stats) {
 
         if (zone != current_zone) {
             printf("\n#### ZONE %u ####\n", zone);
-            print_zone_info(dev_name, zone, zone_size);
+            print_zone_info(dev_name, zone + 1, zone_size);
             current_zone = zone;
         }
         printf("Extent %d:  Starting PBA: 0x%06"PRIx64"  Ending PBA: 0x%06"PRIx64"  Size: 0x%06"PRIx64"\n",
@@ -340,9 +339,11 @@ int main(int argc, char *argv[]) {
     free(filename);
     free(dev_name);
     free(zns_dev_name);
+    free(stats);
     filename = NULL;
     dev_name = NULL;
     zns_dev_name = NULL;
+    stats = NULL;
 
     return 0;
 }
