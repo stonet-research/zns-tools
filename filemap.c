@@ -13,7 +13,9 @@
 #include "linux/fiemap.h"
 
 struct stat * get_stats(int fd, char *filename) {
-    struct stat *file_stat = malloc(sizeof(struct stat));
+    struct stat *file_stat;
+
+    file_stat = malloc(sizeof(struct stat));
 
     if (fstat(fd, file_stat) < 0) {
         printf("Failed stat on file %s\n", filename);
@@ -26,7 +28,6 @@ struct stat * get_stats(int fd, char *filename) {
 
 char * get_dev_name(int major, int minor) {
     FILE *dev_info;
-    // we assume no more than 50 chars
     char file_path[50];
     char read_buf[50];
     char *dev_name;
@@ -60,17 +61,15 @@ char * get_dev_name(int major, int minor) {
  *
  * @dev_name: device name (e.g., /dev/nvme0n2)
  *
- * returns: __u64 zone size, -1 on failure
+ * returns: uint64_t zone size, 0 on failure
  *
  * */
-__u64 get_zone_size(char *dev_name) {
+uint64_t get_zone_size(char *dev_name) {
     char *dev_path = NULL;
     unsigned long long start_sector = 0;
     struct blk_zone_report *hdr = NULL;
-    struct blk_zone *blkz; 
-    size_t hdr_len;
     int nr_zones = 1;
-    __u64 zone_size = 0;
+    uint64_t zone_size = 0;
 
     dev_path = malloc(sizeof(char *) * (strlen(dev_name) + 6));
     snprintf(dev_path, strlen(dev_name) + 6, "/dev/%s", dev_name);
@@ -100,67 +99,48 @@ __u64 get_zone_size(char *dev_name) {
     return zone_size;
 }
 
-// TODO: we can do this by calling ioctl on the dev, error return is not zoned -> else zoned
-// returns 0 on zoned -1 otherwise 
-int is_zoned(char *dev_name) {
-    char *sys_path = NULL;
-    FILE *info;
-    char read_buf[13];
-
-    sys_path = malloc(sizeof(char *) * (strlen(dev_name) + 4));
-    snprintf(sys_path, strlen(dev_name) + 31, "/sys/block/%s/queue/zoned", dev_name);
-
-    info = fopen(sys_path, "r");
-    if (!info) {
-        return -1;
-    }
-
-    free(sys_path);
-    sys_path = NULL;
-
-    if (fgets(read_buf, sizeof(read_buf), info) == NULL) {
-        printf("\033[0;31mError\033[0m finding Zone size for %s\n", dev_name);
-        return -1;
-    }
-
-    fclose(info);
-
-    if (strcmp(read_buf, "none")) {
-        return -1;
-    } else if (strncmp(read_buf, "host-managed", 12)) {
-        return 0;
-    }
-
-    return -1;
-}
-
 /* 
- * get PBAs from phsycally mapped LBAs and sort them,
- * in case PBAs are mapped out of order
+ * Check if a device a zoned device.
+ *
+ * @dev_name: device name (e.g., nvme0n2)
+ *
+ * returns: 0 if Zoned, else -1
  *
  * */
-int * get_sorted_pbas(int fd, int nr_blocks, int *pba_counter) {
-    int pba = 0;
-    int *pbas = malloc(sizeof(int) * nr_blocks);
+int is_zoned(char *dev_name) {
+    char *dev_path = NULL;
+    unsigned long long start_sector = 0;
+    struct blk_zone_report *hdr = NULL;
+    int nr_zones = 1;
 
-    /* for (int lba = 0; lba < nr_blocks; lba++) { */
-    /*     // get PBA for each LBA of the file */
-    /*     pba = lba; */
-    /*     if (ioctl(fd, FIBMAP, &pba)) { */
-    /*         printf("\033[0;31mError\033[0m retrieving PBA for LBA %d\n", lba); */
-    /*     } */
+    dev_path = malloc(sizeof(char *) * (strlen(dev_name) + 6));
+    snprintf(dev_path, strlen(dev_name) + 6, "/dev/%s", dev_name);
 
-    /*     // Only use physically mapped addresses */
-    /*     if (pba != 0) { */
-    /*         pbas[*pba_counter] = pba; */
-    /*         (*pba_counter)++; */
-    /*     } */
-    /* } */
+    int dev_fd = open(dev_path, O_RDONLY);
+    if (dev_fd < 0) {
+        return 1;
+    }
 
+    hdr = calloc(1, sizeof(struct blk_zone_report) + nr_zones + sizeof(struct blk_zone));
+    hdr->sector = start_sector;
+    hdr->nr_zones = nr_zones;
 
-   return pbas; 
+    if (ioctl(dev_fd, BLKREPORTZONE, hdr) < 0) {
+        free(dev_path);
+        free(hdr);
+        dev_path = NULL;
+        hdr = NULL;
+
+        return -1;
+    } else {
+        free(dev_path);
+        free(hdr);
+        dev_path = NULL;
+        hdr = NULL;
+        
+        return 0;
+    }
 }
-
 
 /* 
  * Calculate the zone number of an LBA
@@ -168,11 +148,11 @@ int * get_sorted_pbas(int fd, int nr_blocks, int *pba_counter) {
  * @lba: LBA to calculate zone number of
  * @zone_size: size of the zone
  *
- * returns: __u32 of zone number (starting with 1)
+ * returns: uint32_t of zone number (starting with 1)
  * */
-__u32 get_zone_number(__u64 lba, __u64 zone_size) {
-    __u64 zone_mask = 0;
-    __u64 slba = 0;
+uint32_t get_zone_number(uint64_t lba, uint64_t zone_size) {
+    uint64_t zone_mask = 0;
+    uint64_t slba = 0;
 
     zone_mask = ~(zone_size - 1);
     slba = (lba & zone_mask);
@@ -191,13 +171,11 @@ __u32 get_zone_number(__u64 lba, __u64 zone_size) {
  * returns: 0 on success, -1 on failure
  *
  * */
-int print_zone_info(char *dev_name, __u32 zone, __u64 zone_size) {
+int print_zone_info(char *dev_name, uint32_t zone, uint64_t zone_size) {
     char *dev_path = NULL;
     unsigned long long start_sector = 0;
     struct blk_zone_report *hdr = NULL;
-    struct blk_zone *blkz; 
-    size_t hdr_len;
-    __u32 zone_mask;
+    uint32_t zone_mask;
 
     start_sector = zone_size * zone - zone_size;
 
@@ -220,7 +198,7 @@ int print_zone_info(char *dev_name, __u32 zone, __u64 zone_size) {
 
     zone_size = hdr->zones[0].capacity;
     zone_mask = ~(zone_size - 1);
-    printf("SLBA: 0x%06"PRIx64"  ZONE CAP: 0x%06"PRIx64"  WP: 0x%06"PRIx64"  ZONE MASK: 0x%06"PRIx32"\n",
+    printf("SLBA: 0x%06"PRIx64"  ZONE CAP: 0x%06"PRIx64"  WP: 0x%06"PRIx64"  ZONE MASK: 0x%06"PRIx32"\n\n",
             hdr->zones[0].start, hdr->zones[0].capacity, hdr->zones[0].wp, zone_mask);
 
     close(dev_fd);
@@ -245,14 +223,14 @@ int print_zone_info(char *dev_name, __u32 zone, __u64 zone_size) {
  * */
 int get_extents(int fd, char *dev_name, struct stat *stats) {
     struct fiemap *fiemap;
-    __u64 zone_size = 0;
-    __u32 zone = 0;
-    __u32 current_zone = 0;
+    uint64_t zone_size = 0;
+    uint32_t zone = 0;
+    uint32_t current_zone = 0;
 
     fiemap = (struct fiemap*) calloc(sizeof(struct fiemap), sizeof (char *));
 
     fiemap->fm_start = 0;
-    fiemap->fm_length = stats->st_blocks;
+    fiemap->fm_length = (stats->st_blocks >> 9);
     fiemap->fm_flags = 0;
 	fiemap->fm_extent_count = 0;
 	fiemap->fm_mapped_extents = 0;
@@ -263,7 +241,8 @@ int get_extents(int fd, char *dev_name, struct stat *stats) {
 	}
 
     // make sure we have space for all extents
-	fiemap = (struct fiemap*) realloc(fiemap,sizeof(struct fiemap) + fiemap->fm_extent_count);
+	fiemap = (struct fiemap*) realloc(fiemap,sizeof(struct fiemap) + 
+            sizeof(struct fiemap_extent) * (fiemap->fm_mapped_extents));
 
 	fiemap->fm_extent_count = fiemap->fm_mapped_extents;
 	fiemap->fm_mapped_extents = 0;
@@ -273,38 +252,38 @@ int get_extents(int fd, char *dev_name, struct stat *stats) {
 		return -1;
 	}
 
-    printf("\nTotal number of mapped extents: %d\n", fiemap->fm_extent_count);
+    printf("\nNumber of extents: %d\n", fiemap->fm_mapped_extents);
     
-    if ((zone_size = get_zone_size(dev_name) < 0)) {
-		fprintf(stderr, "\033[0;31mError\033[0m getting FIEMAP\n");
+    if ((zone_size = get_zone_size(dev_name) == 0)) {
+		fprintf(stderr, "\033[0;31mError\033[0m getting Zone Size\n");
         return -1;
     }
 
-    for (int i = 0; i < fiemap->fm_extent_count; i++) {
-        zone = get_zone_number(fiemap->fm_extents[i].fe_physical, zone_size);
+    for (int i = 0; i < fiemap->fm_mapped_extents; i++) {
+        zone = get_zone_number((fiemap->fm_extents[i].fe_physical >> 9), zone_size);
 
         if (zone != current_zone) {
-            printf("\n\n#### ZONE %u ####\n", zone);
+            printf("\n#### ZONE %u ####\n", zone);
             print_zone_info(dev_name, zone, zone_size);
             current_zone = zone;
         }
+        printf("Extent %d:  Starting PBA: 0x%06"PRIx64"  Ending PBA: 0x%06"PRIx64"  Size: 0x%06"PRIx64"\n",
+                i, (fiemap->fm_extents[i].fe_physical >> 9), ((fiemap->fm_extents[i].fe_physical >> 9) + 
+                    (fiemap->fm_extents[i].fe_length >> 9)), fiemap->fm_extents[i].fe_length >> 9);
     }
+
+    free(fiemap);
+    fiemap = NULL;
 
     return 0;
 }
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
     int fd;
     char *filename = NULL;
     struct stat *stats;
-    unsigned long zone_size;
-    int sector_size = 0;
     char *dev_name = NULL;
-    int zonemask = 0;
     char *zns_dev_name = NULL;
-    int *pbas = NULL;
-    int pba_counter = 0;
 
     if (argc != 2) {
         printf("Missing argument.\nUsage:\n\tfilemap [file path]");
@@ -328,8 +307,8 @@ int main(int argc, char *argv[])
     dev_name[strcspn(dev_name, "\n")] = 0;
 
     if (is_zoned(dev_name)) {
-        printf("\033[0;33mWarning\033[0m: %s is not a ZNS, checking if used as conventional device with F2FS\n"
-                "If it is used with F2FS as the conventional device, enter the assocaited ZNS device: ", dev_name);
+        printf("\033[0;33mWarning\033[0m: %s is not a ZNS. If it is used with F2FS as the conventional"
+                " device, enter the assocaited ZNS device name: ", dev_name);
         zns_dev_name = malloc(sizeof(char *) * 15);
         int ret = scanf("%s", zns_dev_name);
         if(!ret) {
@@ -347,15 +326,21 @@ int main(int argc, char *argv[])
         memcpy(zns_dev_name, dev_name, strlen(dev_name));
     }
 
-    // TODO: enable this again once it works
-    /* if (is_zoned(zns_dev_name) < 0) { */
-    /*     printf("\033[0;31mWarning\033[0m: %s is not a ZNS device\n", zns_dev_name); */
-    /*     return 1; */
-    /* } */
+    if (is_zoned(zns_dev_name) < 0) {
+        printf("\033[0;31mError\033[0m: %s is not a ZNS device\n", zns_dev_name);
+        return 1;
+    }
     
     if (get_extents(fd, zns_dev_name, stats) < 0) {
         return 1;
     }
+
+    free(filename);
+    free(dev_name);
+    free(zns_dev_name);
+    filename = NULL;
+    dev_name = NULL;
+    zns_dev_name = NULL;
 
     return 0;
 }
