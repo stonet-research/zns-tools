@@ -118,7 +118,7 @@ int is_zoned(char *dev_name) {
 
     int dev_fd = open(dev_path, O_RDONLY);
     if (dev_fd < 0) {
-        return 1;
+        return -1;
     }
 
     hdr = calloc(1, sizeof(struct blk_zone_report) + nr_zones + sizeof(struct blk_zone));
@@ -307,8 +307,9 @@ int main(int argc, char *argv[]) {
     dev_name[strcspn(dev_name, "\n")] = 0;
 
     if (is_zoned(dev_name)) {
-        printf("\033[0;33mWarning\033[0m: %s is not a ZNS. If it is used with F2FS as the conventional"
-                " device, enter the assocaited ZNS device name: ", dev_name);
+        printf("\033[0;33mWarning\033[0m: %s is registered as containing this file, however it is" 
+                " not a ZNS.\nIf it is used with F2FS as the conventional device, enter the"
+                " assocaited ZNS device name: ", dev_name);
         zns_dev_name = malloc(sizeof(char *) * 15);
         int ret = scanf("%s", zns_dev_name);
         if(!ret) {
@@ -332,6 +333,7 @@ int main(int argc, char *argv[]) {
     }
     
     if (get_extents(fd, zns_dev_name, stats) < 0) {
+        printf("\033[0;31mError\033[0m retrieving extents for %s\n", filename);
         return 1;
     }
 
