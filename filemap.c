@@ -301,7 +301,7 @@ struct extent_map * get_extents(int fd, char *dev_name, struct stat *stats, uint
 
         if (fiemap->fm_mapped_extents == 0) {
             fprintf(stderr, "\033[0;31mError\033[0m no extents are mapped\n");
-			return NULL;
+            return NULL;
         }
 
         extent_map[*ext_ctr].phy_blk = (fiemap->fm_extents[0].fe_physical - offset) >> SECTOR_SHIFT;
