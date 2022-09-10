@@ -21,3 +21,9 @@ The output is written to stdout (as with any output it can be redirected if need
 - **Number of allocated blocks**: These are allocated logical blocks for the file, which may not all be written. E.g., only 1 block (a single segment) may be written but a file has 8 blocks allocated. We do not further show information on unallocated blocks.
 - **Number of PBAs in each zone**: The allocated number of PBAs (blocks) in each zone is listed that contains that file.
 - **Ranges of PBAs in each zone**: The ranges for the allocated PBAs are shown in hex for each zone that contains that file.
+
+## Known Issues and Limitations
+
+// TODO write out, f2fs limitations, extent mappings, etc.
+
+- Invalid WP: The information of zones contains an invalid write pointer, which is equivalent to the LBAS of the next zone. We take this information directly from the `BLKREPORTZONE` command, therefore are currently not sure why it is wrong.

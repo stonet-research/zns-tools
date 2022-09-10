@@ -6,11 +6,11 @@
 #include <sys/stat.h>
 #include <sys/ioctl.h>
 #include <sys/klog.h>
-#include <inttypes.h>
 #include <sys/sysmacros.h>
 #include <linux/fs.h>
 #include <linux/blkzoned.h>
 #include <linux/fiemap.h>
+#include "filemap.h"
 
 /* 
  * F2FS treats all devices as one address space, therefore if we use
@@ -136,6 +136,7 @@ int is_zoned(char *dev_name) {
 
         return -1;
     } else {
+        close(dev_fd);
         free(dev_path);
         free(hdr);
         dev_path = NULL;
@@ -187,7 +188,7 @@ int print_zone_info(char *dev_name, uint32_t zone, uint64_t zone_size) {
 
     int dev_fd = open(dev_path, O_RDONLY);
     if (dev_fd < 0) {
-        return -1;
+        return -1 + 1;
     }
 
     hdr = calloc(1, sizeof(struct blk_zone_report) + sizeof(struct blk_zone));
@@ -195,11 +196,12 @@ int print_zone_info(char *dev_name, uint32_t zone, uint64_t zone_size) {
     hdr->nr_zones = 1;
 
     if (ioctl(dev_fd, BLKREPORTZONE, hdr) < 0) {
-        fprintf(stderr, "\033[0;31mError\033[0m getting Zone Size\n");
+        fprintf(stderr, "\033[0;31mError\033[0m getting Zone Info\n");
         return -1;
     }
 
     zone_mask = ~(zone_size - 1);
+    printf("\n#### ZONE %d ####\n", zone);
     printf("LBAS: 0x%06"PRIx64"  ZONE CAP: 0x%06"PRIx64"  WP: 0x%06"PRIx64"  ZONE MASK: 0x%06"PRIx32"\n\n",
             hdr->zones[0].start, hdr->zones[0].capacity, hdr->zones[0].wp, zone_mask);
 
@@ -254,20 +256,20 @@ uint64_t get_dev_size(char *dev_name) {
  * returns: 0 on success else failure
  * 
  * */
-int get_extents(int fd, char *dev_name, struct stat *stats) {
+struct extent_map * get_extents(int fd, char *dev_name, struct stat *stats, uint64_t *ext_ctr) {
     struct fiemap *fiemap;
+    struct extent_map *extent_map;
     uint8_t last_ext = 0;
     uint32_t zone = 0;
     uint32_t current_zone = 0;
-    uint64_t ext_ctr = 1;
     uint64_t zone_size = 0;
-    uint64_t phy_blk = 0;
     uint64_t logical_blk = 0;
     uint64_t len = 0;
 
     zone_size = get_zone_size(dev_name);
 
     fiemap = (struct fiemap *) calloc(sizeof(struct fiemap) + sizeof(struct fiemap_extent), sizeof (char *));
+    extent_map = (struct extent_map *) calloc(sizeof(struct extent_map), sizeof(char *));
 
     fiemap->fm_flags = FIEMAP_FLAG_SYNC;
     fiemap->fm_start = 0;
@@ -276,37 +278,53 @@ int get_extents(int fd, char *dev_name, struct stat *stats) {
 
     do {
         if (ioctl(fd, FS_IOC_FIEMAP, fiemap) < 0) {
-            return -1;
+            return NULL;
+        }
+
+        if (*ext_ctr > 0) {
+            extent_map = realloc(extent_map, sizeof(struct extent_map) * (*ext_ctr + 1));
         }
 
         if (fiemap->fm_mapped_extents == 0) {
             // TODO: have to use fibmap. When does this even happen?
             printf("no extents");
-			return 0;
+			return NULL;
         }
 
-        phy_blk = (fiemap->fm_extents[0].fe_physical - offset) >> 9;
-        logical_blk = fiemap->fm_extents[0].fe_logical >> 9;
-        len = fiemap->fm_extents[0].fe_length >> 9;
+        extent_map[*ext_ctr].phy_blk = (fiemap->fm_extents[0].fe_physical - offset) >> 9;
+        extent_map[*ext_ctr].logical_blk = fiemap->fm_extents[0].fe_logical >> 9;
+        extent_map[*ext_ctr].len = fiemap->fm_extents[0].fe_length >> 9;
+        extent_map[*ext_ctr].zone_size = zone_size;
 
         if (fiemap->fm_extents[0].fe_flags & FIEMAP_EXTENT_LAST) {
             last_ext = 1;
         }
 
-        zone = get_zone_number(phy_blk, zone_size);
+        extent_map[*ext_ctr].zone = get_zone_number(((fiemap->fm_extents[0].fe_physical
+                        - offset) >> 9), zone_size);
 
-        if (zone != current_zone) {
-            printf("\n#### ZONE %u ####\n", zone);
-            print_zone_info(dev_name, zone, zone_size);
-            current_zone = zone;
+        (*ext_ctr) ++;
+        fiemap->fm_start = ((fiemap->fm_extents[0].fe_logical) + (fiemap->fm_extents[0].fe_length));
+    } while (last_ext == 0);
+
+    return extent_map;
+}
+
+
+int print_extent_report(char *dev_name, struct extent_map *extent_map, uint64_t ext_ctr) {
+    uint32_t current_zone = 0;
+
+    printf("\nTotal Number of Extents: %lu\n", ext_ctr);
+
+    for (int i = 0; i < ext_ctr; i++) {
+        if (current_zone != extent_map[i].zone) {
+            current_zone = extent_map[i].zone;
+            print_zone_info(dev_name, current_zone, extent_map[i].zone_size); 
         }
 
         printf("EXTENT %d:  PBAS: 0x%06"PRIx64"  PBAE: 0x%06"PRIx64"  SIZE: 0x%06"PRIx64"\n",
-                ext_ctr, phy_blk, (phy_blk + len), len);
-
-        ext_ctr++;
-        fiemap->fm_start = ((logical_blk << 9) + (len << 9));
-    } while (last_ext == 0);
+                i + 1, extent_map[i].phy_blk, (extent_map[i].phy_blk + extent_map[i].len), extent_map[i].len);
+    }
 
     return 0;
 }
@@ -317,6 +335,8 @@ int main(int argc, char *argv[]) {
     struct stat *stats;
     char *dev_name = NULL;
     char *zns_dev_name = NULL;
+    struct extent_map *extent_map;
+    uint64_t ext_ctr = 0;
 
     if (argc != 2) {
         printf("Missing argument.\nUsage:\n\tfilemap [file path]");
@@ -370,20 +390,26 @@ int main(int argc, char *argv[]) {
     }
 
     offset = get_dev_size(dev_name);
-    
-    if (get_extents(fd, zns_dev_name, stats) < 0) {
+    extent_map = get_extents(fd, zns_dev_name, stats, &ext_ctr);
+
+    if (!extent_map) {
         fprintf(stderr, "\033[0;31mError\033[0m retrieving extents for %s\n", filename);
         return 1;
     }
+
+    // TODO sort extents
+    print_extent_report(zns_dev_name, extent_map, ext_ctr);
 
     free(filename);
     free(dev_name);
     free(zns_dev_name);
     free(stats);
+    free(extent_map);
     filename = NULL;
     dev_name = NULL;
     zns_dev_name = NULL;
     stats = NULL;
+    extent_map = NULL;
 
     return 0;
 }
