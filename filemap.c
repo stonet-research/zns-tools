@@ -13,6 +13,8 @@
 #include <linux/fiemap.h>
 #include "filemap.h"
 
+#define SECTOR_SHIFT 9
+
 /* 
  * F2FS treats all devices as one address space, therefore if we use
  * a conventional device and a ZNS, extent maps contain the offset within
@@ -132,6 +134,7 @@ int is_zoned(char *dev_name) {
 
     int dev_fd = open(dev_path, O_RDONLY);
     if (dev_fd < 0) {
+        fprintf(stderr, "\033[0;31mError\033[0m: Failed opening fd on %s. Try running as root.\n", dev_path);
         return -1;
     }
 
@@ -144,6 +147,8 @@ int is_zoned(char *dev_name) {
         free(hdr);
         dev_path = NULL;
         hdr = NULL;
+
+        fprintf(stderr, "\033[0;31mError\033[0m: %s is not a ZNS device\n", dev_name);
 
         return -1;
     } else {
@@ -283,7 +288,7 @@ struct extent_map * get_extents(int fd, char *dev_name, struct stat *stats, uint
     fiemap->fm_flags = FIEMAP_FLAG_SYNC;
     fiemap->fm_start = 0;
     fiemap->fm_extent_count = 1; // get extents individually
-    fiemap->fm_length = (stats->st_blocks << 9);
+    fiemap->fm_length = (stats->st_blocks << SECTOR_SHIFT);
 
     do {
         if (ioctl(fd, FS_IOC_FIEMAP, fiemap) < 0) {
@@ -299,9 +304,9 @@ struct extent_map * get_extents(int fd, char *dev_name, struct stat *stats, uint
 			return NULL;
         }
 
-        extent_map[*ext_ctr].phy_blk = (fiemap->fm_extents[0].fe_physical - offset) >> 9;
-        extent_map[*ext_ctr].logical_blk = fiemap->fm_extents[0].fe_logical >> 9;
-        extent_map[*ext_ctr].len = fiemap->fm_extents[0].fe_length >> 9;
+        extent_map[*ext_ctr].phy_blk = (fiemap->fm_extents[0].fe_physical - offset) >> SECTOR_SHIFT;
+        extent_map[*ext_ctr].logical_blk = fiemap->fm_extents[0].fe_logical >> SECTOR_SHIFT;
+        extent_map[*ext_ctr].len = fiemap->fm_extents[0].fe_length >> SECTOR_SHIFT;
         extent_map[*ext_ctr].zone_size = zone_size;
 
         if (fiemap->fm_extents[0].fe_flags & FIEMAP_EXTENT_LAST) {
@@ -309,7 +314,7 @@ struct extent_map * get_extents(int fd, char *dev_name, struct stat *stats, uint
         }
 
         extent_map[*ext_ctr].zone = get_zone_number(((fiemap->fm_extents[0].fe_physical
-                        - offset) >> 9), zone_size);
+                        - offset) >> SECTOR_SHIFT), zone_size);
 
         (*ext_ctr) ++;
         fiemap->fm_start = ((fiemap->fm_extents[0].fe_logical) + (fiemap->fm_extents[0].fe_length));
@@ -355,7 +360,7 @@ void sort_extents(struct extent_map *extent_map, uint32_t ext_ctr) {
     for (uint32_t i = 0; i < ext_ctr; i++) {
         for (uint32_t j = 0; j < ext_ctr; j++) {
             if (extent_map[j].zone < extent_map[cur_lowest].zone && 
-                    contains_element(used_ind, j, i)) {
+                    !contains_element(used_ind, j, i)) {
                 cur_lowest = j;
             } else if (contains_element(used_ind, cur_lowest, i)) {
                 cur_lowest = j;
@@ -413,6 +418,7 @@ int main(int argc, char *argv[]) {
     strcpy(filename, argv[1]);
 
     fd = open(filename, O_RDONLY);
+    fsync(fd);
 
     if (fd < 0) {
         fprintf(stderr, "\033[0;31mError\033[0m failed opening file %s\n", filename);
@@ -451,7 +457,6 @@ int main(int argc, char *argv[]) {
     }
 
     if (is_zoned(zns_dev_name) < 0) {
-        fprintf(stderr, "\033[0;31mError\033[0m: %s is not a ZNS device\n", zns_dev_name);
         return 1;
     }
 

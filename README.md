@@ -4,7 +4,7 @@ This directory contains the code for the filemap utility, which locates the phys
 
 ## Compiling and Running
 
-A Makefile is included to compile the code base, which is rather minimal and therefore does not require much. The code utilizes `FIBMAP`, which requires to be run as root (the better alternative avoiding root privileges `FIEMAP` is not supported on all systems, which is why we do not use it, and we have full root access in our VM for experiments.)
+A Makefile is included to compile the code base. It relies on `FIEMAP`, which the file system and kernel must support (F2FS has support for it). We use this tool to evaluate mapping of files on ZNS with F2FS.
 
 ```bash
 # Compile
@@ -14,16 +14,34 @@ make
 sudo ./filemap /mnt/f2fs/file_to_locate
 ```
 
+The issue of F2FS associating the file with the conventional namespace is handled by the program by asking for the ZNS device. An example execution with our setup of `nvme0n1` being the conventional namespace on a ZNS device (hence randomly writable and not zones) and `nvme0n2` being the zoned namespace on the ZNS device.
+
+```bash
+user@stosys:~/src/f2fs-bench/file-map$ sudo ./filemap /mnt/f2fs/test
+Error: nvme0n1 is not a ZNS device
+Warning: nvme0n1 is registered as containing this file, however it is not a ZNS.
+If it is used with F2FS as the conventional device, enter the assocaited ZNS device name: nvme0n2
+```
+
+Also not that if you write less than the ZNS sector size (512B in our case), the extent mapping will return the same `PBAS` and `PBAE` as it has not been written to the storage because the minimum I/O size (a sector) is not full. However, the mapping is already contained in F2FS, as it can return the physical address, and because it allocates a file system block (4KiB) regardless.
+
 ## Output
 
-The output is written to stdout (as with any output it can be redirected if needed) and contains the following information:
+The output indicates which zones contain what extents. For convenience we include zone information in the output (e.g., starting and end addresses) such that it is easier to understand if the file is occupying the entire zone or only parts. The important information is the range of the block addresses, which we depict with a start and ending address of the extent. The output contains several acronyms:
 
-- **Number of allocated blocks**: These are allocated logical blocks for the file, which may not all be written. E.g., only 1 block (a single segment) may be written but a file has 8 blocks allocated. We do not further show information on unallocated blocks.
-- **Number of PBAs in each zone**: The allocated number of PBAs (blocks) in each zone is listed that contains that file.
-- **Ranges of PBAs in each zone**: The ranges for the allocated PBAs are shown in hex for each zone that contains that file.
+```bash
+LBAS: Logical Block Address Start (for the Zonw)
+LBAE: Logical Block Address End (for the Zone)
+ZONE CAP: Zone Capacity
+WP: Write Pointer of the Zone
+ZONE MASK: The Zone Mask that is used to calculate LBAS of LBA addresses in a zone
+
+PBAS: Physical Block Address Start
+PBAE: Physical Block Address End 
+```
 
 ## Known Issues and Limitations
 
-// TODO write out, f2fs limitations, extent mappings, etc.
-
 - Invalid WP: The information of zones contains an invalid write pointer, which is equivalent to the LBAS of the next zone. We take this information directly from the `BLKREPORTZONE` command, therefore are currently not sure why it is wrong.
+- F2FS utilizes all devices (zoned and conventional) as one address space, hence extent mappings return offsets in this range. This requires to subtract the conventional device size from offsets to get the location on the ZNS. Therefore, the utility only works with a single ZNS device currently, and relies on the address space being conventional followed by ZNS (which is how F2FS handles it anyways). 
+- F2FS also does not directly tell us which devices it is using. If we have a setup with a conventional device and a ZNS, it is mounted as the ZNS device, and `ioctl` stat calls on all files return the conventional space device ID. Therefore, we cannot easily know which ZNS device it is actually using. The only place currently is the Kernel Log, however it's too cumbersome to parse all this, and there must be better ways. Therefore, program will currently ask the user for the associated ZNS devices.
