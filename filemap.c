@@ -1,3 +1,4 @@
+#include <stdint.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -26,6 +27,16 @@
  * */
 uint64_t offset = 0;
 
+
+/* 
+ * Get the statistics for a file.
+ *
+ * @fd: file descriptor of the opened file
+ * @filename: char * to the file path
+ *
+ * returns: struct stat * with the ioctl stats. NULL on failure
+ *
+ * */
 struct stat * get_stats(int fd, char *filename) {
     struct stat *file_stat;
 
@@ -202,8 +213,9 @@ int print_zone_info(char *dev_name, uint32_t zone, uint64_t zone_size) {
 
     zone_mask = ~(zone_size - 1);
     printf("\n#### ZONE %d ####\n", zone);
-    printf("LBAS: 0x%06"PRIx64"  ZONE CAP: 0x%06"PRIx64"  WP: 0x%06"PRIx64"  ZONE MASK: 0x%06"PRIx32"\n\n",
-            hdr->zones[0].start, hdr->zones[0].capacity, hdr->zones[0].wp, zone_mask);
+    printf("LBAS: 0x%06llx  LBAE: 0x%06llx  ZONE CAP: 0x%06llx  WP: 0x%06llx  "
+            "ZONE MASK: 0x%06"PRIx32"\n\n", hdr->zones[0].start, hdr->zones[0].start + 
+            hdr->zones[0].capacity, hdr->zones[0].capacity, hdr->zones[0].wp, zone_mask);
 
     close(dev_fd);
 
@@ -252,19 +264,16 @@ uint64_t get_dev_size(char *dev_name) {
  * @fd: file descriptor of the file
  * @dev_name: name of the device (e.g., /dev/nvme0n2)
  * @stats: struct stat of fd
+ * @*ext_ctr: uint32_t * for the function to provide the total number of extents
  *
  * returns: 0 on success else failure
  * 
  * */
-struct extent_map * get_extents(int fd, char *dev_name, struct stat *stats, uint64_t *ext_ctr) {
+struct extent_map * get_extents(int fd, char *dev_name, struct stat *stats, uint32_t *ext_ctr) {
     struct fiemap *fiemap;
     struct extent_map *extent_map;
     uint8_t last_ext = 0;
-    uint32_t zone = 0;
-    uint32_t current_zone = 0;
     uint64_t zone_size = 0;
-    uint64_t logical_blk = 0;
-    uint64_t len = 0;
 
     zone_size = get_zone_size(dev_name);
 
@@ -286,8 +295,7 @@ struct extent_map * get_extents(int fd, char *dev_name, struct stat *stats, uint
         }
 
         if (fiemap->fm_mapped_extents == 0) {
-            // TODO: have to use fibmap. When does this even happen?
-            printf("no extents");
+            fprintf(stderr, "\033[0;31mError\033[0m no extents are mapped\n");
 			return NULL;
         }
 
@@ -310,13 +318,73 @@ struct extent_map * get_extents(int fd, char *dev_name, struct stat *stats, uint
     return extent_map;
 }
 
+/* 
+ * Check if an element is contained in the array.
+ *
+ * @list[]: uint32_t array of items to check.
+ * @element: uint32_t element to find.
+ * @size: size of the uint32_t array.
+ *
+ * returns: 1 if contained otherwise 0.
+ *
+ * */
+int contains_element(uint32_t list[], uint32_t element, uint32_t size) {
 
-int print_extent_report(char *dev_name, struct extent_map *extent_map, uint64_t ext_ctr) {
+    for (uint32_t i = 0; i < size; i++) {
+        if (list[i] == element) {
+            return 1;
+        }
+    } 
+
+    return 0;
+}
+
+/* 
+ * Sort the provided extent maps based on the zone number.
+ *
+ * @extent_map: pointer to extent map struct
+ * @ext_ctr: number of extents in the struct extent_map *
+ *
+ *
+ * */
+void sort_extents(struct extent_map *extent_map, uint32_t ext_ctr) {
+    struct extent_map *temp = malloc(sizeof(struct extent_map) * ext_ctr);
+    uint32_t cur_lowest = 0;
+    uint32_t used_ind[ext_ctr];
+
+    for (uint32_t i = 0; i < ext_ctr; i++) {
+        for (uint32_t j = 0; j < ext_ctr; j++) {
+            if (extent_map[j].zone < extent_map[cur_lowest].zone && 
+                    contains_element(used_ind, j, i)) {
+                cur_lowest = j;
+            } else if (contains_element(used_ind, cur_lowest, i)) {
+                cur_lowest = j;
+            }
+        }
+        used_ind[i] = cur_lowest;
+        temp[i] = extent_map[cur_lowest];
+    }
+
+    memcpy(extent_map, temp, sizeof(struct extent_map) * ext_ctr);
+
+    free(temp);
+    temp = NULL;
+}
+
+/* 
+ * Print the report summary of extent_map. 
+ *
+ * @dev_name: char * to the device name (e.g., nvme0n2)
+ * @extent_map: struct extent_map * to the extent maps 
+ * @ext_ctr: number of elements in the struct extent_map *
+ * 
+ * */
+void print_extent_report(char *dev_name, struct extent_map *extent_map, uint32_t ext_ctr) {
     uint32_t current_zone = 0;
 
-    printf("\nTotal Number of Extents: %lu\n", ext_ctr);
+    printf("\nTotal Number of Extents: %u\n", ext_ctr);
 
-    for (int i = 0; i < ext_ctr; i++) {
+    for (uint32_t i = 0; i < ext_ctr; i++) {
         if (current_zone != extent_map[i].zone) {
             current_zone = extent_map[i].zone;
             print_zone_info(dev_name, current_zone, extent_map[i].zone_size); 
@@ -325,8 +393,6 @@ int print_extent_report(char *dev_name, struct extent_map *extent_map, uint64_t 
         printf("EXTENT %d:  PBAS: 0x%06"PRIx64"  PBAE: 0x%06"PRIx64"  SIZE: 0x%06"PRIx64"\n",
                 i + 1, extent_map[i].phy_blk, (extent_map[i].phy_blk + extent_map[i].len), extent_map[i].len);
     }
-
-    return 0;
 }
 
 int main(int argc, char *argv[]) {
@@ -336,7 +402,7 @@ int main(int argc, char *argv[]) {
     char *dev_name = NULL;
     char *zns_dev_name = NULL;
     struct extent_map *extent_map;
-    uint64_t ext_ctr = 0;
+    uint32_t ext_ctr = 0;
 
     if (argc != 2) {
         printf("Missing argument.\nUsage:\n\tfilemap [file path]");
@@ -397,7 +463,7 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    // TODO sort extents
+    sort_extents(extent_map, ext_ctr);
     print_extent_report(zns_dev_name, extent_map, ext_ctr);
 
     free(filename);
