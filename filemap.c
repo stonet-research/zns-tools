@@ -24,9 +24,9 @@
  * the extent mapping offsets.
  *
  * TODO: This would only work with a single ZNS after a conventional device!
- *       For multiple it would require mainting sizes of each ZNS, and their
- *       order in mkfs.f2fs call (to know the F2FS address space in correct
- *       order).
+ *       For multiple it would require maintaining sizes of each ZNS, and 
+ *       their order in mkfs.f2fs call (to know the F2FS address space in 
+ *       correct order and calculate valid zone address ranges).
  * */
 uint64_t offset = 0;
 
