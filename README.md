@@ -17,18 +17,22 @@ sudo ./filemap /mnt/f2fs/file_to_locate
 The issue of F2FS associating the file with the conventional namespace is handled by the program by asking for the ZNS device. An example execution with our setup of `nvme0n1` being the conventional namespace on a ZNS device (hence randomly writable and not zones) and `nvme0n2` being the zoned namespace on the ZNS device. In the example we write 4KiB from `/dev/urandom` to a test file on the mountpoint and filemap the test file.
 
 ```bash
-user@stosys:~/src/f2fs-bench/file-map$ head -c 4K </dev/urandom> /mnt/f2fs/test
+user@stosys:~/src/f2fs-bench/file-map$ dd if=/dev/urandom bs=10K count=1 >> /mnt/f2fs/test
+1+0 records in
+1+0 records out
+10240 bytes (10 kB, 10 KiB) copied, 0.000222584 s, 46.0 MB/s
 user@stosys:~/src/f2fs-bench/file-map$ sudo ./filemap /mnt/f2fs/test
 Error: nvme0n1 is not a ZNS device
 Warning: nvme0n1 is registered as containing this file, however it is not a ZNS.
 If it is used with F2FS as the conventional device, enter the assocaited ZNS device name: nvme0n2
 
-Total Number of Extents: 1
+Total Number of Extents: 2
 
 #### ZONE 4 ####
-LBAS: 0xc00000  LBAE: 0xe1a800  ZONE CAP: 0x21a800  WP: 0xc00010  ZONE MASK: 0xffc00000
+LBAS: 0xc00000  LBAE: 0xe1a800  ZONE CAP: 0x21a800  WP: 0xc000d0  ZONE SIZE: 0x400000  ZONE MASK: 0xffc00000
 
-EXTENT 1:  PBAS: 0xc00008  PBAE: 0xc00010  SIZE: 0x000008
+EXTENT 1:  PBAS: 0xc00010  PBAE: 0xc00028  SIZE: 0x000018
+EXTENT 2:  PBAS: 0xc00080  PBAE: 0xc000b0  SIZE: 0x000030
 ```
 
 Also not that if you write less than the ZNS sector size (512B in our case), the extent mapping will return the same `PBAS` and `PBAE` as it has not been written to the storage because the minimum I/O size (a sector) is not full. However, the mapping is already contained in F2FS, as it can return the physical address, and because it allocates a file system block (4KiB) regardless.
