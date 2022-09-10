@@ -1,7 +1,6 @@
 #ifndef FILEMAP_H
 #include <inttypes.h>
 
-
 struct extent_map {
     uint32_t zone;
     uint64_t logical_blk;

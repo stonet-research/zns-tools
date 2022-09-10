@@ -23,9 +23,10 @@
  * need to find the size of the conventional space and subtract it from
  * the extent mapping offsets.
  *
- * TODO: what if orders are different? this would only work with a single ZNS
- * after a conventional device!
- * 
+ * TODO: This would only work with a single ZNS after a conventional device!
+ *       For multiple it would require mainting sizes of each ZNS, and their
+ *       order in mkfs.f2fs call (to know the F2FS address space in correct
+ *       order).
  * */
 uint64_t offset = 0;
 
@@ -53,7 +54,17 @@ struct stat * get_stats(int fd, char *filename) {
     return file_stat;
 }
 
-// TODO: is there a better way to get dev from major:minor than reading sysfs?
+
+/* 
+ * Get the device name of block device from its major:minor ID.
+ *
+ * @major: The MAJOR ID of the device.
+ * @minor: The MINOR ID of the device.
+ *
+ * returns: char * with the device name (e.g., nvme0n2).
+ *          NULL on failure.
+ *
+ * */
 char * get_dev_name(int major, int minor) {
     FILE *dev_info;
     char file_path[50];
@@ -115,6 +126,7 @@ uint64_t get_zone_size(char *dev_name) {
     return zone_size;
 }
 
+
 /* 
  * Check if a device a zoned device.
  *
@@ -162,6 +174,7 @@ int is_zoned(char *dev_name) {
     }
 }
 
+
 /* 
  * Calculate the zone number (starting with zone 1) of an LBA
  *
@@ -179,6 +192,7 @@ uint32_t get_zone_number(uint64_t lba, uint64_t zone_size) {
 
     return slba == 0 ? 1 : (slba / zone_size + 1);
 }
+
 
 /*
  * Print the information about a zone.
@@ -219,8 +233,9 @@ int print_zone_info(char *dev_name, uint32_t zone, uint64_t zone_size) {
     zone_mask = ~(zone_size - 1);
     printf("\n#### ZONE %d ####\n", zone);
     printf("LBAS: 0x%06llx  LBAE: 0x%06llx  ZONE CAP: 0x%06llx  WP: 0x%06llx  "
-            "ZONE MASK: 0x%06"PRIx32"\n\n", hdr->zones[0].start, hdr->zones[0].start + 
-            hdr->zones[0].capacity, hdr->zones[0].capacity, hdr->zones[0].wp, zone_mask);
+            "ZONE SIZE: 0x%06llx  ZONE MASK: 0x%06"PRIx32"\n\n", hdr->zones[0].start,
+            hdr->zones[0].start + hdr->zones[0].capacity, hdr->zones[0].capacity, 
+            hdr->zones[0].wp, hdr->zones[0].len, zone_mask);
 
     close(dev_fd);
 
@@ -231,6 +246,7 @@ int print_zone_info(char *dev_name, uint32_t zone, uint64_t zone_size) {
 
     return 0;
 }
+
 
 /* 
  * Get the size of a device in bytes.
@@ -262,6 +278,7 @@ uint64_t get_dev_size(char *dev_name) {
 
     return dev_size;
 }
+
 
 /* 
  * Get the file extents with FIEMAP ioctl
@@ -323,6 +340,7 @@ struct extent_map * get_extents(int fd, char *dev_name, struct stat *stats, uint
     return extent_map;
 }
 
+
 /* 
  * Check if an element is contained in the array.
  *
@@ -343,6 +361,7 @@ int contains_element(uint32_t list[], uint32_t element, uint32_t size) {
 
     return 0;
 }
+
 
 /* 
  * Sort the provided extent maps based on the zone number.
@@ -376,6 +395,7 @@ void sort_extents(struct extent_map *extent_map, uint32_t ext_ctr) {
     temp = NULL;
 }
 
+
 /* 
  * Print the report summary of extent_map. 
  *
@@ -399,6 +419,7 @@ void print_extent_report(char *dev_name, struct extent_map *extent_map, uint32_t
                 i + 1, extent_map[i].phy_blk, (extent_map[i].phy_blk + extent_map[i].len), extent_map[i].len);
     }
 }
+
 
 int main(int argc, char *argv[]) {
     int fd;

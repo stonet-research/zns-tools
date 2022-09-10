@@ -39,14 +39,17 @@ The output indicates which zones contain what extents. For convenience we includ
 
 ```bash
 LBAS: Logical Block Address Start (for the Zonw)
-LBAE: Logical Block Address End (for the Zone)
+LBAE: Logical Block Address End (for the Zone, equal to LBAS + ZONE CAP)
 ZONE CAP: Zone Capacity
 WP: Write Pointer of the Zone
+ZONE SIZE: Size of the Zone
 ZONE MASK: The Zone Mask that is used to calculate LBAS of LBA addresses in a zone
 
 PBAS: Physical Block Address Start
 PBAE: Physical Block Address End 
 ```
+
+Note, the Zone size is less relevant, as it is only used to represent the zones in the next power of 2 value after the ZONE CAP, in order to make bit shifting easier (e.g., `LBA` to `LBAS`). More relevant is the `LBAE`, showing that if it is equal to the `PBAE` of an extent, the file is mapped to the end of the zone. Hence, not necessarily fragmented if its next extent begins again in the next `LBAS` of the next zone. 
 
 ## Known Issues and Limitations
 
