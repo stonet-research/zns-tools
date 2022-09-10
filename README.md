@@ -14,13 +14,21 @@ make
 sudo ./filemap /mnt/f2fs/file_to_locate
 ```
 
-The issue of F2FS associating the file with the conventional namespace is handled by the program by asking for the ZNS device. An example execution with our setup of `nvme0n1` being the conventional namespace on a ZNS device (hence randomly writable and not zones) and `nvme0n2` being the zoned namespace on the ZNS device.
+The issue of F2FS associating the file with the conventional namespace is handled by the program by asking for the ZNS device. An example execution with our setup of `nvme0n1` being the conventional namespace on a ZNS device (hence randomly writable and not zones) and `nvme0n2` being the zoned namespace on the ZNS device. In the example we write 4KiB from `/dev/urandom` to a test file on the mountpoint and filemap the test file.
 
 ```bash
+user@stosys:~/src/f2fs-bench/file-map$ head -c 4K </dev/urandom> /mnt/f2fs/test
 user@stosys:~/src/f2fs-bench/file-map$ sudo ./filemap /mnt/f2fs/test
 Error: nvme0n1 is not a ZNS device
 Warning: nvme0n1 is registered as containing this file, however it is not a ZNS.
 If it is used with F2FS as the conventional device, enter the assocaited ZNS device name: nvme0n2
+
+Total Number of Extents: 1
+
+#### ZONE 4 ####
+LBAS: 0xc00000  LBAE: 0xe1a800  ZONE CAP: 0x21a800  WP: 0xc00010  ZONE MASK: 0xffc00000
+
+EXTENT 1:  PBAS: 0xc00008  PBAE: 0xc00010  SIZE: 0x000008
 ```
 
 Also not that if you write less than the ZNS sector size (512B in our case), the extent mapping will return the same `PBAS` and `PBAE` as it has not been written to the storage because the minimum I/O size (a sector) is not full. However, the mapping is already contained in F2FS, as it can return the physical address, and because it allocates a file system block (4KiB) regardless.
@@ -42,6 +50,6 @@ PBAE: Physical Block Address End
 
 ## Known Issues and Limitations
 
-- Invalid WP: The information of zones contains an invalid write pointer, which is equivalent to the LBAS of the next zone. We take this information directly from the `BLKREPORTZONE` command, therefore are currently not sure why it is wrong.
+- Invalid WP (Sometimes): The information of zones contains an invalid write pointer, which is equivalent to the LBAS of the next zone. We take this information directly from the `BLKREPORTZONE` command, therefore are currently not sure why it is wrong.
 - F2FS utilizes all devices (zoned and conventional) as one address space, hence extent mappings return offsets in this range. This requires to subtract the conventional device size from offsets to get the location on the ZNS. Therefore, the utility only works with a single ZNS device currently, and relies on the address space being conventional followed by ZNS (which is how F2FS handles it anyways). 
 - F2FS also does not directly tell us which devices it is using. If we have a setup with a conventional device and a ZNS, it is mounted as the ZNS device, and `ioctl` stat calls on all files return the conventional space device ID. Therefore, we cannot easily know which ZNS device it is actually using. The only place currently is the Kernel Log, however it's too cumbersome to parse all this, and there must be better ways. Therefore, program will currently ask the user for the associated ZNS devices.
