@@ -50,6 +50,5 @@ PBAE: Physical Block Address End
 
 ## Known Issues and Limitations
 
-- Invalid WP (Sometimes): The information of zones contains an invalid write pointer, which is equivalent to the LBAS of the next zone. We take this information directly from the `BLKREPORTZONE` command, therefore are currently not sure why it is wrong.
 - F2FS utilizes all devices (zoned and conventional) as one address space, hence extent mappings return offsets in this range. This requires to subtract the conventional device size from offsets to get the location on the ZNS. Therefore, the utility only works with a single ZNS device currently, and relies on the address space being conventional followed by ZNS (which is how F2FS handles it anyways). 
 - F2FS also does not directly tell us which devices it is using. If we have a setup with a conventional device and a ZNS, it is mounted as the ZNS device, and `ioctl` stat calls on all files return the conventional space device ID. Therefore, we cannot easily know which ZNS device it is actually using. The only place currently is the Kernel Log, however it's too cumbersome to parse all this, and there must be better ways. Therefore, program will currently ask the user for the associated ZNS devices.
