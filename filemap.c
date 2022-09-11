@@ -182,6 +182,7 @@ int is_zoned(char *dev_name) {
  * @zone_size: size of the zone
  *
  * returns: uint32_t of zone number (starting with 1)
+ *
  * */
 uint32_t get_zone_number(uint64_t lba, uint64_t zone_size) {
     uint64_t zone_mask = 0;
@@ -254,6 +255,7 @@ int print_zone_info(char *dev_name, uint32_t zone, uint64_t zone_size) {
  * @dev_name: device name (e.g., nvme0n2)
  *
  * returns: uint64_t size of the device in bytes.
+ *          -1 on Failure
  *
  * */
 uint64_t get_dev_size(char *dev_name) {
@@ -265,7 +267,7 @@ uint64_t get_dev_size(char *dev_name) {
 
     int dev_fd = open(dev_path, O_RDONLY);
     if (dev_fd < 0) {
-        return 1;
+        return -1;
     }
 
     if (ioctl(dev_fd, BLKGETSIZE64, &dev_size) < 0) {
@@ -288,7 +290,9 @@ uint64_t get_dev_size(char *dev_name) {
  * @stats: struct stat of fd
  * @*ext_ctr: uint32_t * for the function to provide the total number of extents
  *
- * returns: 0 on success else failure
+ * returns: struct extent_map * to the extent maps. arg 
+ *          *ext_ctr contains the number of extent maps in struct extent_map * 
+ *          NULL returned on Failure
  * 
  * */
 struct extent_map * get_extents(int fd, char *dev_name, struct stat *stats, uint32_t *ext_ctr) {
