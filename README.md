@@ -42,7 +42,7 @@ Also not that if you write less than the ZNS sector size (512B in our case), the
 The output indicates which zones contain what extents. For convenience we include zone information in the output (e.g., starting and end addresses) such that it is easier to understand if the file is occupying the entire zone or only parts. The important information is the range of the block addresses, which we depict with a start and ending address of the extent. The output contains several acronyms:
 
 ```bash
-LBAS: Logical Block Address Start (for the Zonw)
+LBAS: Logical Block Address Start (for the Zone)
 LBAE: Logical Block Address End (for the Zone, equal to LBAS + ZONE CAP)
 ZONE CAP: Zone Capacity
 WP: Write Pointer of the Zone
