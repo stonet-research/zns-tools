@@ -1,6 +1,6 @@
 # filemap
 
-This directory contains the code for the filemap utility, which locates the physical block address (PBA) ranges and zones in which files are located on ZNS devices. It lists the specific ranges of PBAs and which zones these are in. Aimed at helping understand the mapping that F2FS implements during GC (mainly greedy foreground GC), and how the lack of application knowledge causes suboptimal placement, mixing possibly hot and cold data over the zones.
+This directory contains the code for the filemap utility, which locates the physical block address (PBA) ranges and zones in which files are located on ZNS devices. It lists the specific ranges of PBAs and which zones these are in. Aimed at helping understand the mapping that F2FS implements during GC (mainly greedy foreground GC), and how the lack of application knowledge causes suboptimal placement, mixing possibly hot and cold data over the zones. **Note** that all output is shown with acronyms, see the [Output Section](https://github.com/nicktehrany/f2fs-bench/tree/master/file-map#output) for explanations and the example output in the [Compiling and Running Section](https://github.com/nicktehrany/f2fs-bench/tree/master/file-map#compiling-and-running).
 
 ## Compiling and Running
 
@@ -29,13 +29,18 @@ If it is used with F2FS as the conventional device, enter the assocaited ZNS dev
 ---- EXTENT MAPPINGS ----
 
 #### ZONE 4 ####
-LBAS: 0xc00000  LBAE: 0xe1a800  ZONE CAP: 0x21a800  WP: 0xc000d0  ZONE SIZE: 0x400000  ZONE MASK: 0xffc00000
+LBAS: 0xc00000  LBAE: 0xe1a800  ZONE CAP: 0x21a800  WP: 0xc00258  ZONE SIZE: 0x400000  ZONE MASK: 0xffc00000
 
 EXTENT 1:  PBAS: 0xc00010  PBAE: 0xc00028  SIZE: 0x000018
-EXTENT 2:  PBAS: 0xc00080  PBAE: 0xc000b0  SIZE: 0x000030
+EXTENT 2:  PBAS: 0xc00080  PBAE: 0xc000a8  SIZE: 0x000028
+EXTENT 3:  PBAS: 0xc000d0  PBAE: 0xc000f8  SIZE: 0x000028
+EXTENT 4:  PBAS: 0xc00150  PBAE: 0xc001b8  SIZE: 0x000068
+EXTENT 5:  PBAS: 0xc001c0  PBAE: 0xc001e8  SIZE: 0x000028
+EXTENT 6:  PBAS: 0xc00218  PBAE: 0xc00258  SIZE: 0x000040
 
 ---- SUMMARY -----
-FILE STATS: NE: 2  TES: 0x000048  AES: 0x000024
+
+NOE: 6  NOZ: 1  TES: 0x000138  AES: 0x000034
 ```
 
 Also not that if you write less than the ZNS sector size (512B in our case), the extent mapping will return the same `PBAS` and `PBAE` as it has not been written to the storage because the minimum I/O size (a sector) is not full. However, the mapping is already contained in F2FS, as it can return the physical address, and because it allocates a file system block (4KiB) regardless.
@@ -55,7 +60,8 @@ ZONE MASK: The Zone Mask that is used to calculate LBAS of LBA addresses in a zo
 PBAS: Physical Block Address Start
 PBAE: Physical Block Address End 
 
-NE: Number of Extents
+NOE: Number of Extents
+NOZ: Number of Zones (in which extents are)
 TES: Total Extent Size (in 512B sectors)
 AES: Average Extent Size (in 512B sectors)
 ```

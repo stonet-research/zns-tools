@@ -303,9 +303,7 @@ struct extent_map * get_extents(int fd, char *dev_name, struct stat *stats) {
     zone_size = get_zone_size(dev_name);
 
     fiemap = (struct fiemap *) calloc(sizeof(struct fiemap) + sizeof(struct fiemap_extent), sizeof (char *));
-    extent_map = (struct extent_map *) malloc(sizeof(struct extent_map) + sizeof(struct extent));
-
-    extent_map->ext_ctr = 0;
+    extent_map = (struct extent_map *) calloc(sizeof(struct extent_map) + sizeof(struct extent), sizeof(char *));
 
     fiemap->fm_flags = FIEMAP_FLAG_SYNC;
     fiemap->fm_start = 0;
@@ -421,6 +419,7 @@ void print_extent_report(char *dev_name, struct extent_map *extent_map) {
     for (uint32_t i = 0; i < extent_map->ext_ctr; i++) {
         if (current_zone != extent_map->extent[i].zone) {
             current_zone = extent_map->extent[i].zone;
+            extent_map->zone_ctr++;
             print_zone_info(dev_name, current_zone, extent_map->extent[i].zone_size); 
         }
 
@@ -429,9 +428,9 @@ void print_extent_report(char *dev_name, struct extent_map *extent_map) {
                     extent_map->extent[i].len), extent_map->extent[i].len);
     }
 
-    printf("\n---- SUMMARY -----\nFILE STATS: NE: %u  TES: 0x%06"PRIx64"  AES: 0x%06"PRIx64"\n", 
-            extent_map->ext_ctr, extent_map->cum_extent_size, extent_map->cum_extent_size / 
-            extent_map->ext_ctr);
+    printf("\n---- SUMMARY -----\n\nNOE: %u  NOZ: %u  TES: 0x%06"PRIx64"  AES: 0x%06"PRIx64"\n", 
+            extent_map->ext_ctr, extent_map->zone_ctr, extent_map->cum_extent_size, 
+            extent_map->cum_extent_size / extent_map->ext_ctr);
 }
 
 

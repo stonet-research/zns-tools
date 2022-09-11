@@ -1,3 +1,4 @@
+#include <stdint.h>
 #ifndef FILEMAP_H
 #include <inttypes.h>
 
@@ -12,6 +13,7 @@ struct extent {
 
 struct extent_map {
     uint32_t ext_ctr;           /* Number of extents in struct * extent */ 
+    uint32_t zone_ctr;          /* Number of zones in which extents are */
     uint64_t cum_extent_size;   /* Cumulative size of all extents in 512B sectors*/
     struct extent extent[];     /* Array of struct extent for each extent */
 };
