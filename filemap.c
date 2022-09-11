@@ -139,7 +139,7 @@ uint64_t get_zone_size(char *dev_name) {
  *
  * @dev_name: device name (e.g., nvme0n2)
  *
- * returns: 0 if Zoned, else -1
+ * returns: 1 if Zoned, else 0
  *
  * */
 int is_zoned(char *dev_name) {
@@ -157,7 +157,7 @@ int is_zoned(char *dev_name) {
         free(dev_path);
         dev_path = NULL;
 
-        return -1;
+        return 0;
     }
 
     hdr = calloc(1, sizeof(struct blk_zone_report) + nr_zones + sizeof(struct blk_zone));
@@ -170,9 +170,7 @@ int is_zoned(char *dev_name) {
         dev_path = NULL;
         hdr = NULL;
 
-        fprintf(stderr, "\033[0;31mError\033[0m: %s is not a ZNS device\n", dev_name);
-
-        return -1;
+        return 0;
     } else {
         close(dev_fd);
         free(dev_path);
@@ -180,7 +178,7 @@ int is_zoned(char *dev_name) {
         dev_path = NULL;
         hdr = NULL;
         
-        return 0;
+        return 1;
     }
 }
 
@@ -479,7 +477,7 @@ int main(int argc, char *argv[]) {
     dev_name = get_dev_name(major(stats->st_dev), minor(stats->st_dev));
     dev_name[strcspn(dev_name, "\n")] = 0;
 
-    if (is_zoned(dev_name)) {
+    if (!is_zoned(dev_name)) {
         printf("\033[0;33mWarning\033[0m: %s is registered as containing this file, however it is" 
                 " not a ZNS.\nIf it is used with F2FS as the conventional device, enter the"
                 " assocaited ZNS device name: ", dev_name);
@@ -500,7 +498,8 @@ int main(int argc, char *argv[]) {
         memcpy(zns_dev_name, dev_name, strlen(dev_name));
     }
 
-    if (is_zoned(zns_dev_name) < 0) {
+    if (!is_zoned(zns_dev_name)) {
+        fprintf(stderr, "\033[0;31mError\033[0m: %s is not a ZNS device\n", dev_name);
         return 1;
     }
 

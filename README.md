@@ -22,7 +22,6 @@ user@stosys:~/src/f2fs-bench/file-map$ dd if=/dev/urandom bs=10K count=1 >> /mnt
 1+0 records out
 10240 bytes (10 kB, 10 KiB) copied, 0.000222584 s, 46.0 MB/s
 user@stosys:~/src/f2fs-bench/file-map$ sudo ./filemap /mnt/f2fs/test
-Error: nvme0n1 is not a ZNS device
 Warning: nvme0n1 is registered as containing this file, however it is not a ZNS.
 If it is used with F2FS as the conventional device, enter the assocaited ZNS device name: nvme0n2
 
