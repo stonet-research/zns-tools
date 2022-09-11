@@ -16,10 +16,12 @@ make
 sudo ./filemap /mnt/f2fs/file_to_locate
 ```
 
-The issue of F2FS associating the file with the conventional namespace is handled by the program by asking for the ZNS device. An example execution with our setup of `nvme0n1` being the conventional namespace on a ZNS device (hence randomly writable and not zones) and `nvme0n2` being the zoned namespace on the ZNS device. In the example we write 4KiB from `/dev/urandom` to a test file on the mountpoint and filemap the test file.
+The issue of F2FS associating the file with the conventional namespace is handled by the program by asking for the ZNS device. An example execution with our setup of `nvme0n1` being the conventional namespace on a ZNS device (hence randomly writable and not zones) and `nvme0n2` being the zoned namespace on the ZNS device. In the example we write several times from `/dev/urandom` to several test files on the mountpoint and filemap the test file. Writing several times to different files aims at having F2FS write file data after each other in the same zone, such that several extents are created, which we succeed at in the example below.
 
 ```bash
-user@stosys:~/src/f2fs-bench/file-map$ dd if=/dev/urandom bs=10K count=1 >> /mnt/f2fs/test
+user@stosys:~/src/f2fs-bench/file-map$ dd if=/dev/urandom bs=500M count=1 >> /mnt/f2fs/test
+user@stosys:~/src/f2fs-bench/file-map$ dd if=/dev/urandom bs=100M count=1 >> /mnt/f2fs/test2
+user@stosys:~/src/f2fs-bench/file-map$ dd if=/dev/urandom bs=500M count=1 >> /mnt/f2fs/test
 1+0 records in
 1+0 records out
 10240 bytes (10 kB, 10 KiB) copied, 0.000222584 s, 46.0 MB/s
@@ -28,21 +30,17 @@ Warning: nvme0n1 is registered as containing this file, however it is not a ZNS.
 If it is used with F2FS as the conventional device, enter the assocaited ZNS device name: nvme0n2
 
 ---- EXTENT MAPPINGS ----
-Info: Extents are sorted by zone but have an associated Extent Number to indicate the logical order of file data.
+Info: Extents are sorted by PBAS but have an associated Extent Number to indicate the logical order of file data.
 
-#### ZONE 4 ####
-LBAS: 0xc00000  LBAE: 0xe1a800  CAP: 0x21a800  WP: 0xc00258  SIZE: 0x400000  STATE: 0x20  MASK: 0xffc00000
+#### ZONE 5 ####
+LBAS: 0x1000000  LBAE: 0x121a800  CAP: 0x21a800  WP: 0x1190000  SIZE: 0x400000  STATE: 0x20  MASK: 0xffc00000
 
-EXTENT 1:  PBAS: 0xc00010  PBAE: 0xc00028  SIZE: 0x000018
-EXTENT 2:  PBAS: 0xc00080  PBAE: 0xc000a8  SIZE: 0x000028
-EXTENT 3:  PBAS: 0xc000d0  PBAE: 0xc000f8  SIZE: 0x000028
-EXTENT 4:  PBAS: 0xc00150  PBAE: 0xc001b8  SIZE: 0x000068
-EXTENT 5:  PBAS: 0xc001c0  PBAE: 0xc001e8  SIZE: 0x000028
-EXTENT 6:  PBAS: 0xc00218  PBAE: 0xc00258  SIZE: 0x000040
+EXTID: 1     PBAS: 0x1000000   PBAE: 0x114a000   SIZE: 0x14a000
+EXTID: 2     PBAS: 0x1186000   PBAE: 0x1190000   SIZE: 0xa000
 
 ---- SUMMARY -----
 
-NOE: 6  NOZ: 1  TES: 0x000138  AES: 0x000034
+NOE: 2     NOZ: 1     TES: 0x154000    AES: 0x71555     EAES: 464213.333333
 ```
 
 Also not that if you write less than the ZNS sector size (512B in our case), the extent mapping will return the same `PBAS` and `PBAE` as it has not been written to the storage because the minimum I/O size (a sector) is not full. However, the mapping is already contained in F2FS, as it can return the physical address, and because it allocates a file system block (4KiB) regardless.

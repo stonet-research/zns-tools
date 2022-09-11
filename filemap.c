@@ -410,7 +410,6 @@ void sort_extents(struct extent_map *extent_map) {
         temp[i] = extent_map->extent[cur_lowest];
     }
 
-
     memcpy(extent_map->extent, temp, sizeof(struct extent) * extent_map->ext_ctr);
 
     free(temp);
