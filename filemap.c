@@ -335,6 +335,7 @@ struct extent_map * get_extents(int fd, char *dev_name, struct stat *stats) {
         extent_map->extent[extent_map->ext_ctr].logical_blk = fiemap->fm_extents[0].fe_logical >> SECTOR_SHIFT;
         extent_map->extent[extent_map->ext_ctr].len = fiemap->fm_extents[0].fe_length >> SECTOR_SHIFT;
         extent_map->extent[extent_map->ext_ctr].zone_size = zone_size;
+        extent_map->extent[extent_map->ext_ctr].ext_nr = extent_map->ext_ctr;
 
         extent_map->cum_extent_size += extent_map->extent[extent_map->ext_ctr].len;
 
@@ -381,6 +382,10 @@ int contains_element(uint32_t list[], uint32_t element, uint32_t size) {
 /* 
  * Sort the provided extent maps based on the zone number.
  *
+ * Note: extent_map->extent[x].ext_nr still shows the return
+ * order of the extents by ioctl, hence depicting the logical
+ * file data order.
+ *
  * @extent_map: pointer to extent map struct
  *
  *
@@ -423,7 +428,8 @@ void sort_extents(struct extent_map *extent_map) {
 void print_extent_report(char *dev_name, struct extent_map *extent_map) {
     uint32_t current_zone = 0;
 
-    printf("\n---- EXTENT MAPPINGS ----\n");
+    printf("\n---- EXTENT MAPPINGS ----\nInfo: Extents are sorted by zone but have an associated "
+            "Extent Number to indicate the logical order of file data.\n");
 
     for (uint32_t i = 0; i < extent_map->ext_ctr; i++) {
         if (current_zone != extent_map->extent[i].zone) {
@@ -433,7 +439,7 @@ void print_extent_report(char *dev_name, struct extent_map *extent_map) {
         }
 
         printf("EXTENT %d:  PBAS: 0x%06"PRIx64"  PBAE: 0x%06"PRIx64"  SIZE: 0x%06"PRIx64"\n",
-                i + 1, extent_map->extent[i].phy_blk, (extent_map->extent[i].phy_blk + 
+                extent_map->extent[i].ext_nr + 1, extent_map->extent[i].phy_blk, (extent_map->extent[i].phy_blk + 
                     extent_map->extent[i].len), extent_map->extent[i].len);
     }
 

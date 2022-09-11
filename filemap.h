@@ -5,6 +5,7 @@
 
 struct extent {
     uint32_t zone;          /* zone index (starting with 1) of the extent */
+    uint32_t ext_nr;        /* Extent number as returned in the order by ioctl */
     uint64_t logical_blk;   /* LBA starting address of the extent */
     uint64_t phy_blk;       /* PBA starting address of the extent */
     uint64_t lbas;          /* LBAS of the zone the extent is in */
