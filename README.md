@@ -16,12 +16,12 @@ make
 sudo ./filemap /mnt/f2fs/file_to_locate
 ```
 
-The issue of F2FS associating the file with the conventional namespace is handled by the program by asking for the ZNS device. An example execution with our setup of `nvme0n1` being the conventional namespace on a ZNS device (hence randomly writable and not zones) and `nvme0n2` being the zoned namespace on the ZNS device. In the example we write several times from `/dev/urandom` to several test files on the mountpoint and filemap the test file. Writing several times to different files aims at having F2FS write file data after each other in the same zone, such that several extents are created, which we succeed at in the example below.
+The issue of F2FS associating the file with the conventional namespace is handled by the program by asking for the ZNS device. An example execution with our setup of `nvme0n1` being the conventional namespace on a ZNS device (hence randomly writable and not zones) and `nvme0n2` being the zoned namespace on the ZNS device. In the example we write several times from `/dev/urandom` to several test files on the mountpoint and filemap the test file (not all writes are shown in the example below). Writing several times to different files aims at having F2FS write file data after each other in the same zone, such that several extents are created, which we succeed at in the example below.
 
 ```bash
 user@stosys:~/src/f2fs-bench/file-map$ dd if=/dev/urandom bs=500M count=1 >> /mnt/f2fs/test
 user@stosys:~/src/f2fs-bench/file-map$ dd if=/dev/urandom bs=100M count=1 >> /mnt/f2fs/test2
-user@stosys:~/src/f2fs-bench/file-map$ dd if=/dev/urandom bs=500M count=1 >> /mnt/f2fs/test
+user@stosys:~/src/f2fs-bench/file-map$ dd if=/dev/urandom bs=100M count=1 >> /mnt/f2fs/test
 1+0 records in
 1+0 records out
 10240 bytes (10 kB, 10 KiB) copied, 0.000222584 s, 46.0 MB/s
