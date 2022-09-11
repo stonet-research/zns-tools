@@ -67,7 +67,7 @@ PBAE: Physical Block Address End
 NOE: Number of Extents
 NOZ: Number of Zones (in which extents are)
 TES: Total Extent Size (in 512B sectors)
-AES: Average Extent Size (in 512B sectors)
+AES: Average Extent Size (floored value due to hex print, in 512B sectors)
 ```
 
 As mentioned, the extent number is in the logical order of the file data, and hence can be out of order in the zones if F2FS has rearranged segments during GC. We only sort by zone in order to reduce output and group zones together, but outputs still maintain the original `extent ID` that is returned by the `ioctl()` call.
