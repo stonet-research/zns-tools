@@ -380,7 +380,7 @@ int contains_element(uint32_t list[], uint32_t element, uint32_t size) {
 
 
 /* 
- * Sort the provided extent maps based on the zone number.
+ * Sort the provided extent maps based on their PBAS.
  *
  * Note: extent_map->extent[x].ext_nr still shows the return
  * order of the extents by ioctl, hence depicting the logical
@@ -399,7 +399,7 @@ void sort_extents(struct extent_map *extent_map) {
 
     for (uint32_t i = 0; i < extent_map->ext_ctr; i++) {
         for (uint32_t j = 0; j < extent_map->ext_ctr; j++) {
-            if (extent_map->extent[j].zone < extent_map->extent[cur_lowest].zone && 
+            if (extent_map->extent[j].phy_blk < extent_map->extent[cur_lowest].phy_blk && 
                     !contains_element(used_ind, j, i)) {
                 cur_lowest = j;
             } else if (contains_element(used_ind, cur_lowest, i)) {
@@ -428,7 +428,7 @@ void sort_extents(struct extent_map *extent_map) {
 void print_extent_report(char *dev_name, struct extent_map *extent_map) {
     uint32_t current_zone = 0;
 
-    printf("\n---- EXTENT MAPPINGS ----\nInfo: Extents are sorted by zone but have an associated "
+    printf("\n---- EXTENT MAPPINGS ----\nInfo: Extents are sorted by PBAS but have an associated "
             "Extent Number to indicate the logical order of file data.\n");
 
     for (uint32_t i = 0; i < extent_map->ext_ctr; i++) {
@@ -438,13 +438,13 @@ void print_extent_report(char *dev_name, struct extent_map *extent_map) {
             print_zone_info(dev_name, current_zone, extent_map->extent[i].zone_size); 
         }
 
-        printf("EXTENT %d:  PBAS: 0x%06"PRIx64"  PBAE: 0x%06"PRIx64"  SIZE: 0x%06"PRIx64"\n",
+        printf("EXTENT: %-3d  PBAS: %#-10"PRIx64"  PBAE: %#-10"PRIx64"  SIZE: %#-10"PRIx64"\n",
                 extent_map->extent[i].ext_nr + 1, extent_map->extent[i].phy_blk, (extent_map->extent[i].phy_blk + 
                     extent_map->extent[i].len), extent_map->extent[i].len);
     }
 
-    printf("\n---- SUMMARY -----\n\nNOE: %u  NOZ: %u  TES: 0x%09"PRIx64"  AES: 0x%09"PRIx64
-            "  EAES: %f\n", 
+    printf("\n---- SUMMARY -----\n\nNOE: %-3u  NOZ: %-3u  TES: %#-10"PRIx64"  AES: %#-10"PRIx64
+            "  EAES: %-10f\n", 
             extent_map->ext_ctr, extent_map->zone_ctr, extent_map->cum_extent_size, 
             extent_map->cum_extent_size / (extent_map->ext_ctr + 1),
             (double)extent_map->cum_extent_size / (double)(extent_map->ext_ctr + 1));

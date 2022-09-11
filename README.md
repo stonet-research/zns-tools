@@ -60,7 +60,7 @@ SIZE:   Size of the Zone (in 512B sectors)
 STATE:  State of a zone (e.g, FULL, EMPTY)
 MASK:   The Zone Mask that is used to calculate LBAS of LBA addresses in a zone
 
-EXTENT: Extent `X` indicates the logical order of extents being returned by ioctl()
+EXTENT: Extent ID in the order of extents returned by ioctl(), depciting logical file data ordering
 PBAS:   Physical Block Address Start
 PBAE:   Physical Block Address End 
 
