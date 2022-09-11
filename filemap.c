@@ -98,7 +98,7 @@ char * get_dev_name(int major, int minor) {
  * Get the zone size of a ZNS device. 
  * Note: Assumes zone size is equal for all zones.
  *
- * @dev_name: device name (e.g., /dev/nvme0n2)
+ * @dev_name: device name (e.g., nvme0n2)
  *
  * returns: uint64_t zone size, 0 on failure
  *
@@ -198,7 +198,7 @@ uint32_t get_zone_number(uint64_t lba, uint64_t zone_size) {
  * Print the information about a zone.
  * Note: Assumes zone size is equal for all zones.
  *
- * @dev_name: device name (e.g., /dev/nvme0n2)
+ * @dev_name: device name (e.g., nvme0n2)
  * @zone: zone number to print information about
  * @zone_size: size of each zone on the device
  *
@@ -284,7 +284,7 @@ uint64_t get_dev_size(char *dev_name) {
  * Get the file extents with FIEMAP ioctl
  *
  * @fd: file descriptor of the file
- * @dev_name: name of the device (e.g., /dev/nvme0n2)
+ * @dev_name: name of the device (e.g., nvme0n2)
  * @stats: struct stat of fd
  * @*ext_ctr: uint32_t * for the function to provide the total number of extents
  *
