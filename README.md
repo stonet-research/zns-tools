@@ -52,22 +52,25 @@ Also not that if you write less than the ZNS sector size (512B in our case), the
 The output indicates which zones contain what extents. For convenience we include zone information in the output (e.g., starting and end addresses) such that it is easier to understand if the file is occupying the entire zone or only parts. The important information is the range of the block addresses, which we depict with a start and ending address of the extent. The output contains several acronyms:
 
 ```bash
-LBAS: Logical Block Address Start (for the Zone)
-LBAE: Logical Block Address End (for the Zone, equal to LBAS + ZONE CAP)
-CAP: Zone Capacity (in 512B sectors)
-WP: Write Pointer of the Zone
-SIZE: Size of the Zone (in 512B sectors)
-STATE: State of a zone (e.g, FULL, EMPTY)
-MASK: The Zone Mask that is used to calculate LBAS of LBA addresses in a zone
+LBAS:   Logical Block Address Start (for the Zone)
+LBAE:   Logical Block Address End (for the Zone, equal to LBAS + ZONE CAP)
+CAP:    Zone Capacity (in 512B sectors)
+WP:     Write Pointer of the Zone
+SIZE:   Size of the Zone (in 512B sectors)
+STATE:  State of a zone (e.g, FULL, EMPTY)
+MASK:   The Zone Mask that is used to calculate LBAS of LBA addresses in a zone
 
-EXTENT NR: Indicates the logical order of extents being returned by ioctl()
-PBAS: Physical Block Address Start
-PBAE: Physical Block Address End 
+EXTENT: Extent `X` indicates the logical order of extents being returned by ioctl()
+PBAS:   Physical Block Address Start
+PBAE:   Physical Block Address End 
 
-NOE: Number of Extents
-NOZ: Number of Zones (in which extents are)
-TES: Total Extent Size (in 512B sectors)
-AES: Average Extent Size (floored value due to hex print, in 512B sectors)
+NOE:    Number of Extents
+NOZ:    Number of Zones (in which extents are)
+TES:    Total Extent Size (in 512B sectors)
+AES:    Average Extent Size (floored value due to hex print, in 512B sectors)
+        [Meant for easier comparison with Extent Sizes]
+EAES:   Exact Average Extent Size (double point precision value, in 512B sectors)
+        [Meant for exact calculations of average extent sizes]
 ```
 
 As mentioned, the extent number is in the logical order of the file data, and hence can be out of order in the zones if F2FS has rearranged segments during GC. We only sort by zone in order to reduce output and group zones together, but outputs still maintain the original `extent ID` that is returned by the `ioctl()` call.
