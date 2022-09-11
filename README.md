@@ -2,7 +2,7 @@
 
 This directory contains the code for the filemap utility, which locates the physical block address (PBA) ranges and zones in which files are located on ZNS devices. It lists the specific ranges of PBAs and which zones these are in. Aimed at helping understand the mapping that F2FS implements during GC, and how the lack of application knowledge causes suboptimal placement, mixing possibly hot and cold data over the zones. **Note** that all output is shown with acronyms, see the [Output Section](https://github.com/nicktehrany/f2fs-bench/tree/master/file-map#output) for explanations and the example output in the [Compiling and Running Section](https://github.com/nicktehrany/f2fs-bench/tree/master/file-map#compiling-and-running).
 
-**Important**, F2FS manages data in segments (2MiB, and the smallest GC unit), therefore when it does garbage collection, it will move segments around, possibly rearranging the order of segments (hence files are no longer truly consecutive, even if segments are all after each other). The extents being reported by the `FIEMAP` `ioctl()` call are following this scheme, in that they are reported as different extents if they are out of order. Therefore, the extents in a zone may be contiguous but are not truly consecutive, and we show these as not being contiguous, and depict them in the order that F2FS returns them (with their respective `extent ID`), which is equivalent to the logical order of the file data. See the example in Section [Example Output with Rearranged Extents](https://github.com/nicktehrany/f2fs-bench/tree/master/file-map#example-output-with-rearranged-extents).
+**Important**, F2FS manages data in segments (2MiB, and the smallest GC unit), therefore when it does garbage collection, it will move segments around, possibly rearranging the order of segments (hence files are no longer truly consecutive, even if segments are all after each other). The extents being reported by the `FIEMAP` `ioctl()` call are following this scheme, in that they are reported as different extents if they are out of order. Therefore, the extents in a zone may be contiguous but are not truly consecutive, and we show these as not being contiguous, and depict them in the order that F2FS returns them (with their respective `EXTENT ID`), which is equivalent to the logical order of the file data. See the example in Section [Example Output with Rearranged Extents](https://github.com/nicktehrany/f2fs-bench/tree/master/file-map#example-output-with-rearranged-extents).
 
 ## Compiling and Running
 
@@ -60,7 +60,7 @@ SIZE:   Size of the Zone (in 512B sectors)
 STATE:  State of a zone (e.g, FULL, EMPTY)
 MASK:   The Zone Mask that is used to calculate LBAS of LBA addresses in a zone
 
-EXTENT: Extent ID in the order of extents returned by ioctl(), depciting logical file data ordering
+EXTID:  Extent number in the order of the extents returned by ioctl(), depciting logical file data ordering
 PBAS:   Physical Block Address Start
 PBAE:   Physical Block Address End 
 
@@ -73,7 +73,7 @@ EAES:   Exact Average Extent Size (double point precision value, in 512B sectors
         [Meant for exact calculations of average extent sizes]
 ```
 
-As mentioned, the extent number is in the logical order of the file data, and hence can be out of order in the zones if F2FS has rearranged segments during GC. We only sort by zone in order to reduce output and group zones together, but outputs still maintain the original `extent ID` that is returned by the `ioctl()` call.
+As mentioned, the extent number is in the logical order of the file data, and hence can be out of order in the zones if F2FS has rearranged segments during GC. We only sort by zone in order to reduce output and group zones together, but outputs still maintain the original `EXTID` that is returned by the `ioctl()` call.
 
 **Note**, the Zone size is less relevant, as it is only used to represent the zones in the next power of 2 value after the ZONE CAP, in order to make bit shifting easier (e.g., `LBA` to `LBAS`). More relevant is the `LBAE`, showing that if it is equal to the `PBAE` of an extent, the file is mapped to the end of the zone. Hence, not necessarily fragmented if its next extent begins again in the next `LBAS` of the next zone. 
 
@@ -88,56 +88,46 @@ For more information about the `STATE` of zones, visit the [ZNS documentation](h
 
 ## Example Output with Rearranged Extents
 
-This example shows how F2FS rearranges the segments in the file, resulting in out of order extents in different zones, which hence are not truly consecutive anymore.
+This example shows how F2FS rearranges the segments in the file, resulting in out of order extents in different zones (and possibly out of order in the same zone!), which hence are not truly consecutive anymore, by being fragmented.
 
 ```bash
-user@stosys:~/src/f2fs-bench/file-map$ sudo ./filemap /mnt/f2fs/fio
+user@stosys:~/src/f2fs-bench/file-map$ sudo ./filemap /mnt/f2fs/db0/LOG
 Warning: nvme0n1 is registered as containing this file, however it is not a ZNS.
 If it is used with F2FS as the conventional device, enter the assocaited ZNS device name: nvme0n2
 
 ---- EXTENT MAPPINGS ----
-Info: Extents are sorted by zone but have an associated Extent Number to indicate the logical order of file data.
+Info: Extents are sorted by PBAS but have an associated Extent Number to indicate the logical order of file data.
 
-#### ZONE 9 ####
-LBAS: 0x2000000  LBAE: 0x221a800  CAP: 0x21a800  WP: 0x2400000  SIZE: 0x400000  STATE: 0xe0  MASK: 0xffc00000
+#### ZONE 41 ####
+LBAS: 0xa000000  LBAE: 0xa21a800  CAP: 0x21a800  WP: 0xa0ad6c8  SIZE: 0x400000  STATE: 0x20  MASK: 0xffc00000
 
-EXTENT 1:  PBAS: 0x2182800  PBAE: 0x221a800  SIZE: 0x098000
+EXTID: 20    PBAS: 0xa02bc28   PBAE: 0xa02bc50   SIZE: 0x28
+EXTID: 21    PBAS: 0xa0ad658   PBAE: 0xa0ad6b8   SIZE: 0x60
 
-#### ZONE 10 ####
-LBAS: 0x2400000  LBAE: 0x261a800  CAP: 0x21a800  WP: 0x2800000  SIZE: 0x400000  STATE: 0xe0  MASK: 0xffc00000
+#### ZONE 45 ####
+LBAS: 0xb000000  LBAE: 0xb21a800  CAP: 0x21a800  WP: 0xb058a68  SIZE: 0x400000  STATE: 0x20  MASK: 0xffc00000
 
-EXTENT 2:  PBAS: 0x2400000  PBAE: 0x261a800  SIZE: 0x21a800
-
-#### ZONE 26 ####
-LBAS: 0x6400000  LBAE: 0x661a800  CAP: 0x21a800  WP: 0x6800000  SIZE: 0x400000  STATE: 0xe0  MASK: 0xffc00000
-
-EXTENT 3:  PBAS: 0x6582800  PBAE: 0x6584800  SIZE: 0x002000
-EXTENT 4:  PBAS: 0x6586800  PBAE: 0x65de800  SIZE: 0x058000
-EXTENT 9:  PBAS: 0x65de800  PBAE: 0x660e800  SIZE: 0x030000
-EXTENT 11:  PBAS: 0x660e800  PBAE: 0x661a800  SIZE: 0x00c000
-EXTENT 15:  PBAS: 0x6442000  PBAE: 0x6582800  SIZE: 0x140800
-
-#### ZONE 27 ####
-LBAS: 0x6800000  LBAE: 0x6a1a800  CAP: 0x21a800  WP: 0x6c00000  SIZE: 0x400000  STATE: 0xe0  MASK: 0xffc00000
-
-EXTENT 5:  PBAS: 0x698c800  PBAE: 0x6996800  SIZE: 0x00a000
-EXTENT 6:  PBAS: 0x69a0800  PBAE: 0x69aa800  SIZE: 0x00a000
-EXTENT 7:  PBAS: 0x69b4800  PBAE: 0x69be800  SIZE: 0x00a000
-EXTENT 8:  PBAS: 0x69c6800  PBAE: 0x69fc800  SIZE: 0x036000
-EXTENT 10:  PBAS: 0x69fc800  PBAE: 0x6a12800  SIZE: 0x016000
-EXTENT 12:  PBAS: 0x6800000  PBAE: 0x6928800  SIZE: 0x128800
-EXTENT 13:  PBAS: 0x6a12800  PBAE: 0x6a1a800  SIZE: 0x008000
-EXTENT 16:  PBAS: 0x6928800  PBAE: 0x6982800  SIZE: 0x05a000
-
-#### ZONE 28 ####
-LBAS: 0x6c00000  LBAE: 0x6e1a800  CAP: 0x21a800  WP: 0x6d82800  SIZE: 0x400000  STATE: 0x20  MASK: 0xffc00000
-
-EXTENT 14:  PBAS: 0x6c00000  PBAE: 0x6c2c000  SIZE: 0x02c000
-EXTENT 17:  PBAS: 0x6c2c000  PBAE: 0x6d82800  SIZE: 0x156800
+EXTID: 1     PBAS: 0xb057818   PBAE: 0xb057888   SIZE: 0x70
+EXTID: 2     PBAS: 0xb057890   PBAE: 0xb0578f0   SIZE: 0x60
+EXTID: 3     PBAS: 0xb0578f8   PBAE: 0xb057930   SIZE: 0x38
+EXTID: 4     PBAS: 0xb057938   PBAE: 0xb057a80   SIZE: 0x148
+EXTID: 5     PBAS: 0xb057a98   PBAE: 0xb057c28   SIZE: 0x190
+EXTID: 6     PBAS: 0xb057c30   PBAE: 0xb057cc8   SIZE: 0x98
+EXTID: 7     PBAS: 0xb057cd0   PBAE: 0xb057d60   SIZE: 0x90
+EXTID: 8     PBAS: 0xb057d68   PBAE: 0xb057e38   SIZE: 0xd0
+EXTID: 10    PBAS: 0xb057e40   PBAE: 0xb057ee8   SIZE: 0xa8
+EXTID: 11    PBAS: 0xb057ef0   PBAE: 0xb057fe0   SIZE: 0xf0
+EXTID: 9     PBAS: 0xb057ff0   PBAE: 0xb058158   SIZE: 0x168
+EXTID: 12    PBAS: 0xb058168   PBAE: 0xb058238   SIZE: 0xd0
+EXTID: 18    PBAS: 0xb058248   PBAE: 0xb058300   SIZE: 0xb8
+EXTID: 13    PBAS: 0xb058368   PBAE: 0xb058460   SIZE: 0xf8
+EXTID: 14    PBAS: 0xb058468   PBAE: 0xb058500   SIZE: 0x98
+EXTID: 15    PBAS: 0xb058508   PBAE: 0xb0585f0   SIZE: 0xe8
+EXTID: 16    PBAS: 0xb058600   PBAE: 0xb058718   SIZE: 0x118
+EXTID: 17    PBAS: 0xb058780   PBAE: 0xb058840   SIZE: 0xc0
+EXTID: 19    PBAS: 0xb058938   PBAE: 0xb0589c8   SIZE: 0x90
 
 ---- SUMMARY -----
 
-NOE: 17  NOZ: 5  TES: 0x800000  AES: 0x078787
+NOE: 21    NOZ: 2     TES: 0xfc8       AES: 0xb7        EAES: 183.636364
 ```
-
-You will also notice that these extents almost always have a size that is a multiple of the segment size (2MiB)! This of course only happens if the data being allocated is large enough to fit in a segment.

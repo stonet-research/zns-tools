@@ -438,12 +438,12 @@ void print_extent_report(char *dev_name, struct extent_map *extent_map) {
             print_zone_info(dev_name, current_zone, extent_map->extent[i].zone_size); 
         }
 
-        printf("EXTENT: %-3d  PBAS: %#-10"PRIx64"  PBAE: %#-10"PRIx64"  SIZE: %#-10"PRIx64"\n",
+        printf("EXTID: %-4d  PBAS: %#-10"PRIx64"  PBAE: %#-10"PRIx64"  SIZE: %#-10"PRIx64"\n",
                 extent_map->extent[i].ext_nr + 1, extent_map->extent[i].phy_blk, (extent_map->extent[i].phy_blk + 
                     extent_map->extent[i].len), extent_map->extent[i].len);
     }
 
-    printf("\n---- SUMMARY -----\n\nNOE: %-3u  NOZ: %-3u  TES: %#-10"PRIx64"  AES: %#-10"PRIx64
+    printf("\n---- SUMMARY -----\n\nNOE: %-4u  NOZ: %-4u  TES: %#-10"PRIx64"  AES: %#-10"PRIx64
             "  EAES: %-10f\n", 
             extent_map->ext_ctr, extent_map->zone_ctr, extent_map->cum_extent_size, 
             extent_map->cum_extent_size / (extent_map->ext_ctr + 1),
