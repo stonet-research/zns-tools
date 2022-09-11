@@ -377,11 +377,11 @@ int contains_element(uint32_t list[], uint32_t element, uint32_t size) {
  *
  * */
 void sort_extents(struct extent_map *extent_map) {
-    struct extent_map *temp;
+    struct extent *temp;
     uint32_t cur_lowest = 0;
     uint32_t used_ind[extent_map->ext_ctr];
 
-    temp = malloc(sizeof(struct extent_map) + sizeof(struct extent) * extent_map->ext_ctr);
+    temp = calloc(sizeof(struct extent) * extent_map->ext_ctr, sizeof(char *));
 
     for (uint32_t i = 0; i < extent_map->ext_ctr; i++) {
         for (uint32_t j = 0; j < extent_map->ext_ctr; j++) {
@@ -393,10 +393,11 @@ void sort_extents(struct extent_map *extent_map) {
             }
         }
         used_ind[i] = cur_lowest;
-        temp[i] = extent_map[cur_lowest];
+        temp[i] = extent_map->extent[cur_lowest];
     }
 
-    memcpy(extent_map, temp, sizeof(struct extent_map) * extent_map->ext_ctr);
+
+    memcpy(extent_map->extent, temp, sizeof(struct extent) * extent_map->ext_ctr);
 
     free(temp);
     temp = NULL;
