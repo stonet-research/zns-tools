@@ -443,9 +443,9 @@ void print_extent_report(char *dev_name, struct extent_map *extent_map) {
                     extent_map->extent[i].len), extent_map->extent[i].len);
     }
 
-    printf("\n---- SUMMARY -----\n\nNOE: %u  NOZ: %u  TES: 0x%06"PRIx64"  AES: 0x%06"PRIx64"\n", 
+    printf("\n---- SUMMARY -----\n\nNOE: %u  NOZ: %u  TES: 0x%09"PRIx64"  AES: 0x%09"PRIx64"\n", 
             extent_map->ext_ctr, extent_map->zone_ctr, extent_map->cum_extent_size, 
-            extent_map->cum_extent_size / extent_map->ext_ctr);
+            extent_map->cum_extent_size / (extent_map->ext_ctr + 1));
 }
 
 
