@@ -288,14 +288,13 @@ uint64_t get_dev_size(char *dev_name) {
  * @fd: file descriptor of the file
  * @dev_name: name of the device (e.g., nvme0n2)
  * @stats: struct stat of fd
- * @*ext_ctr: uint32_t * for the function to provide the total number of extents
  *
  * returns: struct extent_map * to the extent maps. arg 
  *          *ext_ctr contains the number of extent maps in struct extent_map * 
  *          NULL returned on Failure
  * 
  * */
-struct extent_map * get_extents(int fd, char *dev_name, struct stat *stats, uint32_t *ext_ctr) {
+struct extent_map * get_extents(int fd, char *dev_name, struct stat *stats) {
     struct fiemap *fiemap;
     struct extent_map *extent_map;
     uint8_t last_ext = 0;
@@ -304,7 +303,9 @@ struct extent_map * get_extents(int fd, char *dev_name, struct stat *stats, uint
     zone_size = get_zone_size(dev_name);
 
     fiemap = (struct fiemap *) calloc(sizeof(struct fiemap) + sizeof(struct fiemap_extent), sizeof (char *));
-    extent_map = (struct extent_map *) calloc(sizeof(struct extent_map), sizeof(char *));
+    extent_map = (struct extent_map *) malloc(sizeof(struct extent_map) + sizeof(struct extent));
+
+    extent_map->ext_ctr = 0;
 
     fiemap->fm_flags = FIEMAP_FLAG_SYNC;
     fiemap->fm_start = 0;
@@ -312,12 +313,12 @@ struct extent_map * get_extents(int fd, char *dev_name, struct stat *stats, uint
     fiemap->fm_length = (stats->st_blocks << SECTOR_SHIFT);
 
     do {
-        if (ioctl(fd, FS_IOC_FIEMAP, fiemap) < 0) {
-            return NULL;
+        if (extent_map->ext_ctr > 0) {
+            extent_map = realloc(extent_map, sizeof(struct extent_map) + sizeof(struct extent) * (extent_map->ext_ctr + 1));
         }
 
-        if (*ext_ctr > 0) {
-            extent_map = realloc(extent_map, sizeof(struct extent_map) * (*ext_ctr + 1));
+        if (ioctl(fd, FS_IOC_FIEMAP, fiemap) < 0) {
+            return NULL;
         }
 
         if (fiemap->fm_mapped_extents == 0) {
@@ -325,19 +326,21 @@ struct extent_map * get_extents(int fd, char *dev_name, struct stat *stats, uint
             return NULL;
         }
 
-        extent_map[*ext_ctr].phy_blk = (fiemap->fm_extents[0].fe_physical - offset) >> SECTOR_SHIFT;
-        extent_map[*ext_ctr].logical_blk = fiemap->fm_extents[0].fe_logical >> SECTOR_SHIFT;
-        extent_map[*ext_ctr].len = fiemap->fm_extents[0].fe_length >> SECTOR_SHIFT;
-        extent_map[*ext_ctr].zone_size = zone_size;
+        extent_map->extent[extent_map->ext_ctr].phy_blk = (fiemap->fm_extents[0].fe_physical - offset) >> SECTOR_SHIFT;
+        extent_map->extent[extent_map->ext_ctr].logical_blk = fiemap->fm_extents[0].fe_logical >> SECTOR_SHIFT;
+        extent_map->extent[extent_map->ext_ctr].len = fiemap->fm_extents[0].fe_length >> SECTOR_SHIFT;
+        extent_map->extent[extent_map->ext_ctr].zone_size = zone_size;
+
+        extent_map->cum_extent_size += extent_map->extent[extent_map->ext_ctr].len;
 
         if (fiemap->fm_extents[0].fe_flags & FIEMAP_EXTENT_LAST) {
             last_ext = 1;
         }
 
-        extent_map[*ext_ctr].zone = get_zone_number(((fiemap->fm_extents[0].fe_physical
+        extent_map->extent[extent_map->ext_ctr].zone = get_zone_number(((fiemap->fm_extents[0].fe_physical
                         - offset) >> SECTOR_SHIFT), zone_size);
 
-        (*ext_ctr) ++;
+        extent_map->ext_ctr++;
         fiemap->fm_start = ((fiemap->fm_extents[0].fe_logical) + (fiemap->fm_extents[0].fe_length));
     } while (last_ext == 0);
 
@@ -375,14 +378,16 @@ int contains_element(uint32_t list[], uint32_t element, uint32_t size) {
  *
  *
  * */
-void sort_extents(struct extent_map *extent_map, uint32_t ext_ctr) {
-    struct extent_map *temp = malloc(sizeof(struct extent_map) * ext_ctr);
+void sort_extents(struct extent_map *extent_map) {
+    struct extent_map *temp;
     uint32_t cur_lowest = 0;
-    uint32_t used_ind[ext_ctr];
+    uint32_t used_ind[extent_map->ext_ctr];
 
-    for (uint32_t i = 0; i < ext_ctr; i++) {
-        for (uint32_t j = 0; j < ext_ctr; j++) {
-            if (extent_map[j].zone < extent_map[cur_lowest].zone && 
+    temp = malloc(sizeof(struct extent_map) + sizeof(struct extent) * extent_map->ext_ctr);
+
+    for (uint32_t i = 0; i < extent_map->ext_ctr; i++) {
+        for (uint32_t j = 0; j < extent_map->ext_ctr; j++) {
+            if (extent_map->extent[j].zone < extent_map->extent[cur_lowest].zone && 
                     !contains_element(used_ind, j, i)) {
                 cur_lowest = j;
             } else if (contains_element(used_ind, cur_lowest, i)) {
@@ -393,7 +398,7 @@ void sort_extents(struct extent_map *extent_map, uint32_t ext_ctr) {
         temp[i] = extent_map[cur_lowest];
     }
 
-    memcpy(extent_map, temp, sizeof(struct extent_map) * ext_ctr);
+    memcpy(extent_map, temp, sizeof(struct extent_map) * extent_map->ext_ctr);
 
     free(temp);
     temp = NULL;
@@ -408,20 +413,25 @@ void sort_extents(struct extent_map *extent_map, uint32_t ext_ctr) {
  * @ext_ctr: number of elements in the struct extent_map *
  * 
  * */
-void print_extent_report(char *dev_name, struct extent_map *extent_map, uint32_t ext_ctr) {
+void print_extent_report(char *dev_name, struct extent_map *extent_map) {
     uint32_t current_zone = 0;
 
-    printf("\nTotal Number of Extents: %u\n", ext_ctr);
+    printf("\n---- EXTENT MAPPINGS ----\n");
 
-    for (uint32_t i = 0; i < ext_ctr; i++) {
-        if (current_zone != extent_map[i].zone) {
-            current_zone = extent_map[i].zone;
-            print_zone_info(dev_name, current_zone, extent_map[i].zone_size); 
+    for (uint32_t i = 0; i < extent_map->ext_ctr; i++) {
+        if (current_zone != extent_map->extent[i].zone) {
+            current_zone = extent_map->extent[i].zone;
+            print_zone_info(dev_name, current_zone, extent_map->extent[i].zone_size); 
         }
 
         printf("EXTENT %d:  PBAS: 0x%06"PRIx64"  PBAE: 0x%06"PRIx64"  SIZE: 0x%06"PRIx64"\n",
-                i + 1, extent_map[i].phy_blk, (extent_map[i].phy_blk + extent_map[i].len), extent_map[i].len);
+                i + 1, extent_map->extent[i].phy_blk, (extent_map->extent[i].phy_blk + 
+                    extent_map->extent[i].len), extent_map->extent[i].len);
     }
+
+    printf("\n---- SUMMARY -----\nFILE STATS: NE: %u  TES: 0x%06"PRIx64"  AES: 0x%06"PRIx64"\n", 
+            extent_map->ext_ctr, extent_map->cum_extent_size, extent_map->cum_extent_size / 
+            extent_map->ext_ctr);
 }
 
 
@@ -432,7 +442,6 @@ int main(int argc, char *argv[]) {
     char *dev_name = NULL;
     char *zns_dev_name = NULL;
     struct extent_map *extent_map;
-    uint32_t ext_ctr = 0;
 
     if (argc != 2) {
         printf("Missing argument.\nUsage:\n\tfilemap [file path]");
@@ -486,15 +495,15 @@ int main(int argc, char *argv[]) {
     }
 
     offset = get_dev_size(dev_name);
-    extent_map = get_extents(fd, zns_dev_name, stats, &ext_ctr);
+    extent_map = (struct extent_map *) get_extents(fd, zns_dev_name, stats);
 
     if (!extent_map) {
         fprintf(stderr, "\033[0;31mError\033[0m retrieving extents for %s\n", filename);
         return 1;
     }
 
-    sort_extents(extent_map, ext_ctr);
-    print_extent_report(zns_dev_name, extent_map, ext_ctr);
+    sort_extents(extent_map);
+    print_extent_report(zns_dev_name, extent_map);
 
     free(filename);
     free(dev_name);
