@@ -299,8 +299,7 @@ uint64_t get_dev_size(char *dev_name) {
  * @dev_name: name of the device (e.g., nvme0n2)
  * @stats: struct stat of fd
  *
- * returns: struct extent_map * to the extent maps. arg 
- *          *ext_ctr contains the number of extent maps in struct extent_map * 
+ * returns: struct extent_map * to the extent maps. 
  *          NULL returned on Failure
  * 
  * */
@@ -385,7 +384,6 @@ int contains_element(uint32_t list[], uint32_t element, uint32_t size) {
  * Sort the provided extent maps based on the zone number.
  *
  * @extent_map: pointer to extent map struct
- * @ext_ctr: number of extents in the struct extent_map *
  *
  *
  * */
@@ -422,7 +420,6 @@ void sort_extents(struct extent_map *extent_map) {
  *
  * @dev_name: char * to the device name (e.g., nvme0n2)
  * @extent_map: struct extent_map * to the extent maps 
- * @ext_ctr: number of elements in the struct extent_map *
  * 
  * */
 void print_extent_report(char *dev_name, struct extent_map *extent_map) {
