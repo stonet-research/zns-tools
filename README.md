@@ -2,6 +2,8 @@
 
 This directory contains the code for the filemap utility, which locates the physical block address (PBA) ranges and zones in which files are located on ZNS devices. It lists the specific ranges of PBAs and which zones these are in. Aimed at helping understand the mapping that F2FS implements during GC, and how the lack of application knowledge causes suboptimal placement, mixing possibly hot and cold data over the zones. **Note** that all output is shown with acronyms, see the [Output Section](https://github.com/nicktehrany/f2fs-bench/tree/master/file-map#output) for explanations and the example output in the [Compiling and Running Section](https://github.com/nicktehrany/f2fs-bench/tree/master/file-map#compiling-and-running).
 
+**Important**, F2FS manages data in segments (2MiB, and the smallest GC unit), therefore when it does garbage collection, it will move segments around, possibly rearranging the order of segments (hence files are no longer truly consecutive, even if segments are all after each other). The extents being reported by the `FIEMAP` `ioctl` call are following this scheme, in that they are reported as different extents if they are out of order. Therefore, the extents in a zone may be contiguous but are not truly consecutive, and we show these as not being contiguous, and depict them in the order that F2FS returns them, which is equivalent to the logical order of the file data. You will also notice that these extents always have a size that is a multiple of the segment size (2MiB)! 
+
 ## Compiling and Running
 
 A Makefile is included to compile the code base. It relies on `FIEMAP`, which the file system and kernel must support (F2FS has support for it). We use this tool to evaluate mapping of files on ZNS with F2FS.
