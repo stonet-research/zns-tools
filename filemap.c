@@ -48,6 +48,10 @@ struct stat * get_stats(int fd, char *filename) {
     if (fstat(fd, file_stat) < 0) {
         printf("Failed stat on file %s\n", filename);
         close(fd);
+
+        free(file_stat);
+        file_stat = NULL;
+
         return NULL;
     }
 
@@ -84,6 +88,9 @@ char * get_dev_name(int major, int minor) {
     while (fgets(read_buf, sizeof(read_buf), dev_info) != NULL) {
         if (strncmp(read_buf, "DEVNAME=", 8) == 0) {
             strncpy(dev_name, read_buf + 8, strlen(read_buf) - 8);
+
+            fclose(dev_info);
+
             return dev_name;
         }
     }
@@ -147,6 +154,9 @@ int is_zoned(char *dev_name) {
     int dev_fd = open(dev_path, O_RDONLY);
     if (dev_fd < 0) {
         fprintf(stderr, "\033[0;31mError\033[0m: Failed opening fd on %s. Try running as root.\n", dev_path);
+        free(dev_path);
+        dev_path = NULL;
+
         return -1;
     }
 
@@ -233,10 +243,10 @@ int print_zone_info(char *dev_name, uint32_t zone, uint64_t zone_size) {
 
     zone_mask = ~(zone_size - 1);
     printf("\n#### ZONE %d ####\n", zone);
-    printf("LBAS: 0x%06llx  LBAE: 0x%06llx  ZONE CAP: 0x%06llx  WP: 0x%06llx  "
-            "ZONE SIZE: 0x%06llx  ZONE MASK: 0x%06"PRIx32"\n\n", hdr->zones[0].start,
+    printf("LBAS: 0x%06llx  LBAE: 0x%06llx  CAP: 0x%06llx  WP: 0x%06llx  SIZE: "
+            "0x%06llx  STATE: %#-4x  MASK: 0x%06"PRIx32"\n\n", hdr->zones[0].start,
             hdr->zones[0].start + hdr->zones[0].capacity, hdr->zones[0].capacity, 
-            hdr->zones[0].wp, hdr->zones[0].len, zone_mask);
+            hdr->zones[0].wp, hdr->zones[0].len, hdr->zones[0].cond << 4, zone_mask);
 
     close(dev_fd);
 
@@ -302,7 +312,7 @@ struct extent_map * get_extents(int fd, char *dev_name, struct stat *stats) {
 
     zone_size = get_zone_size(dev_name);
 
-    fiemap = (struct fiemap *) calloc(sizeof(struct fiemap) + sizeof(struct fiemap_extent), sizeof (char *));
+    fiemap = (struct fiemap *) calloc(sizeof(struct fiemap), sizeof (char *));
     extent_map = (struct extent_map *) calloc(sizeof(struct extent_map) + sizeof(struct extent), sizeof(char *));
 
     fiemap->fm_flags = FIEMAP_FLAG_SYNC;
@@ -341,6 +351,9 @@ struct extent_map * get_extents(int fd, char *dev_name, struct stat *stats) {
         extent_map->ext_ctr++;
         fiemap->fm_start = ((fiemap->fm_extents[0].fe_logical) + (fiemap->fm_extents[0].fe_length));
     } while (last_ext == 0);
+
+    free(fiemap);
+    fiemap = NULL;
 
     return extent_map;
 }
@@ -504,6 +517,8 @@ int main(int argc, char *argv[]) {
 
     sort_extents(extent_map);
     print_extent_report(zns_dev_name, extent_map);
+
+    close(fd);
 
     free(filename);
     free(dev_name);

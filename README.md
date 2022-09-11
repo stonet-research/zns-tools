@@ -29,7 +29,7 @@ If it is used with F2FS as the conventional device, enter the assocaited ZNS dev
 ---- EXTENT MAPPINGS ----
 
 #### ZONE 4 ####
-LBAS: 0xc00000  LBAE: 0xe1a800  ZONE CAP: 0x21a800  WP: 0xc00258  ZONE SIZE: 0x400000  ZONE MASK: 0xffc00000
+LBAS: 0xc00000  LBAE: 0xe1a800  CAP: 0x21a800  WP: 0xc00258  SIZE: 0x400000  STATE: 0x20  MASK: 0xffc00000
 
 EXTENT 1:  PBAS: 0xc00010  PBAE: 0xc00028  SIZE: 0x000018
 EXTENT 2:  PBAS: 0xc00080  PBAE: 0xc000a8  SIZE: 0x000028
@@ -52,10 +52,11 @@ The output indicates which zones contain what extents. For convenience we includ
 ```bash
 LBAS: Logical Block Address Start (for the Zone)
 LBAE: Logical Block Address End (for the Zone, equal to LBAS + ZONE CAP)
-ZONE CAP: Zone Capacity (in 512B sectors)
+CAP: Zone Capacity (in 512B sectors)
 WP: Write Pointer of the Zone
-ZONE SIZE: Size of the Zone (in 512B sectors)
-ZONE MASK: The Zone Mask that is used to calculate LBAS of LBA addresses in a zone
+SIZE: Size of the Zone (in 512B sectors)
+STATE: State of a zone (e.g, FULL, EMPTY)
+MASK: The Zone Mask that is used to calculate LBAS of LBA addresses in a zone
 
 PBAS: Physical Block Address Start
 PBAE: Physical Block Address End 
@@ -66,7 +67,11 @@ TES: Total Extent Size (in 512B sectors)
 AES: Average Extent Size (in 512B sectors)
 ```
 
-Note, the Zone size is less relevant, as it is only used to represent the zones in the next power of 2 value after the ZONE CAP, in order to make bit shifting easier (e.g., `LBA` to `LBAS`). More relevant is the `LBAE`, showing that if it is equal to the `PBAE` of an extent, the file is mapped to the end of the zone. Hence, not necessarily fragmented if its next extent begins again in the next `LBAS` of the next zone. 
+**Note**, the Zone size is less relevant, as it is only used to represent the zones in the next power of 2 value after the ZONE CAP, in order to make bit shifting easier (e.g., `LBA` to `LBAS`). More relevant is the `LBAE`, showing that if it is equal to the `PBAE` of an extent, the file is mapped to the end of the zone. Hence, not necessarily fragmented if its next extent begins again in the next `LBAS` of the next zone. 
+
+**Also Note**, the `WP` of a full zone is equal to the `LBAS + ZONE CAP` (hence also equal to the `LBAS` of the next zone).
+
+For more information about the `STATE` of zones, visit the [ZNS documentation](https://zonedstorage.io/docs/linux/zbd-api#zone-condition).
 
 ## Known Issues and Limitations
 
