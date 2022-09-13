@@ -15,21 +15,6 @@
 #define SECTOR_SHIFT 9
 
 /* 
- * F2FS treats all devices as one address space, therefore if we use
- * a conventional device and a ZNS, extent maps contain the offset within
- * this total address space. For instance, with a 4GB conventional device
- * and a ZNS the offsets in the ZNS address space are +4GB. Therefore, we
- * need to find the size of the conventional space and subtract it from
- * the extent mapping offsets.
- *
- * TODO: This would only work with a single ZNS after a conventional device!
- *       For multiple it would require maintaining sizes of each ZNS, and 
- *       their order in mkfs.f2fs call (to know the F2FS address space in 
- *       correct order and calculate valid zone address ranges).
- * */
-uint64_t offset = 0;
-
-/* 
  * Calculate the zone number (starting with zone 1) of an LBA
  *
  * @lba: LBA to calculate zone number of
@@ -158,7 +143,7 @@ struct extent_map * get_extents(struct control *ctrl) {
             return NULL;
         }
 
-        extent_map->extent[extent_map->ext_ctr].phy_blk = (fiemap->fm_extents[0].fe_physical - offset) >> SECTOR_SHIFT;
+        extent_map->extent[extent_map->ext_ctr].phy_blk = (fiemap->fm_extents[0].fe_physical - ctrl->offset) >> SECTOR_SHIFT;
         extent_map->extent[extent_map->ext_ctr].logical_blk = fiemap->fm_extents[0].fe_logical >> SECTOR_SHIFT;
         extent_map->extent[extent_map->ext_ctr].len = fiemap->fm_extents[0].fe_length >> SECTOR_SHIFT;
         extent_map->extent[extent_map->ext_ctr].zone_size = ctrl->znsdev->zone_size;
@@ -171,7 +156,7 @@ struct extent_map * get_extents(struct control *ctrl) {
         }
 
         extent_map->extent[extent_map->ext_ctr].zone = get_zone_number(((fiemap->fm_extents[0].fe_physical
-                        - offset) >> SECTOR_SHIFT), extent_map->extent[extent_map->ext_ctr].zone_size);
+                        - ctrl->offset) >> SECTOR_SHIFT), extent_map->extent[extent_map->ext_ctr].zone_size);
 
         get_zone_info(ctrl->znsdev->dev_path, &extent_map->extent[extent_map->ext_ctr]);
 
