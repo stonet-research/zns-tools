@@ -240,7 +240,7 @@ int print_zone_info(char *dev_name, uint32_t zone, uint64_t zone_size) {
     }
 
     zone_mask = ~(zone_size - 1);
-    printf("\n#### ZONE %d ####\n", zone);
+    printf("\n===== ZONE %d =====\n", zone);
     printf("LBAS: 0x%06llx  LBAE: 0x%06llx  CAP: 0x%06llx  WP: 0x%06llx  SIZE: "
             "0x%06llx  STATE: %#-4x  MASK: 0x%06"PRIx32"\n\n", hdr->zones[0].start,
             hdr->zones[0].start + hdr->zones[0].capacity, hdr->zones[0].capacity, 
