@@ -19,7 +19,7 @@ struct control {
     struct bdev *znsdev;
     uint8_t multi_dev;
     uint8_t show_holes;
-    uint8_t verbose;
+    uint8_t info;
     uint64_t offset;        /* offset for the ZNS - only in multi_dev setup */
 };
 

@@ -1,4 +1,3 @@
-#include <stdlib.h>
 #include "control.h"
 #include <stdio.h>
 #include <unistd.h>
@@ -8,7 +7,6 @@
 #include <libgen.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
-#include <sys/klog.h>
 #include <sys/sysmacros.h>
 #include <linux/fs.h>
 #include <linux/blkzoned.h>
@@ -157,19 +155,53 @@ static uint64_t get_zone_size(char *dev_path) {
     return zone_size;
 }
 
+void show_help() {
+    printf("Possible flags are:\n");
+    printf("-f\tInput file to map [Required]\n");
+    printf("-h\tShow this help\n");
+    printf("-i\tShow info prints\n");
+    printf("-s\tShow file holes\n");
+    exit(0);
+}
+
+static int parse_opts(struct control *ctrl, int argc, char **argv) {
+    int c;
+
+    while ((c = getopt (argc, argv, "f:his")) != -1) {
+        switch (c)
+        {
+            case 'h':
+                show_help();
+                break;
+            case 'f':
+                ctrl->filename = optarg;
+                break;
+            case 's':
+                ctrl->show_holes = 1;
+                break;
+            case 'i':
+                ctrl->info = 1;
+                break;
+            default:
+                show_help();
+                abort();
+        }
+    }
+
+    return 1;
+}
 
 struct control * init_ctrl(int argc, char **argv) {
     struct control *ctrl;
 
     ctrl = (struct control *) calloc(sizeof(struct control), sizeof(char *));
 
-    if (argc != 2) {
-        printf("Missing argument.\nUsage:\n\tfilemap [file path]");
+    if (!parse_opts(ctrl, argc, argv)) {
+        return NULL;
+    } else if (!ctrl->filename) {
+        fprintf(stderr, "\033[0;31mError\033[0m missing filename argument -f\n");
         return NULL;
     }
-
-    ctrl->filename = malloc(strlen(argv[1]) + 1);
-    strcpy(ctrl->filename, argv[1]);
 
     ctrl->fd = open(ctrl->filename, O_RDONLY);
     fsync(ctrl->fd);

@@ -4,10 +4,7 @@
 #include <fcntl.h>
 #include <stdlib.h>
 #include <string.h>
-#include <libgen.h>
-#include <sys/stat.h>
 #include <sys/ioctl.h>
-#include <sys/klog.h>
 #include <sys/sysmacros.h>
 #include <linux/fs.h>
 #include <linux/blkzoned.h>
@@ -52,21 +49,11 @@ uint32_t get_zone_number(uint64_t lba, uint64_t zone_size) {
 }
 
 
-/*
- * Print the information about a zone.
- * Note: Assumes zone size is equal for all zones.
- *
- * @dev_name: device name (e.g., nvme0n2)
- * @zone: zone number to print information about
- * @zone_size: size of each zone on the device
- *
- * returns: 0 on success, -1 on failure
- *
- * */
-int print_zone_info(struct bdev* znsdev, uint32_t zone) {
+uint64_t print_zone_info(struct bdev* znsdev, uint32_t zone) {
     unsigned long long start_sector = 0;
     struct blk_zone_report *hdr = NULL;
     uint32_t zone_mask;
+    uint64_t zone_wp = 0;
 
     start_sector = znsdev->zone_size * zone - znsdev->zone_size;
 
@@ -85,7 +72,8 @@ int print_zone_info(struct bdev* znsdev, uint32_t zone) {
     }
 
     zone_mask = ~(znsdev->zone_size - 1);
-    printf("\n===== ZONE %d =====\n", zone);
+    zone_wp = hdr->zones[0].wp;
+    printf("\n**** ZONE %d ****\n", zone);
     printf("LBAS: 0x%06llx  LBAE: 0x%06llx  CAP: 0x%06llx  WP: 0x%06llx  SIZE: "
             "0x%06llx  STATE: %#-4x  MASK: 0x%06"PRIx32"\n\n", hdr->zones[0].start,
             hdr->zones[0].start + hdr->zones[0].capacity, hdr->zones[0].capacity, 
@@ -96,7 +84,7 @@ int print_zone_info(struct bdev* znsdev, uint32_t zone) {
     free(hdr);
     hdr = NULL;
 
-    return 0;
+    return zone_wp;
 }
 
 
@@ -224,6 +212,35 @@ void sort_extents(struct extent_map *extent_map) {
 }
 
 
+static void show_info(int show_hole_info) {
+    printf("LBAS:   Logical Block Address Start (for the Zone)\n");
+    printf("LBAE:   Logical Block Address End (for the Zone, equal to LBAS + ZONE CAP)\n");
+    printf("CAP:    Zone Capacity (in 512B sectors)\n");
+    printf("WP:     Write Pointer of the Zone\n");
+    printf("SIZE:   Size of the Zone (in 512B sectors)\n");
+    printf("STATE:  State of a zone (e.g, FULL, EMPTY)\n");
+    printf("MASK:   The Zone Mask that is used to calculate LBAS of LBA addresses in a zone\n");
+
+    printf("EXTID:  Extent number in the order of the extents returned by ioctl(), depciting logical file data ordering\n");
+    printf("PBAS:   Physical Block Address Start\n");
+    printf("PBAE:   Physical Block Address End\n");
+
+    printf("NOE:    Number of Extent\n");
+    printf("TES:    Total Extent Size (in 512B sectors\n");
+    printf("AES:    Average Extent Size (floored value due to hex print, in 512B sectors)\n"
+            "\t[Meant for easier comparison with Extent Sizes\n");
+    printf("EAES:   Exact Average Extent Size (double point precision value, in 512B sectors\n"
+            "\t[Meant for exact calculations of average extent sizes\n");
+    printf("NOZ:    Number of Zones (in which extents are\n");
+
+    if(show_hole_info) {
+        printf("NOH:    Number of Holes\n");
+        printf("THS:    Total Hole Size (in 512B sectors\n");
+        printf("AHS:    Average Hole Size (floored value due to hex print, in 512B sectors)\n");
+        printf("EAHS:   Exact Average Hole Size (double point precision value, in 512B sectors\n");
+    }
+}
+
 /* 
  * Print the report summary of extent_map. 
  *
@@ -233,27 +250,66 @@ void sort_extents(struct extent_map *extent_map) {
  * */
 void print_extent_report(struct control *ctrl, struct extent_map *extent_map) {
     uint32_t current_zone = 0;
+    uint32_t hole_ctr = 0;
+    uint64_t hole_cum_size = 0;
+    uint64_t hole_size = 0; 
 
-    printf("\n---- EXTENT MAPPINGS ----\nInfo: Extents are sorted by PBAS but have an associated "
-            "Extent Number to indicate the logical order of file data.\n");
+    if (ctrl->info) {
+        printf("\n====================================================================\n");
+        printf("\t\t\tACRONYM INFO\n");
+        printf("====================================================================\n");
+        printf("\nInfo: Extents are sorted by PBAS but have an associated "
+                "Extent Number to indicate the logical order of file data.\n\n");
+        show_info(ctrl->show_holes);
+    }
+
+    printf("\n====================================================================\n");
+    printf("\t\t\tEXTENT MAPPINGS\n");
+    printf("====================================================================\n");
 
     for (uint32_t i = 0; i < extent_map->ext_ctr; i++) {
         if (current_zone != extent_map->extent[i].zone) {
             current_zone = extent_map->extent[i].zone;
             extent_map->zone_ctr++;
-            print_zone_info(ctrl->znsdev, current_zone); 
+            extent_map->extent[i].zone_wp = print_zone_info(ctrl->znsdev, current_zone); 
+        }
+
+        // Track holes in between extents in the same zone
+        if (ctrl->show_holes && i > 0 && (extent_map->extent[i - 1].phy_blk + extent_map->extent[i - 1].len 
+                    != extent_map->extent[i].phy_blk)) {
+
+            if (extent_map->extent[i - 1].zone == extent_map->extent[i].zone) {
+                // Hole in the same zone between segments
+
+                hole_size = extent_map->extent[i].phy_blk - (extent_map->extent[i - 1].phy_blk + 
+                        extent_map->extent[i - 1].len);
+                hole_cum_size += hole_size;
+                hole_ctr++;
+
+                printf("--- HOLE:    PBAS: %#-10"PRIx64"  PBAE: %#-10"PRIx64"  SIZE: %#-10"PRIx64"\n",
+                        extent_map->extent[i - 1].phy_blk + extent_map->extent[i - 1].len, 
+                        extent_map->extent[i].phy_blk, hole_size);
+            } 
         }
 
         printf("EXTID: %-4d  PBAS: %#-10"PRIx64"  PBAE: %#-10"PRIx64"  SIZE: %#-10"PRIx64"\n",
                 extent_map->extent[i].ext_nr + 1, extent_map->extent[i].phy_blk, (extent_map->extent[i].phy_blk + 
                     extent_map->extent[i].len), extent_map->extent[i].len);
+
     }
 
-    printf("\n---- SUMMARY -----\n\nNOE: %-4u  NOZ: %-4u  TES: %#-10"PRIx64"  AES: %#-10"PRIx64
-            "  EAES: %-10f\n", 
-            extent_map->ext_ctr, extent_map->zone_ctr, extent_map->cum_extent_size, 
+    printf("\n====================================================================\n");
+    printf("\t\t\tSTATS SUMMARY\n");
+    printf("====================================================================\n");
+    printf("\nNOE: %-4u  TES: %#-10"PRIx64"  AES: %#-10"PRIx64"  EAES: %-10f"
+            "  NOZ: %-4u\n", extent_map->ext_ctr, extent_map->cum_extent_size, 
             extent_map->cum_extent_size / (extent_map->ext_ctr + 1),
-            (double)extent_map->cum_extent_size / (double)(extent_map->ext_ctr + 1));
+            (double)extent_map->cum_extent_size / (double)(extent_map->ext_ctr + 1), extent_map->zone_ctr);
+
+    if (ctrl->show_holes) {
+        printf("NOH: %-4u  THS: %#-10"PRIx64"  AHS: %#-10"PRIx64"  EAHS: %-10f\n", 
+                hole_ctr, hole_cum_size, hole_cum_size / hole_ctr, (double)hole_cum_size / (double)hole_ctr);
+    }
 }
 
 
@@ -279,7 +335,6 @@ int main(int argc, char *argv[]) {
 
     close(ctrl->fd);
 
-    free(ctrl->filename);
     free(ctrl->bdev->dev_name);
     free(ctrl->bdev);
     if (ctrl->multi_dev) {

@@ -12,6 +12,7 @@ struct extent {
     uint64_t lbas;          /* LBAS of the zone the extent is in */
     uint64_t len;           /* Length of the extent in 512B sectors */
     uint64_t zone_size;     /* Size of the zone the extent is in */
+    uint64_t zone_wp;       /* Write Pointer of this current zone */
 };
 
 struct extent_map {
