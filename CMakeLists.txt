@@ -17,6 +17,7 @@ message("Compiling with ${CMAKE_CXX_COMPILER_ID}: ${CMAKE_CXX_COMPILER}")
 
 add_executable(${PROJECT_NAME}
     ${PROJECT_SOURCE_DIR}/filemap.c
+    ${PROJECT_SOURCE_DIR}/control.c
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE src)

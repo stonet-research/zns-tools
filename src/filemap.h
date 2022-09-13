@@ -1,4 +1,5 @@
 #ifndef FILEMAP_H
+#define FILEMAP_H
 
 #include <stdint.h>
 #include <inttypes.h>
