@@ -49,7 +49,7 @@ uint32_t get_zone_number(uint64_t lba, uint64_t zone_size) {
 }
 
 
-uint64_t print_zone_info(struct bdev* znsdev, uint32_t zone) {
+int print_zone_info(struct extent *extent, struct bdev* znsdev, uint32_t zone) {
     unsigned long long start_sector = 0;
     struct blk_zone_report *hdr = NULL;
     uint32_t zone_mask;
@@ -72,7 +72,8 @@ uint64_t print_zone_info(struct bdev* znsdev, uint32_t zone) {
     }
 
     zone_mask = ~(znsdev->zone_size - 1);
-    zone_wp = hdr->zones[0].wp;
+    extent->zone_wp = hdr->zones[0].wp;
+    extent->zone_lbae = hdr->zones[0].start + hdr->zones[0].capacity;
     printf("\n**** ZONE %d ****\n", zone);
     printf("LBAS: 0x%06llx  LBAE: 0x%06llx  CAP: 0x%06llx  WP: 0x%06llx  SIZE: "
             "0x%06llx  STATE: %#-4x  MASK: 0x%06"PRIx32"\n\n", hdr->zones[0].start,
@@ -84,9 +85,40 @@ uint64_t print_zone_info(struct bdev* znsdev, uint32_t zone) {
     free(hdr);
     hdr = NULL;
 
-    return zone_wp;
+    return 1;
 }
 
+
+static int get_zone_info(char *dev_path, struct extent* extent) {
+    struct blk_zone_report *hdr = NULL;
+    uint64_t start_sector;
+
+    start_sector = extent->zone_size * extent->zone - extent->zone_size;
+
+    int fd = open(dev_path, O_RDONLY);
+    if (fd < 0) {
+        return -1;
+    }
+
+    hdr = calloc(1, sizeof(struct blk_zone_report) + sizeof(struct blk_zone));
+    hdr->sector = start_sector;
+    hdr->nr_zones = 1;
+
+    if (ioctl(fd, BLKREPORTZONE, hdr) < 0) {
+        fprintf(stderr, "\033[0;31mError\033[0m getting Zone Info\n");
+        return -1;
+    }
+
+    extent->zone_wp = hdr->zones[0].wp;
+    extent->zone_lbae = hdr->zones[0].start + hdr->zones[0].capacity;
+
+    close(fd);
+
+    free(hdr);
+    hdr = NULL;
+
+    return 1;
+}
 
 /* 
  * Get the file extents with FIEMAP ioctl
@@ -140,6 +172,8 @@ struct extent_map * get_extents(struct control *ctrl) {
 
         extent_map->extent[extent_map->ext_ctr].zone = get_zone_number(((fiemap->fm_extents[0].fe_physical
                         - offset) >> SECTOR_SHIFT), extent_map->extent[extent_map->ext_ctr].zone_size);
+
+        get_zone_info(ctrl->znsdev->dev_path, &extent_map->extent[extent_map->ext_ctr]);
 
         extent_map->ext_ctr++;
         fiemap->fm_start = ((fiemap->fm_extents[0].fe_logical) + (fiemap->fm_extents[0].fe_length));
@@ -271,7 +305,8 @@ void print_extent_report(struct control *ctrl, struct extent_map *extent_map) {
         if (current_zone != extent_map->extent[i].zone) {
             current_zone = extent_map->extent[i].zone;
             extent_map->zone_ctr++;
-            extent_map->extent[i].zone_wp = print_zone_info(ctrl->znsdev, current_zone); 
+            print_zone_info(&extent_map->extent[i],
+                    ctrl->znsdev, current_zone); 
         }
 
         // Track holes in between extents in the same zone
@@ -290,12 +325,40 @@ void print_extent_report(struct control *ctrl, struct extent_map *extent_map) {
                         extent_map->extent[i - 1].phy_blk + extent_map->extent[i - 1].len, 
                         extent_map->extent[i].phy_blk, hole_size);
             } 
+        } else if (ctrl->show_holes && i > 0 && i < extent_map->ext_ctr && extent_map->extent[i].lbas 
+                != extent_map->extent[i].phy_blk && extent_map->extent[i - 1].zone != 
+                extent_map->extent[i].zone) {
+            // Hole between LBAS of zone and PBAS of the extent
+
+            hole_size = extent_map->extent[i].phy_blk - extent_map->extent[i].lbas; 
+            hole_cum_size += hole_size;
+            hole_ctr++;
+
+            printf("--- HOLE:    PBAS: %#-10"PRIx64"  PBAE: %#-10"PRIx64"  SIZE: %#-10"PRIx64"\n",
+                    extent_map->extent[i].lbas, extent_map->extent[i].phy_blk, hole_size);
         }
 
         printf("EXTID: %-4d  PBAS: %#-10"PRIx64"  PBAE: %#-10"PRIx64"  SIZE: %#-10"PRIx64"\n",
                 extent_map->extent[i].ext_nr + 1, extent_map->extent[i].phy_blk, (extent_map->extent[i].phy_blk + 
                     extent_map->extent[i].len), extent_map->extent[i].len);
 
+        if (ctrl->show_holes && i > 0 && i < extent_map->ext_ctr && extent_map->extent[i].phy_blk +
+                extent_map->extent[i].len != extent_map->extent[i].zone_lbae && 
+                extent_map->extent[i].zone != extent_map->extent[i + 1].zone &&
+                extent_map->extent[i].zone_wp >= extent_map->extent[i].zone_lbae) {
+            // Hole between PBAE of the extent and the zone LBAE (since WP can be next zone LBAS if full)
+            // e.g. extent ends before the write pointer of its zone but the next 
+            // extent is in a different zone (hence hole between PBAE and WP)
+
+            hole_size = extent_map->extent[i].zone_lbae - (extent_map->extent[i].phy_blk + 
+                    extent_map->extent[i].len); 
+            hole_cum_size += hole_size;
+            hole_ctr++;
+
+            printf("--- HOLE:    PBAS: %#-10"PRIx64"  PBAE: %#-10"PRIx64"  SIZE: %#-10"PRIx64"\n",
+                    extent_map->extent[i].phy_blk + extent_map->extent[i].len, extent_map->extent[i].zone_lbae,
+                    hole_size);
+        }
     }
 
     printf("\n====================================================================\n");
