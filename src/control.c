@@ -1,17 +1,17 @@
 #include "control.h"
-#include <stdio.h>
-#include <unistd.h>
 #include <fcntl.h>
+#include <libgen.h>
+#include <linux/blkzoned.h>
+#include <linux/fs.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <libgen.h>
-#include <sys/stat.h>
 #include <sys/ioctl.h>
+#include <sys/stat.h>
 #include <sys/sysmacros.h>
-#include <linux/fs.h>
-#include <linux/blkzoned.h>
+#include <unistd.h>
 
-/* 
+/*
  * Check if a device a zoned device.
  *
  * @dev_name: device name (e.g., nvme0n2)
@@ -27,11 +27,15 @@ static uint8_t is_zoned(char *dev_path) {
 
     fd = open(dev_path, O_RDONLY);
     if (fd < 0) {
-        fprintf(stderr, "\033[0;31mError\033[0m: Failed opening fd on %s. Try running as root.\n", dev_path);
+        fprintf(stderr,
+                "\033[0;31mError\033[0m: Failed opening fd on %s. Try running "
+                "as root.\n",
+                dev_path);
         return 0;
     }
 
-    hdr = calloc(1, sizeof(struct blk_zone_report) + nr_zones + sizeof(struct blk_zone));
+    hdr = calloc(1, sizeof(struct blk_zone_report) + nr_zones +
+                        sizeof(struct blk_zone));
     hdr->sector = start_sector;
     hdr->nr_zones = nr_zones;
 
@@ -44,13 +48,12 @@ static uint8_t is_zoned(char *dev_path) {
         close(fd);
         free(hdr);
         hdr = NULL;
-        
+
         return 1;
     }
 }
 
-
-/* 
+/*
  * Get the device name of block device from its major:minor ID.
  *
  * *st: struct stat * from fstat() call
@@ -62,16 +65,20 @@ static uint8_t is_zoned(char *dev_path) {
 static int init_dev(struct bdev *bdev, struct stat *st) {
     int fd;
 
-    sprintf(bdev->dev_path, "/dev/block/%d:%d", major(st->st_dev), minor(st->st_dev));
+    sprintf(bdev->dev_path, "/dev/block/%d:%d", major(st->st_dev),
+            minor(st->st_dev));
 
     fd = open(bdev->dev_path, O_RDONLY);
     if (fd < 0) {
-        fprintf(stderr, "\033[0;31mError\033[0m opening device fd for %s\n", bdev->dev_path);
+        fprintf(stderr, "\033[0;31mError\033[0m opening device fd for %s\n",
+                bdev->dev_path);
         return 0;
     }
 
-    if (readlink(bdev->dev_path, bdev->link_name, sizeof(bdev->link_name)) < 0) {
-        fprintf(stderr, "\033[0;31mError\033[0m opening device fd for %s\n", bdev->dev_path);
+    if (readlink(bdev->dev_path, bdev->link_name, sizeof(bdev->link_name)) <
+        0) {
+        fprintf(stderr, "\033[0;31mError\033[0m opening device fd for %s\n",
+                bdev->dev_path);
         return 0;
     }
 
@@ -85,7 +92,6 @@ static int init_dev(struct bdev *bdev, struct stat *st) {
     return 1;
 }
 
-
 static int init_znsdev(struct bdev *znsdev) {
     int fd;
 
@@ -93,7 +99,8 @@ static int init_znsdev(struct bdev *znsdev) {
 
     fd = open(znsdev->dev_path, O_RDONLY);
     if (fd < 0) {
-        fprintf(stderr, "\033[0;31mError\033[0m opening device fd for %s\n", znsdev->dev_path);
+        fprintf(stderr, "\033[0;31mError\033[0m opening device fd for %s\n",
+                znsdev->dev_path);
         return 0;
     }
 
@@ -103,8 +110,7 @@ static int init_znsdev(struct bdev *znsdev) {
     return 1;
 }
 
-
-/* 
+/*
  * Get the size of a device in bytes.
  *
  * @dev_name: device name (e.g., nvme0n2)
@@ -128,9 +134,8 @@ uint64_t get_dev_size(char *dev_path) {
     return dev_size;
 }
 
-
 /*
- * Get the zone size of a ZNS device. 
+ * Get the zone size of a ZNS device.
  * Note: Assumes zone size is equal for all zones.
  *
  * @dev_name: device name (e.g., nvme0n2)
@@ -167,39 +172,39 @@ void show_help() {
 static int parse_opts(struct control *ctrl, int argc, char **argv) {
     int c;
 
-    while ((c = getopt (argc, argv, "f:his")) != -1) {
-        switch (c)
-        {
-            case 'h':
-                show_help();
-                break;
-            case 'f':
-                ctrl->filename = optarg;
-                break;
-            case 's':
-                ctrl->show_holes = 1;
-                break;
-            case 'i':
-                ctrl->info = 1;
-                break;
-            default:
-                show_help();
-                abort();
+    while ((c = getopt(argc, argv, "f:his")) != -1) {
+        switch (c) {
+        case 'h':
+            show_help();
+            break;
+        case 'f':
+            ctrl->filename = optarg;
+            break;
+        case 's':
+            ctrl->show_holes = 1;
+            break;
+        case 'i':
+            ctrl->info = 1;
+            break;
+        default:
+            show_help();
+            abort();
         }
     }
 
     return 1;
 }
 
-struct control * init_ctrl(int argc, char **argv) {
+struct control *init_ctrl(int argc, char **argv) {
     struct control *ctrl;
 
-    ctrl = (struct control *) calloc(sizeof(struct control), sizeof(char *));
+    ctrl = (struct control *)calloc(sizeof(struct control), sizeof(char *));
 
     if (!parse_opts(ctrl, argc, argv)) {
         return NULL;
     } else if (!ctrl->filename) {
-        fprintf(stderr, "\033[0;31mError\033[0m missing filename argument -f\n");
+        fprintf(stderr,
+                "\033[0;31mError\033[0m missing filename argument -f\n");
         return NULL;
     }
 
@@ -207,31 +212,36 @@ struct control * init_ctrl(int argc, char **argv) {
     fsync(ctrl->fd);
 
     if (ctrl->fd < 0) {
-        fprintf(stderr, "\033[0;31mError\033[0m failed opening file %s\n", ctrl->filename);
+        fprintf(stderr, "\033[0;31mError\033[0m failed opening file %s\n",
+                ctrl->filename);
         return NULL;
     }
-    
+
     ctrl->stats = calloc(sizeof(struct stat), sizeof(char *));
     if (fstat(ctrl->fd, ctrl->stats) < 0) {
         printf("Failed stat on file %s\n", ctrl->filename);
         close(ctrl->fd);
     }
-    
+
     ctrl->bdev = calloc(sizeof(struct bdev), sizeof(char *));
     if (!init_dev(ctrl->bdev, ctrl->stats)) {
         return NULL;
     }
 
     if (ctrl->bdev->is_zoned != 1) {
-        printf("\033[0;33mWarning\033[0m: %s is registered as containing this file, however it is" 
-                " not a ZNS.\nIf it is used with F2FS as the conventional device, enter the"
-                " assocaited ZNS device name: ", ctrl->bdev->dev_name);
+        printf("\033[0;33mWarning\033[0m: %s is registered as containing this "
+               "file, however it is"
+               " not a ZNS.\nIf it is used with F2FS as the conventional "
+               "device, enter the"
+               " assocaited ZNS device name: ",
+               ctrl->bdev->dev_name);
 
-        // TODO: is there a way we can find the associated ZNS dev in F2FS? it's in the kernel log
+        // TODO: is there a way we can find the associated ZNS dev in F2FS? it's
+        // in the kernel log
         ctrl->znsdev = calloc(sizeof(struct bdev), sizeof(char *));
         ctrl->znsdev->dev_name = malloc(sizeof(char *) * 15);
         int ret = scanf("%s", ctrl->znsdev->dev_name);
-        if(!ret) {
+        if (!ret) {
             fprintf(stderr, "\033[0;31mError\033[0m reading input\n");
             return NULL;
         }
@@ -241,7 +251,8 @@ struct control * init_ctrl(int argc, char **argv) {
         }
 
         if (ctrl->znsdev->is_zoned != 1) {
-            fprintf(stderr, "\033[0;31mError\033[0m: %s is not a ZNS device\n", ctrl->znsdev->dev_name);
+            fprintf(stderr, "\033[0;31mError\033[0m: %s is not a ZNS device\n",
+                    ctrl->znsdev->dev_name);
             return NULL;
         }
 
