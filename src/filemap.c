@@ -352,12 +352,10 @@ static void print_extent_report(struct control *ctrl,
                            extent_map->extent[i - 1].len,
                        extent_map->extent[i].phy_blk, hole_size);
             }
-        } 
+        }
         if (ctrl->show_holes && i > 0 && i < extent_map->ext_ctr - 1 &&
-                   extent_map->extent[i].zone_lbas !=
-                       extent_map->extent[i].phy_blk &&
-                   extent_map->extent[i - 1].zone !=
-                       extent_map->extent[i].zone) {
+            extent_map->extent[i].zone_lbas != extent_map->extent[i].phy_blk &&
+            extent_map->extent[i - 1].zone != extent_map->extent[i].zone) {
             // Hole between LBAS of zone and PBAS of the extent
 
             hole_size =
@@ -367,8 +365,8 @@ static void print_extent_report(struct control *ctrl,
 
             printf("--- HOLE:    PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
                    "  SIZE: %#-10" PRIx64 "\n",
-                   extent_map->extent[i].zone_lbas, extent_map->extent[i].phy_blk,
-                   hole_size);
+                   extent_map->extent[i].zone_lbas,
+                   extent_map->extent[i].phy_blk, hole_size);
         }
 
         printf("EXTID: %-4d  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
