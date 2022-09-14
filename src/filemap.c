@@ -307,6 +307,7 @@ static void print_extent_report(struct control *ctrl,
     uint64_t hole_cum_size = 0;
     uint64_t hole_size = 0;
     uint64_t hole_end = 0;
+    uint64_t pbae = 0;
 
     if (ctrl->info) {
         printf("\n============================================================="
@@ -376,8 +377,8 @@ static void print_extent_report(struct control *ctrl,
                (extent_map->extent[i].phy_blk + extent_map->extent[i].len),
                extent_map->extent[i].len);
 
-        uint64_t pbae = extent_map->extent[i].phy_blk + extent_map->extent[i].len;
-        if (ctrl->show_holes && i > 0 && i < extent_map->ext_ctr - 1 &&
+        pbae = extent_map->extent[i].phy_blk + extent_map->extent[i].len;
+        if (ctrl->show_holes && i > 0 && i < extent_map->ext_ctr &&
             pbae != extent_map->extent[i].zone_lbae &&
             extent_map->extent[i].zone_wp > pbae &&
             extent_map->extent[i].zone != extent_map->extent[i + 1].zone) {
