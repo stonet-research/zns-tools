@@ -12,6 +12,10 @@
 #include <sys/sysmacros.h>
 #include <unistd.h>
 
+/* 
+ * Shift byte valus to 512B sector values.
+ *
+ * */
 #define SECTOR_SHIFT 9
 
 /*
