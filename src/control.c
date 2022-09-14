@@ -14,7 +14,7 @@
 /*
  * Check if a device a zoned device.
  *
- * @dev_name: device name (e.g., nvme0n2)
+ * @dev_path: device path (e.g., /dev/nvme0n2)
  *
  * returns: 1 if Zoned, else 0
  *
@@ -56,13 +56,13 @@ static uint8_t is_zoned(char *dev_path) {
 /*
  * Get the device name of block device from its major:minor ID.
  *
- * *st: struct stat * from fstat() call
+ * bdev: struct bdev * to block device being used.
+ * st: struct stat * from fstat() call on file
  *
- * returns: char * with the device name (e.g., nvme0n2).
- *          NULL on failure.
+ * returns: 1 on Success, else 0
  *
  * */
-static int init_dev(struct bdev *bdev, struct stat *st) {
+static uint8_t init_dev(struct bdev *bdev, struct stat *st) {
     int fd;
 
     sprintf(bdev->dev_path, "/dev/block/%d:%d", major(st->st_dev),
@@ -92,7 +92,17 @@ static int init_dev(struct bdev *bdev, struct stat *st) {
     return 1;
 }
 
-static int init_znsdev(struct bdev *znsdev) {
+
+/* 
+ *
+ * Init the struct bdev * for the ZNS device.
+ *
+ * @znsdev: struct bdev * to initialize
+ *
+ * returns: 1 on Success, else 0
+ *
+ * */
+static uint8_t init_znsdev(struct bdev *znsdev) {
     int fd;
 
     sprintf(znsdev->dev_path, "/dev/%s", znsdev->dev_name);
@@ -113,13 +123,13 @@ static int init_znsdev(struct bdev *znsdev) {
 /*
  * Get the size of a device in bytes.
  *
- * @dev_name: device name (e.g., nvme0n2)
+ * @dev_path: device path (e.g., /dev/nvme0n2)
  *
  * returns: uint64_t size of the device in bytes.
  *          -1 on Failure
  *
  * */
-uint64_t get_dev_size(char *dev_path) {
+static uint64_t get_dev_size(char *dev_path) {
     uint64_t dev_size = 0;
 
     int fd = open(dev_path, O_RDONLY);
@@ -138,7 +148,7 @@ uint64_t get_dev_size(char *dev_path) {
  * Get the zone size of a ZNS device.
  * Note: Assumes zone size is equal for all zones.
  *
- * @dev_name: device name (e.g., nvme0n2)
+ * @dev_path: device path (e.g., /dev/nvme0n2)
  *
  * returns: uint64_t zone size, 0 on failure
  *
@@ -160,7 +170,13 @@ static uint64_t get_zone_size(char *dev_path) {
     return zone_size;
 }
 
-void show_help() {
+/* 
+ *
+ * Show the command help.
+ *
+ *
+ * */
+static void show_help() {
     printf("Possible flags are:\n");
     printf("-f\tInput file to map [Required]\n");
     printf("-h\tShow this help\n");
@@ -169,6 +185,14 @@ void show_help() {
     exit(0);
 }
 
+/* 
+ * Parse cmd_line options into the struct control.
+ *
+ * @ctrl: struct control *ctrl to initialize
+ * @argc: number of cmd_line args (from main)
+ * @argv: chcar ** to cmd_line args (from main)
+ *
+ * */
 static int parse_opts(struct control *ctrl, int argc, char **argv) {
     int c;
 
@@ -194,6 +218,16 @@ static int parse_opts(struct control *ctrl, int argc, char **argv) {
 
     return 1;
 }
+
+/* 
+ * init the control struct
+ *
+ * @argc: number of cmd_line args (from main)
+ * @argv: char ** to cmd_line args (from main)
+ *
+ * returns: struct control * to initialized control
+ *          NULL on Failure
+ * */
 
 struct control *init_ctrl(int argc, char **argv) {
     struct control *ctrl;

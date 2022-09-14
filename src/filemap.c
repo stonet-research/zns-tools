@@ -20,10 +20,10 @@
  * @lba: LBA to calculate zone number of
  * @zone_size: size of the zone
  *
- * returns: uint32_t of zone number (starting with 1)
+ * returns: number of the zone (starting with 1)
  *
  * */
-uint32_t get_zone_number(uint64_t lba, uint64_t zone_size) {
+static uint32_t get_zone_number(uint64_t lba, uint64_t zone_size) {
     uint64_t zone_mask = 0;
     uint64_t slba = 0;
 
@@ -33,7 +33,15 @@ uint32_t get_zone_number(uint64_t lba, uint64_t zone_size) {
     return slba == 0 ? 1 : (slba / zone_size + 1);
 }
 
-int print_zone_info(struct extent *extent, struct bdev *znsdev, uint32_t zone) {
+/* 
+ * Print the information about a zone.
+ *
+ * @extent: a struct extent * of the current extent
+ * @znsdev: struct bdev * to the ZNS device
+ * @zone: number of the zone to print info of
+ *
+ * */
+static void print_zone_info(struct extent *extent, struct bdev *znsdev, uint32_t zone) {
     unsigned long long start_sector = 0;
     struct blk_zone_report *hdr = NULL;
     uint32_t zone_mask;
@@ -43,7 +51,7 @@ int print_zone_info(struct extent *extent, struct bdev *znsdev, uint32_t zone) {
 
     int fd = open(znsdev->dev_path, O_RDONLY);
     if (fd < 0) {
-        return -1 + 1;
+        return;
     }
 
     hdr = calloc(1, sizeof(struct blk_zone_report) + sizeof(struct blk_zone));
@@ -52,7 +60,7 @@ int print_zone_info(struct extent *extent, struct bdev *znsdev, uint32_t zone) {
 
     if (ioctl(fd, BLKREPORTZONE, hdr) < 0) {
         fprintf(stderr, "\033[0;31mError\033[0m getting Zone Info\n");
-        return -1;
+        return;
     }
 
     zone_mask = ~(znsdev->zone_size - 1);
@@ -69,11 +77,16 @@ int print_zone_info(struct extent *extent, struct bdev *znsdev, uint32_t zone) {
 
     free(hdr);
     hdr = NULL;
-
-    return 1;
 }
 
-static int get_zone_info(char *dev_path, struct extent *extent) {
+/* 
+ * Get information about a zone.
+ *
+ * @dev_path: path to the ZNS dev (e.g., /dev/nvme0n2)
+ * @extent: struct extent * to store zone info in
+ *
+ * */
+static void get_zone_info(char *dev_path, struct extent *extent) {
     struct blk_zone_report *hdr = NULL;
     uint64_t start_sector;
 
@@ -81,7 +94,7 @@ static int get_zone_info(char *dev_path, struct extent *extent) {
 
     int fd = open(dev_path, O_RDONLY);
     if (fd < 0) {
-        return -1;
+        return;
     }
 
     hdr = calloc(1, sizeof(struct blk_zone_report) + sizeof(struct blk_zone));
@@ -90,7 +103,7 @@ static int get_zone_info(char *dev_path, struct extent *extent) {
 
     if (ioctl(fd, BLKREPORTZONE, hdr) < 0) {
         fprintf(stderr, "\033[0;31mError\033[0m getting Zone Info\n");
-        return -1;
+        return;
     }
 
     extent->zone_wp = hdr->zones[0].wp;
@@ -100,22 +113,18 @@ static int get_zone_info(char *dev_path, struct extent *extent) {
 
     free(hdr);
     hdr = NULL;
-
-    return 1;
 }
 
 /*
  * Get the file extents with FIEMAP ioctl
  *
- * @fd: file descriptor of the file
- * @dev_name: name of the device (e.g., nvme0n2)
- * @stats: struct stat of fd
+ * @ctrl: struct control * to the control information
  *
  * returns: struct extent_map * to the extent maps.
  *          NULL returned on Failure
  *
  * */
-struct extent_map *get_extents(struct control *ctrl) {
+static struct extent_map *get_extents(struct control *ctrl) {
     struct fiemap *fiemap;
     struct extent_map *extent_map;
     uint8_t last_ext = 0;
@@ -191,7 +200,7 @@ struct extent_map *get_extents(struct control *ctrl) {
  * returns: 1 if contained otherwise 0.
  *
  * */
-int contains_element(uint32_t list[], uint32_t element, uint32_t size) {
+static int contains_element(uint32_t list[], uint32_t element, uint32_t size) {
 
     for (uint32_t i = 0; i < size; i++) {
         if (list[i] == element) {
@@ -211,9 +220,8 @@ int contains_element(uint32_t list[], uint32_t element, uint32_t size) {
  *
  * @extent_map: pointer to extent map struct
  *
- *
  * */
-void sort_extents(struct extent_map *extent_map) {
+static void sort_extents(struct extent_map *extent_map) {
     struct extent *temp;
     uint32_t cur_lowest = 0;
     uint32_t used_ind[extent_map->ext_ctr];
@@ -241,6 +249,12 @@ void sort_extents(struct extent_map *extent_map) {
     temp = NULL;
 }
 
+/* 
+ * Show the acronym information
+ *
+ * @show_hole_info: flag if hole acronym info is shown
+ *
+ * */
 static void show_info(int show_hole_info) {
     printf("LBAS:   Logical Block Address Start (for the Zone)\n");
     printf("LBAE:   Logical Block Address End (for the Zone, equal to LBAS + "
@@ -280,11 +294,11 @@ static void show_info(int show_hole_info) {
 /*
  * Print the report summary of extent_map.
  *
- * @dev_name: char * to the device name (e.g., nvme0n2)
+ * @ctrl: struct control * of the control
  * @extent_map: struct extent_map * to the extent maps
  *
  * */
-void print_extent_report(struct control *ctrl, struct extent_map *extent_map) {
+static void print_extent_report(struct control *ctrl, struct extent_map *extent_map) {
     uint32_t current_zone = 0;
     uint32_t hole_ctr = 0;
     uint64_t hole_cum_size = 0;
