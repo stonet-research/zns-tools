@@ -24,7 +24,7 @@ sudo ./filemap [flags]
 -f [file_name]: The file to be mapped (Required)
 -h: Show the help menu
 -s: Show holes in between extents
--i: Show the acronym info
+-i: Show info prints with the results
 ```
 
 ### Output
@@ -110,7 +110,7 @@ Warning: nvme0n1 is registered as containing this file, however it is not a ZNS.
 If it is used with F2FS as the conventional device, enter the assocaited ZNS device name: nvme0n2
 
 ====================================================================
-EXTENT MAPPINGS
+                        EXTENT MAPPINGS
 ====================================================================
 
 **** ZONE 5 ****
@@ -119,7 +119,7 @@ LBAS: 0x1000000  LBAE: 0x121a800  CAP: 0x21a800  WP: 0x1032000  SIZE: 0x400000  
 EXTID: 1     PBAS: 0x1000000   PBAE: 0x1032000   SIZE: 0x32000
 
 ====================================================================
-STATS SUMMARY
+                        STATS SUMMARY
 ====================================================================
 
 NOE: 1     TES: 0x32000     AES: 0x19000     EAES: 102400.000000  NOZ: 1
