@@ -204,7 +204,7 @@ EXTID: 45    PBAS: 0x91dead0   PBAE: 0x91deae0   SIZE: 0x10
 --- HOLE:    PBAS: 0x91deae0   PBAE: 0x921a800   SIZE: 0x3bd20
 
 **** ZONE 39 ****
-LBAS: 0x9800000  LBAE: 0x9a1a800  CAP: 0x21a800  WP: 0x99d4ef8  SIZE: 0x400000  STATE: 0x20  MASK: 0xffc00000
+LBAS: 0x9800000  LBAE: 0x9a1a800  CAP: 0x21a800  WP: 0x99d4f68  SIZE: 0x400000  STATE: 0x20  MASK: 0xffc00000
 
 --- HOLE:    PBAS: 0x9800000   PBAE: 0x99d4c18   SIZE: 0x1d4c18
 EXTID: 1     PBAS: 0x99d4c18   PBAE: 0x99d4c60   SIZE: 0x48
@@ -217,13 +217,8 @@ EXTID: 4     PBAS: 0x99d4d90   PBAE: 0x99d4de0   SIZE: 0x50
 --- HOLE:    PBAS: 0x99d4de0   PBAE: 0x99d4de8   SIZE: 0x8
 EXTID: 5     PBAS: 0x99d4de8   PBAE: 0x99d4ef0   SIZE: 0x108
 --- HOLE:    PBAS: 0x99d4ef0   PBAE: 0x99d4ef8   SIZE: 0x8
-
-**** ZONE 44 ****
-LBAS: 0xac00000  LBAE: 0xae1a800  CAP: 0x21a800  WP: 0xb000000  SIZE: 0x400000  STATE: 0xe0  MASK: 0xffc00000
-
---- HOLE:    PBAS: 0xac00000   PBAE: 0xacdf558   SIZE: 0xdf558
-EXTID: 6     PBAS: 0xacdf558   PBAE: 0xacdf5c0   SIZE: 0x68
---- HOLE:    PBAS: 0xacdf5c0   PBAE: 0xae1a800   SIZE: 0x13b240
+EXTID: 6     PBAS: 0x99d4ef8   PBAE: 0x99d4f60   SIZE: 0x68
+--- HOLE:    PBAS: 0x99d4f60   PBAE: 0x99d4f68   SIZE: 0x8
 
 **** ZONE 51 ****
 LBAS: 0xc800000  LBAE: 0xca1a800  CAP: 0x21a800  WP: 0xcc00000  SIZE: 0x400000  STATE: 0xe0  MASK: 0xffc00000
@@ -380,13 +375,12 @@ EXTID: 68    PBAS: 0x189387c0  PBAE: 0x189387f0  SIZE: 0x30
 EXTID: 69    PBAS: 0x1894b220  PBAE: 0x1894b228  SIZE: 0x8
 --- HOLE:    PBAS: 0x1894b228  PBAE: 0x18a1a800  SIZE: 0xcf5d8
 
-
 ====================================================================
                         STATS SUMMARY
 ====================================================================
 
-NOE: 76    TES: 0xef8       AES: 0x31        EAES: 49.766234   NOZ: 18
-NOH: 92    THS: 0x237bf18   AHS: 0x62bd0     EAHS: 404432.956522
+NOE: 76    TES: 0xef8       AES: 0x31        EAES: 49.766234   NOZ: 17
+NOH: 92    THS: 0x2230d60   AHS: 0x5f23b     EAHS: 389691.478261
 ```
 
 This example shows that the average extent size is very small, because the LOG file is written frequently in smaller units. Hence, over time with GC and while we fill the file system, extents get moved around and have lots of holes between them.
