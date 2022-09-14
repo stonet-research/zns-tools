@@ -92,8 +92,7 @@ static uint8_t init_dev(struct bdev *bdev, struct stat *st) {
     return 1;
 }
 
-
-/* 
+/*
  *
  * Init the struct bdev * for the ZNS device.
  *
@@ -170,7 +169,7 @@ static uint64_t get_zone_size(char *dev_path) {
     return zone_size;
 }
 
-/* 
+/*
  *
  * Show the command help.
  *
@@ -185,7 +184,7 @@ static void show_help() {
     exit(0);
 }
 
-/* 
+/*
  * Parse cmd_line options into the struct control.
  *
  * @ctrl: struct control *ctrl to initialize
@@ -219,7 +218,7 @@ static int parse_opts(struct control *ctrl, int argc, char **argv) {
     return 1;
 }
 
-/* 
+/*
  * init the control struct
  *
  * @argc: number of cmd_line args (from main)

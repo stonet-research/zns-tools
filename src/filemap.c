@@ -33,7 +33,7 @@ static uint32_t get_zone_number(uint64_t lba, uint64_t zone_size) {
     return slba == 0 ? 1 : (slba / zone_size + 1);
 }
 
-/* 
+/*
  * Print the information about a zone.
  *
  * @extent: a struct extent * of the current extent
@@ -41,7 +41,8 @@ static uint32_t get_zone_number(uint64_t lba, uint64_t zone_size) {
  * @zone: number of the zone to print info of
  *
  * */
-static void print_zone_info(struct extent *extent, struct bdev *znsdev, uint32_t zone) {
+static void print_zone_info(struct extent *extent, struct bdev *znsdev,
+                            uint32_t zone) {
     unsigned long long start_sector = 0;
     struct blk_zone_report *hdr = NULL;
     uint32_t zone_mask;
@@ -79,7 +80,7 @@ static void print_zone_info(struct extent *extent, struct bdev *znsdev, uint32_t
     hdr = NULL;
 }
 
-/* 
+/*
  * Get information about a zone.
  *
  * @dev_path: path to the ZNS dev (e.g., /dev/nvme0n2)
@@ -249,7 +250,7 @@ static void sort_extents(struct extent_map *extent_map) {
     temp = NULL;
 }
 
-/* 
+/*
  * Show the acronym information
  *
  * @show_hole_info: flag if hole acronym info is shown
@@ -298,7 +299,8 @@ static void show_info(int show_hole_info) {
  * @extent_map: struct extent_map * to the extent maps
  *
  * */
-static void print_extent_report(struct control *ctrl, struct extent_map *extent_map) {
+static void print_extent_report(struct control *ctrl,
+                                struct extent_map *extent_map) {
     uint32_t current_zone = 0;
     uint32_t hole_ctr = 0;
     uint64_t hole_cum_size = 0;

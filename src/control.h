@@ -12,15 +12,16 @@ struct bdev {
 };
 
 struct control {
-    char *filename;     /* full file name and path to map */
-    int fd;             /* file descriptor of the file to be mapped */
-    struct stat *stats; /* statistics from fstat() call */
-    struct bdev *bdev;  /* block device file is located on */
-    struct bdev *znsdev; /* additional ZNS device if file F2FS reporst file on  prior bdev */
-    uint8_t multi_dev;   /* flag if device setup is using bdev + ZNS */ 
+    char *filename;      /* full file name and path to map */
+    int fd;              /* file descriptor of the file to be mapped */
+    struct stat *stats;  /* statistics from fstat() call */
+    struct bdev *bdev;   /* block device file is located on */
+    struct bdev *znsdev; /* additional ZNS device if file F2FS reporst file on
+                            prior bdev */
+    uint8_t multi_dev;   /* flag if device setup is using bdev + ZNS */
     uint8_t show_holes;  /* cmd_line flag to show holes */
-    uint8_t info;       /* cmd_line flag to show info */
-    uint64_t offset; /* offset for the ZNS - only in multi_dev setup */
+    uint8_t info;        /* cmd_line flag to show info */
+    uint64_t offset;     /* offset for the ZNS - only in multi_dev setup */
 };
 
 struct control *init_ctrl(int, char **);
