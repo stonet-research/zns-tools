@@ -327,7 +327,7 @@ void print_extent_report(struct control *ctrl, struct extent_map *extent_map) {
                 extent_map->extent[i].ext_nr + 1, extent_map->extent[i].phy_blk, (extent_map->extent[i].phy_blk + 
                     extent_map->extent[i].len), extent_map->extent[i].len);
 
-        if (ctrl->show_holes && i > 0 && i < extent_map->ext_ctr && extent_map->extent[i].phy_blk +
+        if (ctrl->show_holes && i > 0 && i < extent_map->ext_ctr - 1 && extent_map->extent[i].phy_blk +
                 extent_map->extent[i].len != extent_map->extent[i].zone_lbae && 
                 extent_map->extent[i].zone != extent_map->extent[i + 1].zone &&
                 extent_map->extent[i].zone_wp >= extent_map->extent[i].zone_lbae) {
