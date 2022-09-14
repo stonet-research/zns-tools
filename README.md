@@ -68,6 +68,8 @@ As mentioned, the extent number is in the logical order of the file data, and he
 
 For more information about the `STATE` of zones, visit the [ZNS documentation](https://zonedstorage.io/docs/linux/zbd-api#zone-condition).
 
+**Important:** Extents that are out of the address range for the ZNS device are not included in the statistics (e.g., when F2FS uses inline data the extent is not on the ZNS but the conventional block device). We still show a warning about such as extents and their info.
+
 ### Holes between Extents
 
 When F2FS run GC it will generate file fragments, which are referred to as `extents`, where an extent depicts a contiguous region of data. Over time files are broken up and extents end up in different areas (and zones) on the device. As a result of this file fragmentation extents can be reordered and/or mixed with other extents in zones. Therefore, we define a metric of identifying the space of other data (other than the data of the file that is being mapped) between extents. This can happen in three cases.
@@ -389,3 +391,4 @@ This example shows that the average extent size is very small, because the LOG f
 
 - F2FS utilizes all devices (zoned and conventional) as one address space, hence extent mappings return offsets in this range. This requires to subtract the conventional device size from offsets to get the location on the ZNS. Therefore, the utility only works with a single ZNS device currently, and relies on the address space being conventional followed by ZNS (which is how F2FS handles it anyways). 
 - F2FS also does not directly tell us which devices it is using. If we have a setup with a conventional device and a ZNS, it is mounted as the ZNS device, and `ioctl()` stat calls on all files return the conventional space device ID. Therefore, we cannot easily know which ZNS device it is actually using. The only place currently is the Kernel Log, however it's too cumbersome to parse all this, and there must be better ways. Therefore, program will currently ask the user for the associated ZNS devices.
+- Extents that are out of the address range for the ZNS device are not included in the statistics (e.g., when F2FS uses inline data the extent is not on the ZNS but the conventional block device). We still show a warning about such as extents and their info.

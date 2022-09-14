@@ -139,6 +139,7 @@ static struct extent_map *get_extents(struct control *ctrl) {
     fiemap->fm_start = 0;
     fiemap->fm_extent_count = 1; // get extents individually
     fiemap->fm_length = (ctrl->stats->st_blocks << SECTOR_SHIFT);
+    extent_map->ext_ctr = 0;
 
     do {
         if (extent_map->ext_ctr > 0) {
@@ -156,36 +157,44 @@ static struct extent_map *get_extents(struct control *ctrl) {
             return NULL;
         }
 
-        extent_map->extent[extent_map->ext_ctr].phy_blk =
-            (fiemap->fm_extents[0].fe_physical - ctrl->offset) >> SECTOR_SHIFT;
-        extent_map->extent[extent_map->ext_ctr].logical_blk =
-            fiemap->fm_extents[0].fe_logical >> SECTOR_SHIFT;
-        extent_map->extent[extent_map->ext_ctr].len =
-            fiemap->fm_extents[0].fe_length >> SECTOR_SHIFT;
-        extent_map->extent[extent_map->ext_ctr].zone_size =
-            ctrl->znsdev->zone_size;
-        extent_map->extent[extent_map->ext_ctr].ext_nr = extent_map->ext_ctr;
+        // If data is on the bdev, not the ZNS (e.g. inline or other reason?)
+        // Disregard this extent but print warning
+        if (fiemap->fm_extents[0].fe_physical < ctrl->offset) {
+            printf("\n\033[0;33mWarning\033[0m: Extent Reported on %s  PBAS: 0x%06llx  PBAE: 0x%06llx  SIZE: 0x%06llx\n", ctrl->bdev->dev_name, fiemap->fm_extents[0].fe_physical >> SECTOR_SHIFT,
+                    (fiemap->fm_extents[0].fe_physical + fiemap->fm_extents[0].fe_length) >> SECTOR_SHIFT,
+                    fiemap->fm_extents[0].fe_length >> SECTOR_SHIFT);
+        } else {
+            extent_map->extent[extent_map->ext_ctr].phy_blk =
+                (fiemap->fm_extents[0].fe_physical - ctrl->offset) >> SECTOR_SHIFT;
+            extent_map->extent[extent_map->ext_ctr].logical_blk =
+                fiemap->fm_extents[0].fe_logical >> SECTOR_SHIFT;
+            extent_map->extent[extent_map->ext_ctr].len =
+                fiemap->fm_extents[0].fe_length >> SECTOR_SHIFT;
+            extent_map->extent[extent_map->ext_ctr].zone_size =
+                ctrl->znsdev->zone_size;
+            extent_map->extent[extent_map->ext_ctr].ext_nr = extent_map->ext_ctr;
 
-        extent_map->cum_extent_size +=
-            extent_map->extent[extent_map->ext_ctr].len;
+            extent_map->cum_extent_size +=
+                extent_map->extent[extent_map->ext_ctr].len;
 
 
-        extent_map->extent[extent_map->ext_ctr].zone = get_zone_number(
-            ((fiemap->fm_extents[0].fe_physical - ctrl->offset) >>
-             SECTOR_SHIFT),
-            extent_map->extent[extent_map->ext_ctr].zone_size);
+            extent_map->extent[extent_map->ext_ctr].zone = get_zone_number(
+                ((fiemap->fm_extents[0].fe_physical - ctrl->offset) >>
+                 SECTOR_SHIFT),
+                extent_map->extent[extent_map->ext_ctr].zone_size);
 
-        get_zone_info(ctrl->znsdev->dev_path,
-                      &extent_map->extent[extent_map->ext_ctr]);
-
-        fiemap->fm_start = ((fiemap->fm_extents[0].fe_logical) +
-                            (fiemap->fm_extents[0].fe_length));
+            get_zone_info(ctrl->znsdev->dev_path,
+                          &extent_map->extent[extent_map->ext_ctr]);
+            extent_map->ext_ctr++;
+        }
 
         if (fiemap->fm_extents[0].fe_flags & FIEMAP_EXTENT_LAST) {
             last_ext = 1;
-        } else {
-            extent_map->ext_ctr++;
         }
+
+        fiemap->fm_start = ((fiemap->fm_extents[0].fe_logical) +
+                            (fiemap->fm_extents[0].fe_length));
+        
     } while (last_ext == 0);
 
     free(fiemap);
@@ -415,8 +424,8 @@ static void print_extent_report(struct control *ctrl,
         "\nNOE: %-4u  TES: %#-10" PRIx64 "  AES: %#-10" PRIx64 "  EAES: %-10f"
         "  NOZ: %-4u\n",
         extent_map->ext_ctr, extent_map->cum_extent_size,
-        extent_map->cum_extent_size / (extent_map->ext_ctr + 1),
-        (double)extent_map->cum_extent_size / (double)(extent_map->ext_ctr + 1),
+        extent_map->cum_extent_size / (extent_map->ext_ctr),
+        (double)extent_map->cum_extent_size / (double)(extent_map->ext_ctr),
         extent_map->zone_ctr);
 
     if (ctrl->show_holes) {
