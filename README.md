@@ -428,6 +428,8 @@ NOE: 85    TES: 0xef8       AES: 0x2c        EAES: 44.558140   NOZ: 23
 NOH: 104   THS: 0x2e087e8   AHS: 0x714ff     EAHS: 464127.769231
 ```
 
+This example shows that the average extent size is very small, because the LOG file is written frequently in smaller units. Hence, over time with GC and while we fill the file system, extents get moved around and have lots of holes between them.
+
 ## Known Issues and Limitations
 
 - F2FS utilizes all devices (zoned and conventional) as one address space, hence extent mappings return offsets in this range. This requires to subtract the conventional device size from offsets to get the location on the ZNS. Therefore, the utility only works with a single ZNS device currently, and relies on the address space being conventional followed by ZNS (which is how F2FS handles it anyways). 
