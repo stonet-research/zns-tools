@@ -169,9 +169,6 @@ static struct extent_map *get_extents(struct control *ctrl) {
         extent_map->cum_extent_size +=
             extent_map->extent[extent_map->ext_ctr].len;
 
-        if (fiemap->fm_extents[0].fe_flags & FIEMAP_EXTENT_LAST) {
-            last_ext = 1;
-        }
 
         extent_map->extent[extent_map->ext_ctr].zone = get_zone_number(
             ((fiemap->fm_extents[0].fe_physical - ctrl->offset) >>
@@ -181,9 +178,14 @@ static struct extent_map *get_extents(struct control *ctrl) {
         get_zone_info(ctrl->znsdev->dev_path,
                       &extent_map->extent[extent_map->ext_ctr]);
 
-        extent_map->ext_ctr++;
         fiemap->fm_start = ((fiemap->fm_extents[0].fe_logical) +
                             (fiemap->fm_extents[0].fe_length));
+
+        if (fiemap->fm_extents[0].fe_flags & FIEMAP_EXTENT_LAST) {
+            last_ext = 1;
+        } else {
+            extent_map->ext_ctr++;
+        }
     } while (last_ext == 0);
 
     free(fiemap);
