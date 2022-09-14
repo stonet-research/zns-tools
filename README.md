@@ -378,6 +378,8 @@ EXTID: 67    PBAS: 0x188b8e48  PBAE: 0x188b8e78  SIZE: 0x30
 EXTID: 68    PBAS: 0x189387c0  PBAE: 0x189387f0  SIZE: 0x30
 --- HOLE:    PBAS: 0x189387f0  PBAE: 0x1894b220  SIZE: 0x12a30
 EXTID: 69    PBAS: 0x1894b220  PBAE: 0x1894b228  SIZE: 0x8
+--- HOLE:    PBAS: 0x1894b228  PBAE: 0x18a1a800  SIZE: 0xcf5d8
+
 
 ====================================================================
                         STATS SUMMARY
