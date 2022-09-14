@@ -2,7 +2,7 @@
 
 This directory contains the code for the filemap utility, which locates the physical block address (PBA) ranges and zones in which files are located on ZNS devices. It lists the specific ranges of PBAs and which zones these are in. Aimed at helping understand the mapping that F2FS implements during GC, and how the lack of application knowledge causes suboptimal placement, mixing possibly hot and cold data over the zones. **Note** that all output is shown with acronyms, see the [Output Section](https://github.com/nicktehrany/f2fs-bench/tree/master/file-map#output) for explanations and the example output in the [Compiling and Running Section](https://github.com/nicktehrany/f2fs-bench/tree/master/file-map#compiling-and-running).
 
-**Important**, F2FS manages data in segments (2MiB, and the smallest GC unit), therefore when it does garbage collection, it will move segments around, possibly rearranging the order of segments (hence files are no longer truly consecutive, even if segments are all after each other). The extents being reported by the `FIEMAP` `ioctl()` call are following this scheme, in that they are reported as different extents if they are out of order. Therefore, the extents in a zone may be contiguous but are not truly consecutive, and we show these as not being contiguous, and depict them in the order that F2FS returns them (with their respective `EXTENT ID`), which is equivalent to the logical order of the file data. See the example in Section [Example Output with Rearranged Extents](https://github.com/nicktehrany/f2fs-bench/tree/master/file-map#example-output-with-rearranged-extents).
+**Important**, F2FS manages data in segments (2MiB, and the smallest GC unit), therefore when it does garbage collection, it will move segments around, possibly rearranging the order of segments (hence files are no longer truly consecutive, even if segments are all after each other). The extents being reported by the `FIEMAP` `ioctl()` call are following this scheme, in that they are reported as different extents if they are out of order. Therefore, the extents in a zone may be contiguous but are not truly consecutive, and we show these as not being contiguous, and depict them in the order that F2FS returns them (with their respective `EXTENT ID`), which is equivalent to the logical order of the file data. See the example in Section [Complex Example Output with Holes](https://github.com/nicktehrany/f2fs-bench/tree/master/file-map#complex-example-output-with-holes).
 
 ## Compiling and Running
 
@@ -126,7 +126,7 @@ NOE: 1     TES: 0x32000     AES: 0x19000     EAES: 102400.000000  NOZ: 1
 As can be seen, a single write creates only one extent without any fragmentation.
 
 
-### Example Output with Rearranged Extents
+### Complex Example Output with Holes
 
 This example shows how F2FS rearranges the segments in the file, resulting in out of order extents in different zones (and possibly out of order in the same zone!), which hence are not truly consecutive anymore, by being fragmented. This data is a result of running RocksDB with `db_bench` over the entire file system space (hence generating more extents and fragmentation). The output also depicts the holes between extents.
 
