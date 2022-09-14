@@ -109,6 +109,7 @@ static void get_zone_info(char *dev_path, struct extent *extent) {
 
     extent->zone_wp = hdr->zones[0].wp;
     extent->zone_lbae = hdr->zones[0].start + hdr->zones[0].capacity;
+    extent->zone_lbas = hdr->zones[0].start;
 
     close(fd);
 
@@ -351,21 +352,22 @@ static void print_extent_report(struct control *ctrl,
                            extent_map->extent[i - 1].len,
                        extent_map->extent[i].phy_blk, hole_size);
             }
-        } else if (ctrl->show_holes && i > 0 && i < extent_map->ext_ctr &&
-                   extent_map->extent[i].lbas !=
+        } 
+        if (ctrl->show_holes && i > 0 && i < extent_map->ext_ctr - 1 &&
+                   extent_map->extent[i].zone_lbas !=
                        extent_map->extent[i].phy_blk &&
                    extent_map->extent[i - 1].zone !=
                        extent_map->extent[i].zone) {
             // Hole between LBAS of zone and PBAS of the extent
 
             hole_size =
-                extent_map->extent[i].phy_blk - extent_map->extent[i].lbas;
+                extent_map->extent[i].phy_blk - extent_map->extent[i].zone_lbas;
             hole_cum_size += hole_size;
             hole_ctr++;
 
             printf("--- HOLE:    PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
                    "  SIZE: %#-10" PRIx64 "\n",
-                   extent_map->extent[i].lbas, extent_map->extent[i].phy_blk,
+                   extent_map->extent[i].zone_lbas, extent_map->extent[i].phy_blk,
                    hole_size);
         }
 

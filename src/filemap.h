@@ -9,7 +9,7 @@ struct extent {
     uint32_t ext_nr;      /* Extent number as returned in the order by ioctl */
     uint64_t logical_blk; /* LBA starting address of the extent */
     uint64_t phy_blk;     /* PBA starting address of the extent */
-    uint64_t lbas;        /* LBAS of the zone the extent is in */
+    uint64_t zone_lbas;   /* LBAS of the zone the extent is in */
     uint64_t len;         /* Length of the extent in 512B sectors */
     uint64_t zone_size;   /* Size of the zone the extent is in */
     uint64_t zone_wp;     /* Write Pointer of this current zone */
