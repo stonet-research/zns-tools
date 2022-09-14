@@ -88,9 +88,9 @@ When F2FS run GC it will generate file fragments, which are referred to as `exte
     As can be seen, there is a hole between the start of extent 2 of File A, and the beginning of zone 2, meaning there must be some other data (invalid or other file data) between the zone LBAS and the start of the extent, creating file fragmentation.
 3. Similar to the LBAS of a zone, there can also be a hole if the extent does not go until the write pointer (`WP`) of the zone, and there exists an extent in a higher zone. Why wasn't the following extent written in the space after the prior extent up to the WP? Hence we also have a hole here. Visually depicting this is as follows
     ```bash
-    LBAS        ZONE 1      LBAE    LBAS     ZONE 2     LBAE
+    LBAS        ZONE 1       WP    LBAS     ZONE 2     LBAE
     | Extent 1 Fila A | HOLE |       |  Extent 2 FILE A  | 
-    0x0              0x30   0x40    0x50   0x55         0x70
+    0x0              0x30   0x40    0x50                0x70
     ```
     As can be seen, Zone 1 has an extent of file A up to `0x30`, and the next extent starting in Zone 2 at `0x50`. However, the WP of Zone 1 is past the ending LBA of the first extent (at `0x40`, also the Zone LBAE). Hencer, there is a gap of `0x10` between Extent 1 of File A and Extent 2 of File A, which is a hole.
 
