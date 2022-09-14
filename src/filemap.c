@@ -306,6 +306,7 @@ static void print_extent_report(struct control *ctrl,
     uint32_t hole_ctr = 0;
     uint64_t hole_cum_size = 0;
     uint64_t hole_size = 0;
+    uint64_t hole_end = 0;
 
     if (ctrl->info) {
         printf("\n============================================================="
@@ -375,26 +376,30 @@ static void print_extent_report(struct control *ctrl,
                (extent_map->extent[i].phy_blk + extent_map->extent[i].len),
                extent_map->extent[i].len);
 
+        uint64_t pbae = extent_map->extent[i].phy_blk + extent_map->extent[i].len;
         if (ctrl->show_holes && i > 0 && i < extent_map->ext_ctr - 1 &&
-            extent_map->extent[i].phy_blk + extent_map->extent[i].len !=
-                extent_map->extent[i].zone_lbae &&
-            extent_map->extent[i].zone != extent_map->extent[i + 1].zone &&
-            extent_map->extent[i].zone_wp >= extent_map->extent[i].zone_lbae) {
+            pbae != extent_map->extent[i].zone_lbae &&
+            extent_map->extent[i].zone_wp > pbae &&
+            extent_map->extent[i].zone != extent_map->extent[i + 1].zone) {
             // Hole between PBAE of the extent and the zone LBAE (since WP can
             // be next zone LBAS if full) e.g. extent ends before the write
             // pointer of its zone but the next extent is in a different zone
             // (hence hole between PBAE and WP)
 
-            hole_size =
-                extent_map->extent[i].zone_lbae -
-                (extent_map->extent[i].phy_blk + extent_map->extent[i].len);
+            if (extent_map->extent[i].zone_wp < extent_map->extent[i].zone_lbae) {
+                hole_end = extent_map->extent[i].zone_wp; 
+            } else {
+                hole_end = extent_map->extent[i].zone_lbae;
+            }
+
+            hole_size = hole_end - pbae;
             hole_cum_size += hole_size;
             hole_ctr++;
 
             printf("--- HOLE:    PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
                    "  SIZE: %#-10" PRIx64 "\n",
                    extent_map->extent[i].phy_blk + extent_map->extent[i].len,
-                   extent_map->extent[i].zone_lbae, hole_size);
+                   hole_end, hole_size);
         }
     }
 
