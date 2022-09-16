@@ -9,8 +9,8 @@ This directory contains the code for the filemap utility, which locates the phys
 Building relies on CMake is included to compile the code base. It relies on `FIEMAP`, which the file system and kernel must support (F2FS has support for it). We use this tool to evaluate mapping of files on ZNS with F2FS.
 
 ```bash
-mkdir build && cd build
-cmake ..
+sh ./autogen.sh
+./configure
 make
 
 # Run: filemap -f [file path to locate]
