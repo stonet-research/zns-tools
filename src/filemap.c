@@ -12,7 +12,7 @@
 #include <sys/sysmacros.h>
 #include <unistd.h>
 
-/* 
+/*
  * Shift byte valus to 512B sector values.
  *
  * */
@@ -121,7 +121,7 @@ static void get_zone_info(char *dev_path, struct extent *extent) {
     hdr = NULL;
 }
 
-/* 
+/*
  * Show the flags that are set in an extent
  *
  * @flags: the uint32_t flags of the extent (extent.fe_flags)
@@ -141,7 +141,7 @@ static void show_extent_flags(uint32_t flags) {
     if (flags & FIEMAP_EXTENT_DATA_ENCRYPTED) {
         printf("FIEMAP_EXTENT_DATA_ENCRYPTED  ");
     }
-    if(flags & FIEMAP_EXTENT_NOT_ALIGNED) {
+    if (flags & FIEMAP_EXTENT_NOT_ALIGNED) {
         printf("FIEMAP_EXTENT_NOT_ALIGNED  ");
     }
     if (flags & FIEMAP_EXTENT_DATA_INLINE) {
@@ -212,8 +212,8 @@ static struct extent_map *get_extents(struct control *ctrl) {
                        SECTOR_SHIFT,
                    fiemap->fm_extents[0].fe_length >> SECTOR_SHIFT);
 
-                printf("\t |--- FLAGS:  ");
-                show_extent_flags(fiemap->fm_extents[0].fe_flags);
+            printf("\t |--- FLAGS:  ");
+            show_extent_flags(fiemap->fm_extents[0].fe_flags);
         } else {
             extent_map->extent[extent_map->ext_ctr].phy_blk =
                 (fiemap->fm_extents[0].fe_physical - ctrl->offset) >>
@@ -226,7 +226,8 @@ static struct extent_map *get_extents(struct control *ctrl) {
                 ctrl->znsdev->zone_size;
             extent_map->extent[extent_map->ext_ctr].ext_nr =
                 extent_map->ext_ctr;
-            extent_map->extent[extent_map->ext_ctr].flags = fiemap->fm_extents[0].fe_flags;
+            extent_map->extent[extent_map->ext_ctr].flags =
+                fiemap->fm_extents[0].fe_flags;
 
             extent_map->cum_extent_size +=
                 extent_map->extent[extent_map->ext_ctr].len;
@@ -357,7 +358,6 @@ static void show_info(int show_hole_info) {
     }
 }
 
-
 /*
  * Print the report summary of extent_map.
  *
@@ -446,7 +446,6 @@ static void print_extent_report(struct control *ctrl,
             printf("\n|--- FLAGS:  ");
             show_extent_flags(extent_map->extent[i].flags);
         }
-
 
         pbae = extent_map->extent[i].phy_blk + extent_map->extent[i].len;
         if (ctrl->show_holes && i > 0 && i < extent_map->ext_ctr &&
