@@ -1,6 +1,6 @@
-# filemap
+# zonemap
 
-This directory contains the code for the filemap utility, which locates the physical block address (PBA) ranges and zones in which files are located on ZNS devices. It lists the specific ranges of PBAs and which zones these are in. Aimed at helping understand the mapping that F2FS implements during GC, and how the lack of application knowledge causes suboptimal placement, mixing possibly hot and cold data over the zones. **Note** that all output is shown with acronyms, see the [Output Section](https://github.com/nicktehrany/f2fs-bench/tree/master/file-map#output) for explanations and the example output in the [Compiling and Running Section](https://github.com/nicktehrany/f2fs-bench/tree/master/file-map#compiling-and-running).
+This directory contains the code for the zonemap utility, which locates the physical block address (PBA) ranges and zones in which files are located on ZNS devices. It lists the specific ranges of PBAs and which zones these are in. Aimed at helping understand the mapping that F2FS implements during GC, and how the lack of application knowledge causes suboptimal placement, mixing possibly hot and cold data over the zones. **Note** that all output is shown with acronyms, see the [Output Section](https://github.com/nicktehrany/f2fs-bench/tree/master/file-map#output) for explanations and the example output in the [Compiling and Running Section](https://github.com/nicktehrany/f2fs-bench/tree/master/file-map#compiling-and-running).
 
 **Important**, F2FS manages data in segments (2MiB, and the smallest GC unit), therefore when it does garbage collection, it will move segments around, possibly rearranging the order of segments (hence files are no longer truly consecutive, even if segments are all after each other). The extents being reported by the `FIEMAP` `ioctl()` call are following this scheme, in that they are reported as different extents if they are out of order. Therefore, the extents in a zone may be contiguous but are not truly consecutive, and we show these as not being contiguous, and depict them in the order that F2FS returns them (with their respective `EXTENT ID`), which is equivalent to the logical order of the file data. See the example in Section [Complex Example Output with Holes](https://github.com/nicktehrany/f2fs-bench/tree/master/file-map#complex-example-output-with-holes).
 
@@ -13,14 +13,16 @@ sh ./autogen.sh
 ./configure
 make
 
-# Run: filemap -f [file path to locate]
-sudo ./filemap -f /mnt/f2fs/file_to_locate
+cd src # executable ends up in src/
+
+# Run: zonemap -f [file path to locate]
+sudo ./zonemap -f /mnt/f2fs/file_to_locate
 ```
 
-We need to run with `sudo` since the program is required to open file descriptors on devices (which can only be done with privileges). The possible flags for `filemap` are (for explanations on holes see the [Holes between Extents Section](https://github.com/nicktehrany/f2fs-bench/tree/master/file-map#holes-between-extents) and for acronym definitions see the [Output Section](https://github.com/nicktehrany/f2fs-bench/tree/master/file-map#output)):
+We need to run with `sudo` since the program is required to open file descriptors on devices (which can only be done with privileges). The possible flags for `zonemap` are (for explanations on holes see the [Holes between Extents Section](https://github.com/nicktehrany/f2fs-bench/tree/master/file-map#holes-between-extents) and for acronym definitions see the [Output Section](https://github.com/nicktehrany/f2fs-bench/tree/master/file-map#output)):
 
 ```bash
-sudo ./filemap [flags]
+sudo ./zonemap [flags]
 -f [file_name]: The file to be mapped (Required)
 -h: Show the help menu
 -s: Show holes in between extents
@@ -130,14 +132,14 @@ When F2FS run GC it will generate file fragments, which are referred to as `exte
 
 ### Example Run
 
-The issue of F2FS associating the file with the conventional namespace is handled by the program by asking for the ZNS device. An example execution with our setup of `nvme0n1` being the conventional namespace on a ZNS device (hence randomly writable and not zones) and `nvme0n2` being the zoned namespace on the ZNS device. In the example we write several times from `/dev/urandom` to a file on the mount point and map the file with `filemap`
+The issue of F2FS associating the file with the conventional namespace is handled by the program by asking for the ZNS device. An example execution with our setup of `nvme0n1` being the conventional namespace on a ZNS device (hence randomly writable and not zones) and `nvme0n2` being the zoned namespace on the ZNS device. In the example we write several times from `/dev/urandom` to a file on the mount point and map the file with `zonemap`
 
 ```bash
 user@stosys:~/src/f2fs-bench/file-map/build$ dd if=/dev/urandom bs=100M count=1 >> /mnt/f2fs/test
 1+0 records in
 1+0 records out
 104857600 bytes (105 MB, 100 MiB) copied, 0.389088 s, 269 MB/s
-user@stosys:~/src/f2fs-bench/file-map/build$ sudo ./filemap -f /mnt/f2fs/test
+user@stosys:~/src/f2fs-bench/file-map/build$ sudo ./zonemap -f /mnt/f2fs/test
 Warning: nvme0n1 is registered as containing this file, however it is not a ZNS.
 If it is used with F2FS as the conventional device, enter the assocaited ZNS device name: nvme0n2
 
@@ -165,7 +167,7 @@ As can be seen, a single write creates only one extent without any fragmentation
 This example shows how F2FS rearranges the segments in the file, resulting in out of order extents in different zones (and possibly out of order in the same zone!), which hence are not truly consecutive anymore, by being fragmented. This data is a result of running RocksDB with `db_bench` over the entire file system space (hence generating more extents and fragmentation). The output also depicts the holes between extents.
 
 ```bash
-user@stosys:~/src/f2fs-bench/file-map/build$ sudo ./filemap -f /mnt/f2fs/db0/LOG -s
+user@stosys:~/src/f2fs-bench/file-map/build$ sudo ./zonemap -f /mnt/f2fs/db0/LOG -s
 Warning: nvme0n1 is registered as containing this file, however it is not a ZNS.
 If it is used with F2FS as the conventional device, enter the assocaited ZNS device name: nvme0n2
 

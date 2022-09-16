@@ -1,3 +1,3 @@
 ## Makefile.am
 
-dist_man8_MANS = filemap.8
+dist_man8_MANS = zonemap.8

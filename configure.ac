@@ -1,6 +1,6 @@
 AC_PREREQ([2.68])
 
-AC_INIT([filemap], [0.1], [nicktehrany1@gmail.com])
+AC_INIT([zonemap], [0.1], [nicktehrany1@gmail.com])
 
 AC_PREFIX_DEFAULT(/usr)
 AC_CONFIG_SRCDIR([config.h.in])

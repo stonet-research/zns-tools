@@ -1,5 +1,5 @@
-#ifndef FILEMAP_H
-#define FILEMAP_H
+#ifndef ZONEMAP_H
+#define ZONEMAP_H
 
 #include <inttypes.h>
 #include <stdint.h>

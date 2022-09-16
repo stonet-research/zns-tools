@@ -1,4 +1,4 @@
-#include "filemap.h"
+#include "zonemap.h"
 #include "control.h"
 #include <fcntl.h>
 #include <linux/blkzoned.h>

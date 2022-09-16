@@ -1,12 +1,12 @@
 ## Makefile.am
 
 AM_CFLAGS = -Wall
-sbin_PROGRAMS = filemap
+sbin_PROGRAMS = zonemap
 
 CFILES = control.c \
-		  filemap.c
+		  zonemap.c
 
 HFILES = control.h \
-		  filemap.h
+		  zonemap.h
 
-filemap_SOURCES = ${CFILES} ${HFILES}
+zonemap_SOURCES = ${CFILES} ${HFILES}
