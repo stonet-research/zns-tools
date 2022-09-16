@@ -170,6 +170,51 @@ static uint64_t get_zone_size(char *dev_path) {
 }
 
 /*
+ * Show the acronym information
+ *
+ * */
+static void show_info() {
+    printf("\n============================================================="
+            "=======\n");
+    printf("\t\t\tACRONYM INFO\n");
+    printf("==============================================================="
+            "=====\n");
+    printf("\nInfo: Extents are sorted by PBAS but have an associated "
+            "Extent Number to indicate the logical order of file data.\n\n");
+    printf("LBAS:   Logical Block Address Start (for the Zone)\n");
+    printf("LBAE:   Logical Block Address End (for the Zone, equal to LBAS + "
+           "ZONE CAP)\n");
+    printf("CAP:    Zone Capacity (in 512B sectors)\n");
+    printf("WP:     Write Pointer of the Zone\n");
+    printf("SIZE:   Size of the Zone (in 512B sectors)\n");
+    printf("STATE:  State of a zone (e.g, FULL, EMPTY)\n");
+    printf("MASK:   The Zone Mask that is used to calculate LBAS of LBA "
+           "addresses in a zone\n");
+
+    printf("EXTID:  Extent number in the order of the extents returned by "
+           "ioctl(), depciting logical file data ordering\n");
+    printf("PBAS:   Physical Block Address Start\n");
+    printf("PBAE:   Physical Block Address End\n");
+
+    printf("NOE:    Number of Extent\n");
+    printf("TES:    Total Extent Size (in 512B sectors\n");
+    printf("AES:    Average Extent Size (floored value due to hex print, in "
+           "512B sectors)\n"
+           "\t[Meant for easier comparison with Extent Sizes\n");
+    printf("EAES:   Exact Average Extent Size (double point precision value, "
+           "in 512B sectors\n"
+           "\t[Meant for exact calculations of average extent sizes\n");
+    printf("NOZ:    Number of Zones (in which extents are\n");
+
+    printf("NOH:    Number of Holes\n");
+    printf("THS:    Total Hole Size (in 512B sectors\n");
+    printf("AHS:    Average Hole Size (floored value due to hex print, in "
+            "512B sectors)\n");
+    printf("EAHS:   Exact Average Hole Size (double point precision value, "
+            "in 512B sectors\n");
+}
+
+/*
  *
  * Show the command help.
  *
@@ -182,6 +227,8 @@ static void show_help() {
     printf("-i\tShow info prints\n");
     printf("-l\tShow extent flags\n");
     printf("-s\tShow file holes\n");
+
+    show_info();
     exit(0);
 }
 
