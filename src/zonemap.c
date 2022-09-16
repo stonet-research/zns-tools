@@ -1,4 +1,4 @@
-#include "filemap.h"
+#include "zonemap.h"
 #include "control.h"
 #include <fcntl.h>
 #include <linux/blkzoned.h>
@@ -50,7 +50,6 @@ static void print_zone_info(struct extent *extent, struct bdev *znsdev,
     unsigned long long start_sector = 0;
     struct blk_zone_report *hdr = NULL;
     uint32_t zone_mask;
-    uint64_t zone_wp = 0;
 
     start_sector = znsdev->zone_size * zone - znsdev->zone_size;
 
@@ -317,48 +316,6 @@ static void sort_extents(struct extent_map *extent_map) {
 }
 
 /*
- * Show the acronym information
- *
- * @show_hole_info: flag if hole acronym info is shown
- *
- * */
-static void show_info(int show_hole_info) {
-    printf("LBAS:   Logical Block Address Start (for the Zone)\n");
-    printf("LBAE:   Logical Block Address End (for the Zone, equal to LBAS + "
-           "ZONE CAP)\n");
-    printf("CAP:    Zone Capacity (in 512B sectors)\n");
-    printf("WP:     Write Pointer of the Zone\n");
-    printf("SIZE:   Size of the Zone (in 512B sectors)\n");
-    printf("STATE:  State of a zone (e.g, FULL, EMPTY)\n");
-    printf("MASK:   The Zone Mask that is used to calculate LBAS of LBA "
-           "addresses in a zone\n");
-
-    printf("EXTID:  Extent number in the order of the extents returned by "
-           "ioctl(), depciting logical file data ordering\n");
-    printf("PBAS:   Physical Block Address Start\n");
-    printf("PBAE:   Physical Block Address End\n");
-
-    printf("NOE:    Number of Extent\n");
-    printf("TES:    Total Extent Size (in 512B sectors\n");
-    printf("AES:    Average Extent Size (floored value due to hex print, in "
-           "512B sectors)\n"
-           "\t[Meant for easier comparison with Extent Sizes\n");
-    printf("EAES:   Exact Average Extent Size (double point precision value, "
-           "in 512B sectors\n"
-           "\t[Meant for exact calculations of average extent sizes\n");
-    printf("NOZ:    Number of Zones (in which extents are\n");
-
-    if (show_hole_info) {
-        printf("NOH:    Number of Holes\n");
-        printf("THS:    Total Hole Size (in 512B sectors\n");
-        printf("AHS:    Average Hole Size (floored value due to hex print, in "
-               "512B sectors)\n");
-        printf("EAHS:   Exact Average Hole Size (double point precision value, "
-               "in 512B sectors\n");
-    }
-}
-
-/*
  * Print the report summary of extent_map.
  *
  * @ctrl: struct control * of the control
@@ -373,17 +330,6 @@ static void print_extent_report(struct control *ctrl,
     uint64_t hole_size = 0;
     uint64_t hole_end = 0;
     uint64_t pbae = 0;
-
-    if (ctrl->info) {
-        printf("\n============================================================="
-               "=======\n");
-        printf("\t\t\tACRONYM INFO\n");
-        printf("==============================================================="
-               "=====\n");
-        printf("\nInfo: Extents are sorted by PBAS but have an associated "
-               "Extent Number to indicate the logical order of file data.\n\n");
-        show_info(ctrl->show_holes);
-    }
 
     printf("\n================================================================="
            "===\n");
@@ -502,7 +448,7 @@ int main(int argc, char *argv[]) {
     struct control *ctrl;
     struct extent_map *extent_map;
 
-    ctrl = (struct control *)init_ctrl(argc, argv);
+    ctrl = (struct control *) init_ctrl(argc, argv);
 
     if (!ctrl) {
         return 1;
