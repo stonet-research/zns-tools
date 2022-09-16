@@ -316,7 +316,6 @@ static void sort_extents(struct extent_map *extent_map) {
     temp = NULL;
 }
 
-
 /*
  * Print the report summary of extent_map.
  *

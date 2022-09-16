@@ -175,12 +175,12 @@ static uint64_t get_zone_size(char *dev_path) {
  * */
 static void show_info() {
     printf("\n============================================================="
-            "=======\n");
+           "=======\n");
     printf("\t\t\tACRONYM INFO\n");
     printf("==============================================================="
-            "=====\n");
+           "=====\n");
     printf("\nInfo: Extents are sorted by PBAS but have an associated "
-            "Extent Number to indicate the logical order of file data.\n\n");
+           "Extent Number to indicate the logical order of file data.\n\n");
     printf("LBAS:   Logical Block Address Start (for the Zone)\n");
     printf("LBAE:   Logical Block Address End (for the Zone, equal to LBAS + "
            "ZONE CAP)\n");
@@ -209,9 +209,9 @@ static void show_info() {
     printf("NOH:    Number of Holes\n");
     printf("THS:    Total Hole Size (in 512B sectors\n");
     printf("AHS:    Average Hole Size (floored value due to hex print, in "
-            "512B sectors)\n");
+           "512B sectors)\n");
     printf("EAHS:   Exact Average Hole Size (double point precision value, "
-            "in 512B sectors\n");
+           "in 512B sectors\n");
 }
 
 /*
