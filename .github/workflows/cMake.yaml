@@ -15,6 +15,6 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: "Create build directory and run CMake"
-        run: cmake -S . -B build -G "Cmake" -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+        run: cmake -S . -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
       - name: "Build Project" 
         run: cmake --build build --target all --config Release -- -j4
