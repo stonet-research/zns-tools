@@ -64,41 +64,37 @@ EAHS:   Exact Average Hole Size (double point precision value, in 512B sectors)
 
 As mentioned, the extent number is in the logical order of the file data, and hence can be out of order in the zones if F2FS has rearranged segments during GC. We only sort by zone in order to reduce output and group zones together, but outputs still maintain the original `EXTID` that is returned by the `ioctl()` call.
 
-**Note**, the Zone size is less relevant, as it is only used to represent the zones in the next power of 2 value after the ZONE CAP, in order to make bit shifting easier (e.g., `LBA` to `LBAS`). More relevant is the `LBAE`, showing that if it is equal to the `PBAE` of an extent, the file is mapped to the end of the zone. Hence, not necessarily fragmented if its next extent begins again in the next `LBAS` of the next zone. 
-
-**Also Note**, the `WP` of a full zone is equal to the `LBAS + ZONE CAP` (hence also equal to the `LBAS` of the next zone).
+**Note**, the Zone size is less relevant, as it is only used to represent the zones in the next power of 2 value after the ZONE CAP, in order to make bit shifting easier (e.g., `LBA` to `LBAS`). More relevant is the `LBAE`, showing that if it is equal to the `PBAE` of an extent, the file is mapped to the end of the zone. Hence, not necessarily fragmented if its next extent begins again in the next `LBAS` of the next zone. **Also Note**, the `WP` of a full zone is equal to the `LBAS + ZONE CAP` (hence also equal to the `LBAS` of the next zone).
 
 For more information about the `STATE` of zones, visit the [ZNS documentation](https://zonedstorage.io/docs/linux/zbd-api#zone-condition).
-
-**Important:** Extents that are out of the address range for the ZNS device are not included in the statistics (e.g., when F2FS uses inline data the extent is not on the ZNS but the conventional block device). We still show a warning about such as extents and their info.
 
 #### Extent Flags
 
 There can be several flags for the extent. Information is taken from the [Kernel fiemap documentation](https://www.kernel.org/doc/Documentation/filesystems/fiemap.txt).
 
 `FIEMAP_EXTENT_LAST`
-This is generally the last extent in the file. A mapping attempt past this extent may return nothing. Some implementations set this flag to indicate this extent is the last one in the range queried by the user (via fiemap->fm_length).
+This is generally the last extent in the file. A mapping attempt past this extent may return nothing. Some implementations set this flag to indicate this extent is the last one in the range queried by the user (via `fiemap->fm_length`).
 
 `FIEMAP_EXTENT_UNKNOWN`
 The location of this extent is currently unknown. This may indicate the data is stored on an inaccessible volume or that no storage has been allocated for the file yet.
 
 `FIEMAP_EXTENT_DELALLOC`
-This will also set FIEMAP_EXTENT_UNKNOWN. Delayed allocation - while there is data for this extent, its physical location has not been allocated yet.
+This will also set `FIEMAP_EXTENT_UNKNOWN`. Delayed allocation - while there is data for this extent, its physical location has not been allocated yet.
 
 `FIEMAP_EXTENT_ENCODED`
 This extent does not consist of plain filesystem blocks but is encoded (e.g. encrypted or compressed). Reading the data in this extent via I/O to the block device will have undefined results.
 
 `FIEMAP_EXTENT_DATA_ENCRYPTED`
-This will also set FIEMAP_EXTENT_ENCODED The data in this extent has been encrypted by the file system.
+This will also set `FIEMAP_EXTENT_ENCODED` The data in this extent has been encrypted by the file system.
 
 `FIEMAP_EXTENT_NOT_ALIGNED`
 Extent offsets and length are not guaranteed to be block aligned.
 
 `FIEMAP_EXTENT_DATA_INLINE`
-This will also set FIEMAP_EXTENT_NOT_ALIGNED Data is located within a meta data block.
+This will also set `FIEMAP_EXTENT_NOT_ALIGNED` Data is located within a meta data block.
 
 `FIEMAP_EXTENT_DATA_TAIL`
-This will also set FIEMAP_EXTENT_NOT_ALIGNED Data is packed into a block with data from other files.
+This will also set `FIEMAP_EXTENT_NOT_ALIGNED` Data is packed into a block with data from other files.
 
 `FIEMAP_EXTENT_UNWRITTEN`
 Unwritten extent - the extent is allocated but its data has not been initialized. This indicates the extent's data will be all zero if read through the filesystem but the contents are undefined if read directly from the device.
