@@ -484,6 +484,8 @@ static void print_extent_report(struct control *ctrl,
                "  EAHS: %-10f\n",
                hole_ctr, hole_cum_size, hole_cum_size / hole_ctr,
                (double)hole_cum_size / (double)hole_ctr);
+    } else if (ctrl->show_holes && hole_ctr == 0) {
+        printf("NOH: 0");
     }
 }
 
