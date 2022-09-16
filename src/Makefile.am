@@ -1,6 +1,6 @@
 ## Makefile.am
 
-AM_CFLAGS = -Wall
+AM_CFLAGS = -O2 -Wall -Wextra -g -pedantic-errors -Wunused-parameter
 sbin_PROGRAMS = zonemap
 
 CFILES = control.c \
