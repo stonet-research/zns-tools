@@ -30,8 +30,9 @@ AC_CHECK_HEADER(linux/fs.h, [],
 
 AC_CHECK_MEMBER([struct blk_zone.capacity],
 		[AC_DEFINE(HAVE_BLK_ZONE_REP_V2, [1],
-			   [report zones includes zone capacity])],
-		[], [[#include <linux/blkzoned.h>]])
+			   [includes zone capacity])],
+		[AC_MSG_ERROR([missing zone capacity. Update blkzoned.h header])], 
+        [[#include <linux/blkzoned.h>]])
 
 AC_CONFIG_FILES([
 	Makefile
