@@ -74,7 +74,7 @@ For more information about the `STATE` of zones, visit the [ZNS documentation](h
 
 #### Extent Flags
 
-There can be several flags for the extent. Information is taken from the [Kernel fiemap documentation](https://github.com/torvalds/linux/blob/master/Documentation/filesystems/fiemap.rst).
+There can be several flags for the extent. Information is taken from the [Kernel fiemap documentation](https://www.kernel.org/doc/Documentation/filesystems/fiemap.txt).
 
 `FIEMAP_EXTENT_LAST`
 This is generally the last extent in the file. A mapping attempt past this extent may return nothing. Some implementations set this flag to indicate this extent is the last one in the range queried by the user (via fiemap->fm_length).
