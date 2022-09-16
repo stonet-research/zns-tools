@@ -24,6 +24,7 @@ sudo ./filemap [flags]
 -f [file_name]: The file to be mapped (Required)
 -h: Show the help menu
 -s: Show holes in between extents
+-l: Show flags of extents (as returned by ioctl())
 -i: Show info prints with the results
 ```
 
@@ -43,6 +44,7 @@ MASK:   The Zone Mask that is used to calculate LBAS of LBA addresses in a zone
 EXTID:  Extent number in the order of the extents returned by ioctl(), depciting logical file data ordering
 PBAS:   Physical Block Address Start
 PBAE:   Physical Block Address End 
+FLAGS:  Flags of the extent as returned by ioctl()
 
 NOE:    Number of Extents
 NOZ:    Number of Zones (in which extents are)
@@ -69,6 +71,40 @@ As mentioned, the extent number is in the logical order of the file data, and he
 For more information about the `STATE` of zones, visit the [ZNS documentation](https://zonedstorage.io/docs/linux/zbd-api#zone-condition).
 
 **Important:** Extents that are out of the address range for the ZNS device are not included in the statistics (e.g., when F2FS uses inline data the extent is not on the ZNS but the conventional block device). We still show a warning about such as extents and their info.
+
+#### Extent Flags
+
+There can be several flags for the extent. Information is taken from the [Kernel fiemap documentation](https://github.com/torvalds/linux/blob/master/Documentation/filesystems/fiemap.rst).
+
+`FIEMAP_EXTENT_LAST`
+This is generally the last extent in the file. A mapping attempt past this extent may return nothing. Some implementations set this flag to indicate this extent is the last one in the range queried by the user (via fiemap->fm_length).
+
+`FIEMAP_EXTENT_UNKNOWN`
+The location of this extent is currently unknown. This may indicate the data is stored on an inaccessible volume or that no storage has been allocated for the file yet.
+
+`FIEMAP_EXTENT_DELALLOC`
+This will also set FIEMAP_EXTENT_UNKNOWN. Delayed allocation - while there is data for this extent, its physical location has not been allocated yet.
+
+`FIEMAP_EXTENT_ENCODED`
+This extent does not consist of plain filesystem blocks but is encoded (e.g. encrypted or compressed). Reading the data in this extent via I/O to the block device will have undefined results.
+
+`FIEMAP_EXTENT_DATA_ENCRYPTED`
+This will also set FIEMAP_EXTENT_ENCODED The data in this extent has been encrypted by the file system.
+
+`FIEMAP_EXTENT_NOT_ALIGNED`
+Extent offsets and length are not guaranteed to be block aligned.
+
+`FIEMAP_EXTENT_DATA_INLINE`
+This will also set FIEMAP_EXTENT_NOT_ALIGNED Data is located within a meta data block.
+
+`FIEMAP_EXTENT_DATA_TAIL`
+This will also set FIEMAP_EXTENT_NOT_ALIGNED Data is packed into a block with data from other files.
+
+`FIEMAP_EXTENT_UNWRITTEN`
+Unwritten extent - the extent is allocated but its data has not been initialized. This indicates the extent's data will be all zero if read through the filesystem but the contents are undefined if read directly from the device.
+
+`FIEMAP_EXTENT_MERGED`
+This will be set when a file does not support extents, i.e., it uses a block based addressing scheme. Since returning an extent for each block back to userspace would be highly inefficient, the kernel will try to merge most adjacent blocks into 'extents'.
 
 ### Holes between Extents
 

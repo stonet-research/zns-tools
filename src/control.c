@@ -180,6 +180,7 @@ static void show_help() {
     printf("-f\tInput file to map [Required]\n");
     printf("-h\tShow this help\n");
     printf("-i\tShow info prints\n");
+    printf("-l\tShow extent flags\n");
     printf("-s\tShow file holes\n");
     exit(0);
 }
@@ -195,13 +196,16 @@ static void show_help() {
 static int parse_opts(struct control *ctrl, int argc, char **argv) {
     int c;
 
-    while ((c = getopt(argc, argv, "f:his")) != -1) {
+    while ((c = getopt(argc, argv, "f:hils")) != -1) {
         switch (c) {
         case 'h':
             show_help();
             break;
         case 'f':
             ctrl->filename = optarg;
+            break;
+        case 'l':
+            ctrl->show_flags = 1;
             break;
         case 's':
             ctrl->show_holes = 1;

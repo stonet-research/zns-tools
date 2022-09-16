@@ -184,6 +184,7 @@ static struct extent_map *get_extents(struct control *ctrl) {
                 ctrl->znsdev->zone_size;
             extent_map->extent[extent_map->ext_ctr].ext_nr =
                 extent_map->ext_ctr;
+            extent_map->extent[extent_map->ext_ctr].flags = fiemap->fm_extents[0].fe_flags;
 
             extent_map->cum_extent_size +=
                 extent_map->extent[extent_map->ext_ctr].len;
@@ -314,6 +315,39 @@ static void show_info(int show_hole_info) {
     }
 }
 
+static void show_extent_flags(uint32_t flags) {
+
+    if (flags & FIEMAP_EXTENT_UNKNOWN) {
+        printf("FIEMAP_EXTENT_UNKNOWN  ");
+    }
+    if (flags & FIEMAP_EXTENT_DELALLOC) {
+        printf("FIEMAP_EXTENT_DELALLOC  ");
+    }
+    if (flags & FIEMAP_EXTENT_ENCODED) {
+        printf("FIEMAP_EXTENT_ENCODED  ");
+    }
+    if (flags & FIEMAP_EXTENT_DATA_ENCRYPTED) {
+        printf("FIEMAP_EXTENT_DATA_ENCRYPTED  ");
+    }
+    if(flags & FIEMAP_EXTENT_NOT_ALIGNED) {
+        printf("FIEMAP_EXTENT_NOT_ALIGNED  ");
+    }
+    if (flags & FIEMAP_EXTENT_DATA_INLINE) {
+        printf("FIEMAP_EXTENT_DATA_INLINE  ");
+    }
+    if (flags & FIEMAP_EXTENT_DATA_TAIL) {
+        printf("FIEMAP_EXTENT_DATA_TAIL  ");
+    }
+    if (flags & FIEMAP_EXTENT_UNWRITTEN) {
+        printf("FIEMAP_EXTENT_UNWRITTEN  ");
+    }
+    if (flags & FIEMAP_EXTENT_MERGED) {
+        printf("FIEMAP_EXTENT_MERGED  ");
+    }
+
+    printf("\n");
+}
+
 /*
  * Print the report summary of extent_map.
  *
@@ -386,17 +420,23 @@ static void print_extent_report(struct control *ctrl,
             hole_cum_size += hole_size;
             hole_ctr++;
 
-            printf("--- HOLE:    PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
+            printf("++++ HOLE:    PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
                    "  SIZE: %#-10" PRIx64 "\n",
                    extent_map->extent[i].zone_lbas,
                    extent_map->extent[i].phy_blk, hole_size);
         }
 
         printf("EXTID: %-4d  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
-               "  SIZE: %#-10" PRIx64 "\n",
+               "  SIZE: %#-10" PRIx64 "",
                extent_map->extent[i].ext_nr + 1, extent_map->extent[i].phy_blk,
                (extent_map->extent[i].phy_blk + extent_map->extent[i].len),
                extent_map->extent[i].len);
+
+        if (extent_map->extent[i].flags != 0 && ctrl->show_flags) {
+            printf("\n|--- FLAGS:  ");
+            show_extent_flags(extent_map->extent[i].flags);
+        }
+
 
         pbae = extent_map->extent[i].phy_blk + extent_map->extent[i].len;
         if (ctrl->show_holes && i > 0 && i < extent_map->ext_ctr &&
@@ -439,7 +479,7 @@ static void print_extent_report(struct control *ctrl,
            (double)extent_map->cum_extent_size / (double)(extent_map->ext_ctr),
            extent_map->zone_ctr);
 
-    if (ctrl->show_holes) {
+    if (ctrl->show_holes && hole_ctr > 0) {
         printf("NOH: %-4u  THS: %#-10" PRIx64 "  AHS: %#-10" PRIx64
                "  EAHS: %-10f\n",
                hole_ctr, hole_cum_size, hole_cum_size / hole_ctr,

@@ -20,6 +20,7 @@ struct control {
                             prior bdev */
     uint8_t multi_dev;   /* flag if device setup is using bdev + ZNS */
     uint8_t show_holes;  /* cmd_line flag to show holes */
+    uint8_t show_flags;  /* cmd_line flag to show extent flags */
     uint8_t info;        /* cmd_line flag to show info */
     uint64_t offset;     /* offset for the ZNS - only in multi_dev setup */
 };
