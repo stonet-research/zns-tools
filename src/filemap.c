@@ -121,6 +121,45 @@ static void get_zone_info(char *dev_path, struct extent *extent) {
     hdr = NULL;
 }
 
+/* 
+ * Show the flags that are set in an extent
+ *
+ * @flags: the uint32_t flags of the extent (extent.fe_flags)
+ *
+ * */
+static void show_extent_flags(uint32_t flags) {
+
+    if (flags & FIEMAP_EXTENT_UNKNOWN) {
+        printf("FIEMAP_EXTENT_UNKNOWN  ");
+    }
+    if (flags & FIEMAP_EXTENT_DELALLOC) {
+        printf("FIEMAP_EXTENT_DELALLOC  ");
+    }
+    if (flags & FIEMAP_EXTENT_ENCODED) {
+        printf("FIEMAP_EXTENT_ENCODED  ");
+    }
+    if (flags & FIEMAP_EXTENT_DATA_ENCRYPTED) {
+        printf("FIEMAP_EXTENT_DATA_ENCRYPTED  ");
+    }
+    if(flags & FIEMAP_EXTENT_NOT_ALIGNED) {
+        printf("FIEMAP_EXTENT_NOT_ALIGNED  ");
+    }
+    if (flags & FIEMAP_EXTENT_DATA_INLINE) {
+        printf("FIEMAP_EXTENT_DATA_INLINE  ");
+    }
+    if (flags & FIEMAP_EXTENT_DATA_TAIL) {
+        printf("FIEMAP_EXTENT_DATA_TAIL  ");
+    }
+    if (flags & FIEMAP_EXTENT_UNWRITTEN) {
+        printf("FIEMAP_EXTENT_UNWRITTEN  ");
+    }
+    if (flags & FIEMAP_EXTENT_MERGED) {
+        printf("FIEMAP_EXTENT_MERGED  ");
+    }
+
+    printf("\n");
+}
+
 /*
  * Get the file extents with FIEMAP ioctl
  *
@@ -172,6 +211,9 @@ static struct extent_map *get_extents(struct control *ctrl) {
                     fiemap->fm_extents[0].fe_length) >>
                        SECTOR_SHIFT,
                    fiemap->fm_extents[0].fe_length >> SECTOR_SHIFT);
+
+                printf("\t |--- FLAGS:  ");
+                show_extent_flags(fiemap->fm_extents[0].fe_flags);
         } else {
             extent_map->extent[extent_map->ext_ctr].phy_blk =
                 (fiemap->fm_extents[0].fe_physical - ctrl->offset) >>
@@ -315,38 +357,6 @@ static void show_info(int show_hole_info) {
     }
 }
 
-static void show_extent_flags(uint32_t flags) {
-
-    if (flags & FIEMAP_EXTENT_UNKNOWN) {
-        printf("FIEMAP_EXTENT_UNKNOWN  ");
-    }
-    if (flags & FIEMAP_EXTENT_DELALLOC) {
-        printf("FIEMAP_EXTENT_DELALLOC  ");
-    }
-    if (flags & FIEMAP_EXTENT_ENCODED) {
-        printf("FIEMAP_EXTENT_ENCODED  ");
-    }
-    if (flags & FIEMAP_EXTENT_DATA_ENCRYPTED) {
-        printf("FIEMAP_EXTENT_DATA_ENCRYPTED  ");
-    }
-    if(flags & FIEMAP_EXTENT_NOT_ALIGNED) {
-        printf("FIEMAP_EXTENT_NOT_ALIGNED  ");
-    }
-    if (flags & FIEMAP_EXTENT_DATA_INLINE) {
-        printf("FIEMAP_EXTENT_DATA_INLINE  ");
-    }
-    if (flags & FIEMAP_EXTENT_DATA_TAIL) {
-        printf("FIEMAP_EXTENT_DATA_TAIL  ");
-    }
-    if (flags & FIEMAP_EXTENT_UNWRITTEN) {
-        printf("FIEMAP_EXTENT_UNWRITTEN  ");
-    }
-    if (flags & FIEMAP_EXTENT_MERGED) {
-        printf("FIEMAP_EXTENT_MERGED  ");
-    }
-
-    printf("\n");
-}
 
 /*
  * Print the report summary of extent_map.
@@ -485,7 +495,7 @@ static void print_extent_report(struct control *ctrl,
                hole_ctr, hole_cum_size, hole_cum_size / hole_ctr,
                (double)hole_cum_size / (double)hole_ctr);
     } else if (ctrl->show_holes && hole_ctr == 0) {
-        printf("NOH: 0");
+        printf("NOH: 0\n");
     }
 }
 
@@ -498,6 +508,8 @@ int main(int argc, char *argv[]) {
     if (!ctrl) {
         return 1;
     }
+
+    fsync(ctrl->fd);
 
     extent_map = (struct extent_map *)get_extents(ctrl);
 
