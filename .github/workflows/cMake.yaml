@@ -8,6 +8,7 @@ on:
 
 env:
   BUILD_TYPE: RelWithDebInfo
+  CXXFLAGS: -Iinclude/
 
 jobs:
   build:
