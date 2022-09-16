@@ -11,23 +11,20 @@ message("Building with CMake version: ${CMAKE_VERSION}")
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+set(PROJECT_SOURCE_DIR ${CMAKE_SOURCE_DIR}/src)
+
 message("Compiling with ${CMAKE_CXX_COMPILER_ID}: ${CMAKE_CXX_COMPILER}")
 
-
 add_executable(${PROJECT_NAME}
-    ${PROJECT_SOURCE_DIR}/src/filemap.c
-    ${PROJECT_SOURCE_DIR}/src/control.c
-    ${PROJECT_SOURCE_DIR}/include/blkzoned.h
+    ${PROJECT_SOURCE_DIR}/filemap.c
+    ${PROJECT_SOURCE_DIR}/control.c
 )
-
-target_include_directories(${PROJECT_NAME} PRIVATE include)
 
 target_include_directories(${PROJECT_NAME} PRIVATE src)
 
 target_include_directories(${PROJECT_NAME} PUBLIC
                           "${PROJECT_BINARY_DIR}"
 )
-
 
 install(TARGETS ${PROJECT_NAME} DESTINATION bin)
 
