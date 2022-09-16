@@ -50,7 +50,6 @@ static void print_zone_info(struct extent *extent, struct bdev *znsdev,
     unsigned long long start_sector = 0;
     struct blk_zone_report *hdr = NULL;
     uint32_t zone_mask;
-    uint64_t zone_wp = 0;
 
     start_sector = znsdev->zone_size * zone - znsdev->zone_size;
 
@@ -449,7 +448,7 @@ int main(int argc, char *argv[]) {
     struct control *ctrl;
     struct extent_map *extent_map;
 
-    ctrl = (struct control *)init_ctrl(argc, argv);
+    ctrl = (struct control *) init_ctrl(argc, argv);
 
     if (!ctrl) {
         return 1;
