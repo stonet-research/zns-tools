@@ -1,6 +1,7 @@
-#ifndef ZONEMAP_H
-#define ZONEMAP_H
+#ifndef FILEMAP_H
+#define FILEMAP_H
 
+#include "control.h"
 #include <inttypes.h>
 #include <stdint.h>
 
@@ -24,5 +25,7 @@ struct extent_map {
         cum_extent_size;    /* Cumulative size of all extents in 512B sectors */
     struct extent extent[]; /* Array of struct extent for each extent */
 };
+
+int filemap(struct control *ctrl);
 
 #endif
