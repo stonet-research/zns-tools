@@ -1,9 +1,9 @@
 #ifndef FILEMAP_H
 #define FILEMAP_H
 
+#include "control.h"
 #include <inttypes.h>
 #include <stdint.h>
-#include "control.h"
 
 struct extent {
     uint32_t zone;        /* zone index (starting with 1) of the extent */

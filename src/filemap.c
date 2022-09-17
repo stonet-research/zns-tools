@@ -444,7 +444,6 @@ static void print_extent_report(struct control *ctrl,
     }
 }
 
-
 /*
  * Run the filemap program to gather file extent
  * distribution on ZNS zones.
