@@ -1,4 +1,4 @@
-#include "zonemap.h"
+#include "filemap.h"
 #include "control.h"
 #include <fcntl.h>
 #include <linux/blkzoned.h>
@@ -421,8 +421,8 @@ static void print_extent_report(struct control *ctrl,
         }
     }
 
-    printf("\n================================================================="
-           "===\n");
+    printf("\n\n==============================================================="
+           "=====\n");
     printf("\t\t\tSTATS SUMMARY\n");
     printf("==================================================================="
            "=\n");
@@ -444,11 +444,16 @@ static void print_extent_report(struct control *ctrl,
     }
 }
 
-int main(int argc, char *argv[]) {
-    struct control *ctrl;
-    struct extent_map *extent_map;
 
-    ctrl = (struct control *) init_ctrl(argc, argv);
+/*
+ * Run the filemap program to gather file extent
+ * distribution on ZNS zones.
+ *
+ * @ctrl: control parameters
+ *
+ * */
+int filemap(struct control *ctrl) {
+    struct extent_map *extent_map;
 
     if (!ctrl) {
         return 1;

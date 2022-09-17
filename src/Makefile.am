@@ -5,9 +5,10 @@ AM_CFLAGS = -O2 -Wall -Wextra -g -Wunused-parameter
 sbin_PROGRAMS = zonemap
 
 CFILES = control.c \
-		  zonemap.c
+		  filemap.c \
+		  main.c
 
 HFILES = control.h \
-		  zonemap.h
+		  filemap.h
 
 zonemap_SOURCES = ${CFILES} ${HFILES}
