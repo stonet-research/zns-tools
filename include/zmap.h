@@ -1,8 +1,8 @@
 #ifndef __ZMAP_H__
 #define __ZMAP_H__
 
-#include <inttypes.h>
 #include <fcntl.h>
+#include <inttypes.h>
 #include <libgen.h>
 #include <linux/blkzoned.h>
 #include <linux/fs.h>
@@ -46,22 +46,20 @@ extern uint64_t get_zone_size(char *);
 extern void init_ctrl(int, char **);
 extern void cleanup_ctrl();
 
-#define ERR_MSG(fmt, ...)                       \
-    do {                                \
-        printf("[%s:%d] " fmt, __func__, __LINE__, ##__VA_ARGS__); \
-        exit(1); \
+#define ERR_MSG(fmt, ...)                                                      \
+    do {                                                                       \
+        printf("[%s:%d] " fmt, __func__, __LINE__, ##__VA_ARGS__);             \
+        exit(1);                                                               \
     } while (0)
 
-#define DBG(fmt, ...)                        \
-    do {                                \
-        printf("[%s:%4d] " fmt,             \
-                __func__, __LINE__, ##__VA_ARGS__); \
+#define DBG(fmt, ...)                                                          \
+    do {                                                                       \
+        printf("[%s:%4d] " fmt, __func__, __LINE__, ##__VA_ARGS__);            \
     } while (0)
 
- #define MSG(fmt, ...)                        \
-    do {                                \
-        printf(fmt, ##__VA_ARGS__);         \
+#define MSG(fmt, ...)                                                          \
+    do {                                                                       \
+        printf(fmt, ##__VA_ARGS__);                                            \
     } while (0)
-
 
 #endif
