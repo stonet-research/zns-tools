@@ -44,6 +44,7 @@ extern uint8_t init_znsdev(struct bdev *);
 extern uint64_t get_dev_size(char *);
 extern uint64_t get_zone_size(char *);
 extern void init_ctrl(int, char **);
+extern uint32_t get_zone_number(uint64_t);
 extern void cleanup_ctrl();
 
 #define ERR_MSG(fmt, ...)                                                      \

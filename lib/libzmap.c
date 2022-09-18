@@ -323,3 +323,22 @@ void cleanup_ctrl() {
     }
     free(ctrl.stats);
 }
+
+/*
+ * Calculate the zone number (starting with zone 1) of an LBA
+ *
+ * @lba: LBA to calculate zone number of
+ * @zone_size: size of the zone
+ *
+ * returns: number of the zone (starting with 1)
+ *
+ * */
+uint32_t get_zone_number(uint64_t lba) {
+    uint64_t zone_mask = 0;
+    uint64_t slba = 0;
+
+    zone_mask = ~(ctrl.znsdev->zone_size - 1);
+    slba = (lba & zone_mask);
+
+    return slba == 0 ? 1 : (slba / ctrl.znsdev->zone_size + 1);
+}

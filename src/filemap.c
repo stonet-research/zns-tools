@@ -18,41 +18,21 @@
 #define SECTOR_SHIFT 9
 
 /*
- * Calculate the zone number (starting with zone 1) of an LBA
- *
- * @lba: LBA to calculate zone number of
- * @zone_size: size of the zone
- *
- * returns: number of the zone (starting with 1)
- *
- * */
-static uint32_t get_zone_number(uint64_t lba, uint64_t zone_size) {
-    uint64_t zone_mask = 0;
-    uint64_t slba = 0;
-
-    zone_mask = ~(zone_size - 1);
-    slba = (lba & zone_mask);
-
-    return slba == 0 ? 1 : (slba / zone_size + 1);
-}
-
-/*
  * Print the information about a zone.
  *
  * @extent: a struct extent * of the current extent
- * @znsdev: struct bdev * to the ZNS device
  * @zone: number of the zone to print info of
  *
  * */
-static void print_zone_info(struct extent *extent, struct bdev *znsdev,
+static void print_zone_info(struct extent *extent, 
                             uint32_t zone) {
     unsigned long long start_sector = 0;
     struct blk_zone_report *hdr = NULL;
     uint32_t zone_mask;
 
-    start_sector = znsdev->zone_size * zone - znsdev->zone_size;
+    start_sector = ctrl.znsdev->zone_size * zone - ctrl.znsdev->zone_size;
 
-    int fd = open(znsdev->dev_path, O_RDONLY);
+    int fd = open(ctrl.znsdev->dev_path, O_RDONLY);
     if (fd < 0) {
         return;
     }
@@ -66,7 +46,7 @@ static void print_zone_info(struct extent *extent, struct bdev *znsdev,
         return;
     }
 
-    zone_mask = ~(znsdev->zone_size - 1);
+    zone_mask = ~(ctrl.znsdev->zone_size - 1);
     extent->zone_wp = hdr->zones[0].wp;
     extent->zone_lbae = hdr->zones[0].start + hdr->zones[0].capacity;
     MSG("\n**** ZONE %d ****\n", zone);
@@ -85,17 +65,16 @@ static void print_zone_info(struct extent *extent, struct bdev *znsdev,
 /*
  * Get information about a zone.
  *
- * @dev_path: path to the ZNS dev (e.g., /dev/nvme0n2)
  * @extent: struct extent * to store zone info in
  *
  * */
-static void get_zone_info(char *dev_path, struct extent *extent) {
+static void get_zone_info(struct extent *extent) {
     struct blk_zone_report *hdr = NULL;
     uint64_t start_sector;
 
     start_sector = extent->zone_size * extent->zone - extent->zone_size;
 
-    int fd = open(dev_path, O_RDONLY);
+    int fd = open(ctrl.znsdev->dev_path, O_RDONLY);
     if (fd < 0) {
         return;
     }
@@ -232,11 +211,9 @@ static struct extent_map *get_extents() {
 
             extent_map->extent[extent_map->ext_ctr].zone = get_zone_number(
                 ((fiemap->fm_extents[0].fe_physical - ctrl.offset) >>
-                 SECTOR_SHIFT),
-                extent_map->extent[extent_map->ext_ctr].zone_size);
+                 SECTOR_SHIFT));
 
-            get_zone_info(ctrl.znsdev->dev_path,
-                          &extent_map->extent[extent_map->ext_ctr]);
+            get_zone_info(&extent_map->extent[extent_map->ext_ctr]);
             extent_map->ext_ctr++;
         }
 
@@ -339,7 +316,7 @@ static void print_extent_report(struct extent_map *extent_map) {
         if (current_zone != extent_map->extent[i].zone) {
             current_zone = extent_map->extent[i].zone;
             extent_map->zone_ctr++;
-            print_zone_info(&extent_map->extent[i], ctrl.znsdev, current_zone);
+            print_zone_info(&extent_map->extent[i], current_zone);
         }
 
         // Track holes in between extents in the same zone
@@ -447,7 +424,7 @@ static void print_extent_report(struct extent_map *extent_map) {
  *
  *
  * */
-int filemap() {
+void filemap() {
     struct extent_map *extent_map;
 
     fsync(ctrl.fd);
@@ -457,7 +434,6 @@ int filemap() {
     if (!extent_map) {
         ERR_MSG("\033[0;31mError\033[0m retrieving extents for %s\n",
                 ctrl.filename);
-        return 1;
     }
 
     sort_extents(extent_map);
@@ -465,6 +441,4 @@ int filemap() {
 
     close(ctrl.fd);
     free(extent_map);
-
-    return 0;
 }

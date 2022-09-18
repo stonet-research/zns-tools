@@ -26,6 +26,6 @@ struct extent_map {
     struct extent extent[]; /* Array of struct extent for each extent */
 };
 
-extern int filemap();
+extern void filemap();
 
 #endif
