@@ -71,10 +71,10 @@ static void print_zone_info(struct extent *extent, struct bdev *znsdev,
     extent->zone_lbae = hdr->zones[0].start + hdr->zones[0].capacity;
     MSG("\n**** ZONE %d ****\n", zone);
     MSG("LBAS: 0x%06llx  LBAE: 0x%06llx  CAP: 0x%06llx  WP: 0x%06llx  SIZE: "
-           "0x%06llx  STATE: %#-4x  MASK: 0x%06" PRIx32 "\n\n",
-           hdr->zones[0].start, hdr->zones[0].start + hdr->zones[0].capacity,
-           hdr->zones[0].capacity, hdr->zones[0].wp, hdr->zones[0].len,
-           hdr->zones[0].cond << 4, zone_mask);
+        "0x%06llx  STATE: %#-4x  MASK: 0x%06" PRIx32 "\n\n",
+        hdr->zones[0].start, hdr->zones[0].start + hdr->zones[0].capacity,
+        hdr->zones[0].capacity, hdr->zones[0].wp, hdr->zones[0].len,
+        hdr->zones[0].cond << 4, zone_mask);
 
     close(fd);
 
@@ -202,13 +202,13 @@ static struct extent_map *get_extents() {
         // Disregard this extent but print warning
         if (fiemap->fm_extents[0].fe_physical < ctrl.offset) {
             MSG("\n\033[0;33mWarning\033[0m: Extent Reported on %s  PBAS: "
-                   "0x%06llx  PBAE: 0x%06llx  SIZE: 0x%06llx\n",
-                   ctrl.bdev->dev_name,
-                   fiemap->fm_extents[0].fe_physical >> SECTOR_SHIFT,
-                   (fiemap->fm_extents[0].fe_physical +
-                    fiemap->fm_extents[0].fe_length) >>
-                       SECTOR_SHIFT,
-                   fiemap->fm_extents[0].fe_length >> SECTOR_SHIFT);
+                "0x%06llx  PBAE: 0x%06llx  SIZE: 0x%06llx\n",
+                ctrl.bdev->dev_name,
+                fiemap->fm_extents[0].fe_physical >> SECTOR_SHIFT,
+                (fiemap->fm_extents[0].fe_physical +
+                 fiemap->fm_extents[0].fe_length) >>
+                    SECTOR_SHIFT,
+                fiemap->fm_extents[0].fe_length >> SECTOR_SHIFT);
 
             MSG("\t |--- FLAGS:  ");
             show_extent_flags(fiemap->fm_extents[0].fe_flags);
@@ -330,10 +330,10 @@ static void print_extent_report(struct extent_map *extent_map) {
     uint64_t pbae = 0;
 
     MSG("\n================================================================="
-           "===\n");
+        "===\n");
     MSG("\t\t\tEXTENT MAPPINGS\n");
     MSG("==================================================================="
-           "=\n");
+        "=\n");
 
     for (uint32_t i = 0; i < extent_map->ext_ctr; i++) {
         if (current_zone != extent_map->extent[i].zone) {
@@ -358,10 +358,10 @@ static void print_extent_report(struct extent_map *extent_map) {
                 hole_ctr++;
 
                 MSG("--- HOLE:    PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
-                       "  SIZE: %#-10" PRIx64 "\n",
-                       extent_map->extent[i - 1].phy_blk +
-                           extent_map->extent[i - 1].len,
-                       extent_map->extent[i].phy_blk, hole_size);
+                    "  SIZE: %#-10" PRIx64 "\n",
+                    extent_map->extent[i - 1].phy_blk +
+                        extent_map->extent[i - 1].len,
+                    extent_map->extent[i].phy_blk, hole_size);
             }
         }
         if (ctrl.show_holes && i > 0 && i < extent_map->ext_ctr - 1 &&
@@ -375,16 +375,16 @@ static void print_extent_report(struct extent_map *extent_map) {
             hole_ctr++;
 
             MSG("++++ HOLE:    PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
-                   "  SIZE: %#-10" PRIx64 "\n",
-                   extent_map->extent[i].zone_lbas,
-                   extent_map->extent[i].phy_blk, hole_size);
+                "  SIZE: %#-10" PRIx64 "\n",
+                extent_map->extent[i].zone_lbas, extent_map->extent[i].phy_blk,
+                hole_size);
         }
 
         MSG("EXTID: %-4d  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
-               "  SIZE: %#-10" PRIx64 "",
-               extent_map->extent[i].ext_nr + 1, extent_map->extent[i].phy_blk,
-               (extent_map->extent[i].phy_blk + extent_map->extent[i].len),
-               extent_map->extent[i].len);
+            "  SIZE: %#-10" PRIx64 "",
+            extent_map->extent[i].ext_nr + 1, extent_map->extent[i].phy_blk,
+            (extent_map->extent[i].phy_blk + extent_map->extent[i].len),
+            extent_map->extent[i].len);
 
         if (extent_map->extent[i].flags != 0 && ctrl.show_flags) {
             MSG("\n|--- FLAGS:  ");
@@ -413,30 +413,29 @@ static void print_extent_report(struct extent_map *extent_map) {
             hole_ctr++;
 
             MSG("--- HOLE:    PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
-                   "  SIZE: %#-10" PRIx64 "\n",
-                   extent_map->extent[i].phy_blk + extent_map->extent[i].len,
-                   hole_end, hole_size);
+                "  SIZE: %#-10" PRIx64 "\n",
+                extent_map->extent[i].phy_blk + extent_map->extent[i].len,
+                hole_end, hole_size);
         }
     }
 
     MSG("\n\n==============================================================="
-           "=====\n");
+        "=====\n");
     MSG("\t\t\tSTATS SUMMARY\n");
     MSG("==================================================================="
-           "=\n");
-    MSG("\nNOE: %-4u  TES: %#-10" PRIx64 "  AES: %#-10" PRIx64
-           "  EAES: %-10f"
-           "  NOZ: %-4u\n",
-           extent_map->ext_ctr, extent_map->cum_extent_size,
-           extent_map->cum_extent_size / (extent_map->ext_ctr),
-           (double)extent_map->cum_extent_size / (double)(extent_map->ext_ctr),
-           extent_map->zone_ctr);
+        "=\n");
+    MSG("\nNOE: %-4u  TES: %#-10" PRIx64 "  AES: %#-10" PRIx64 "  EAES: %-10f"
+        "  NOZ: %-4u\n",
+        extent_map->ext_ctr, extent_map->cum_extent_size,
+        extent_map->cum_extent_size / (extent_map->ext_ctr),
+        (double)extent_map->cum_extent_size / (double)(extent_map->ext_ctr),
+        extent_map->zone_ctr);
 
     if (ctrl.show_holes && hole_ctr > 0) {
         MSG("NOH: %-4u  THS: %#-10" PRIx64 "  AHS: %#-10" PRIx64
-               "  EAHS: %-10f\n",
-               hole_ctr, hole_cum_size, hole_cum_size / hole_ctr,
-               (double)hole_cum_size / (double)hole_ctr);
+            "  EAHS: %-10f\n",
+            hole_ctr, hole_cum_size, hole_cum_size / hole_ctr,
+            (double)hole_cum_size / (double)hole_ctr);
     } else if (ctrl.show_holes && hole_ctr == 0) {
         MSG("NOH: 0\n");
     }

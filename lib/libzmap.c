@@ -61,8 +61,8 @@ void init_dev(struct stat *st) {
                 ctrl.bdev->dev_path);
     }
 
-    if (readlink(ctrl.bdev->dev_path, ctrl.bdev->link_name, sizeof(ctrl.bdev->link_name)) <
-        0) {
+    if (readlink(ctrl.bdev->dev_path, ctrl.bdev->link_name,
+                 sizeof(ctrl.bdev->link_name)) < 0) {
         ERR_MSG("\033[0;31mError\033[0m opening device fd for %s\n",
                 ctrl.bdev->dev_path);
     }
@@ -158,43 +158,43 @@ uint64_t get_zone_size(char *dev_path) {
  * */
 static void show_info() {
     MSG("\n============================================================="
-           "=======\n");
+        "=======\n");
     MSG("\t\t\tACRONYM INFO\n");
     MSG("==============================================================="
-           "=====\n");
+        "=====\n");
     MSG("\nInfo: Extents are sorted by PBAS but have an associated "
-           "Extent Number to indicate the logical order of file data.\n\n");
+        "Extent Number to indicate the logical order of file data.\n\n");
     MSG("LBAS:   Logical Block Address Start (for the Zone)\n");
     MSG("LBAE:   Logical Block Address End (for the Zone, equal to LBAS + "
-           "ZONE CAP)\n");
+        "ZONE CAP)\n");
     MSG("CAP:    Zone Capacity (in 512B sectors)\n");
     MSG("WP:     Write Pointer of the Zone\n");
     MSG("SIZE:   Size of the Zone (in 512B sectors)\n");
     MSG("STATE:  State of a zone (e.g, FULL, EMPTY)\n");
     MSG("MASK:   The Zone Mask that is used to calculate LBAS of LBA "
-           "addresses in a zone\n");
+        "addresses in a zone\n");
 
     MSG("EXTID:  Extent number in the order of the extents returned by "
-           "ioctl(), depciting logical file data ordering\n");
+        "ioctl(), depciting logical file data ordering\n");
     MSG("PBAS:   Physical Block Address Start\n");
     MSG("PBAE:   Physical Block Address End\n");
 
     MSG("NOE:    Number of Extent\n");
     MSG("TES:    Total Extent Size (in 512B sectors\n");
     MSG("AES:    Average Extent Size (floored value due to hex print, in "
-           "512B sectors)\n"
-           "\t[Meant for easier comparison with Extent Sizes\n");
+        "512B sectors)\n"
+        "\t[Meant for easier comparison with Extent Sizes\n");
     MSG("EAES:   Exact Average Extent Size (double point precision value, "
-           "in 512B sectors\n"
-           "\t[Meant for exact calculations of average extent sizes\n");
+        "in 512B sectors\n"
+        "\t[Meant for exact calculations of average extent sizes\n");
     MSG("NOZ:    Number of Zones (in which extents are\n");
 
     MSG("NOH:    Number of Holes\n");
     MSG("THS:    Total Hole Size (in 512B sectors\n");
     MSG("AHS:    Average Hole Size (floored value due to hex print, in "
-           "512B sectors)\n");
+        "512B sectors)\n");
     MSG("EAHS:   Exact Average Hole Size (double point precision value, "
-           "in 512B sectors\n");
+        "in 512B sectors\n");
 }
 
 /*
@@ -281,11 +281,11 @@ void init_ctrl(int argc, char **argv) {
 
     if (ctrl.bdev->is_zoned != 1) {
         MSG("\033[0;33mWarning\033[0m: %s is registered as containing this "
-               "file, however it is"
-               " not a ZNS.\nIf it is used with F2FS as the conventional "
-               "device, enter the"
-               " assocaited ZNS device name: ",
-               ctrl.bdev->dev_name);
+            "file, however it is"
+            " not a ZNS.\nIf it is used with F2FS as the conventional "
+            "device, enter the"
+            " assocaited ZNS device name: ",
+            ctrl.bdev->dev_name);
 
         // TODO: is there a way we can find the associated ZNS dev in F2FS? it's
         // in the kernel log
@@ -310,8 +310,8 @@ void init_ctrl(int argc, char **argv) {
     }
 }
 
-/* 
- * Cleanup control struct - free memory 
+/*
+ * Cleanup control struct - free memory
  *
  * */
 void cleanup_ctrl() {
