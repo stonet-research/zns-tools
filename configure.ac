@@ -35,8 +35,9 @@ AC_CHECK_MEMBER([struct blk_zone.capacity],
         [[#include <linux/blkzoned.h>]])
 
 AC_CONFIG_FILES([
-	Makefile
-	man/Makefile
+    Makefile
+    man/Makefile
+    lib/Makefile
     src/Makefile
 ])
 

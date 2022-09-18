@@ -1,5 +1,4 @@
 #include "filemap.h"
-#include "control.h"
 #include <fcntl.h>
 #include <linux/blkzoned.h>
 #include <linux/fiemap.h>
@@ -63,15 +62,15 @@ static void print_zone_info(struct extent *extent, struct bdev *znsdev,
     hdr->nr_zones = 1;
 
     if (ioctl(fd, BLKREPORTZONE, hdr) < 0) {
-        fprintf(stderr, "\033[0;31mError\033[0m getting Zone Info\n");
+        ERR_MSG("\033[0;31mError\033[0m getting Zone Info\n");
         return;
     }
 
     zone_mask = ~(znsdev->zone_size - 1);
     extent->zone_wp = hdr->zones[0].wp;
     extent->zone_lbae = hdr->zones[0].start + hdr->zones[0].capacity;
-    printf("\n**** ZONE %d ****\n", zone);
-    printf("LBAS: 0x%06llx  LBAE: 0x%06llx  CAP: 0x%06llx  WP: 0x%06llx  SIZE: "
+    MSG("\n**** ZONE %d ****\n", zone);
+    MSG("LBAS: 0x%06llx  LBAE: 0x%06llx  CAP: 0x%06llx  WP: 0x%06llx  SIZE: "
            "0x%06llx  STATE: %#-4x  MASK: 0x%06" PRIx32 "\n\n",
            hdr->zones[0].start, hdr->zones[0].start + hdr->zones[0].capacity,
            hdr->zones[0].capacity, hdr->zones[0].wp, hdr->zones[0].len,
@@ -106,7 +105,7 @@ static void get_zone_info(char *dev_path, struct extent *extent) {
     hdr->nr_zones = 1;
 
     if (ioctl(fd, BLKREPORTZONE, hdr) < 0) {
-        fprintf(stderr, "\033[0;31mError\033[0m getting Zone Info\n");
+        ERR_MSG("\033[0;31mError\033[0m getting Zone Info\n");
         return;
     }
 
@@ -129,34 +128,34 @@ static void get_zone_info(char *dev_path, struct extent *extent) {
 static void show_extent_flags(uint32_t flags) {
 
     if (flags & FIEMAP_EXTENT_UNKNOWN) {
-        printf("FIEMAP_EXTENT_UNKNOWN  ");
+        MSG("FIEMAP_EXTENT_UNKNOWN  ");
     }
     if (flags & FIEMAP_EXTENT_DELALLOC) {
-        printf("FIEMAP_EXTENT_DELALLOC  ");
+        MSG("FIEMAP_EXTENT_DELALLOC  ");
     }
     if (flags & FIEMAP_EXTENT_ENCODED) {
-        printf("FIEMAP_EXTENT_ENCODED  ");
+        MSG("FIEMAP_EXTENT_ENCODED  ");
     }
     if (flags & FIEMAP_EXTENT_DATA_ENCRYPTED) {
-        printf("FIEMAP_EXTENT_DATA_ENCRYPTED  ");
+        MSG("FIEMAP_EXTENT_DATA_ENCRYPTED  ");
     }
     if (flags & FIEMAP_EXTENT_NOT_ALIGNED) {
-        printf("FIEMAP_EXTENT_NOT_ALIGNED  ");
+        MSG("FIEMAP_EXTENT_NOT_ALIGNED  ");
     }
     if (flags & FIEMAP_EXTENT_DATA_INLINE) {
-        printf("FIEMAP_EXTENT_DATA_INLINE  ");
+        MSG("FIEMAP_EXTENT_DATA_INLINE  ");
     }
     if (flags & FIEMAP_EXTENT_DATA_TAIL) {
-        printf("FIEMAP_EXTENT_DATA_TAIL  ");
+        MSG("FIEMAP_EXTENT_DATA_TAIL  ");
     }
     if (flags & FIEMAP_EXTENT_UNWRITTEN) {
-        printf("FIEMAP_EXTENT_UNWRITTEN  ");
+        MSG("FIEMAP_EXTENT_UNWRITTEN  ");
     }
     if (flags & FIEMAP_EXTENT_MERGED) {
-        printf("FIEMAP_EXTENT_MERGED  ");
+        MSG("FIEMAP_EXTENT_MERGED  ");
     }
 
-    printf("\n");
+    MSG("\n");
 }
 
 /*
@@ -168,7 +167,7 @@ static void show_extent_flags(uint32_t flags) {
  *          NULL returned on Failure
  *
  * */
-static struct extent_map *get_extents(struct control *ctrl) {
+static struct extent_map *get_extents() {
     struct fiemap *fiemap;
     struct extent_map *extent_map;
     uint8_t last_ext = 0;
@@ -180,7 +179,7 @@ static struct extent_map *get_extents(struct control *ctrl) {
     fiemap->fm_flags = FIEMAP_FLAG_SYNC;
     fiemap->fm_start = 0;
     fiemap->fm_extent_count = 1; // get extents individually
-    fiemap->fm_length = (ctrl->stats->st_blocks << SECTOR_SHIFT);
+    fiemap->fm_length = (ctrl.stats->st_blocks << SECTOR_SHIFT);
     extent_map->ext_ctr = 0;
 
     do {
@@ -190,39 +189,39 @@ static struct extent_map *get_extents(struct control *ctrl) {
                                                      (extent_map->ext_ctr + 1));
         }
 
-        if (ioctl(ctrl->fd, FS_IOC_FIEMAP, fiemap) < 0) {
+        if (ioctl(ctrl.fd, FS_IOC_FIEMAP, fiemap) < 0) {
             return NULL;
         }
 
         if (fiemap->fm_mapped_extents == 0) {
-            fprintf(stderr, "\033[0;31mError\033[0m no extents are mapped\n");
+            ERR_MSG("\033[0;31mError\033[0m no extents are mapped\n");
             return NULL;
         }
 
         // If data is on the bdev, not the ZNS (e.g. inline or other reason?)
         // Disregard this extent but print warning
-        if (fiemap->fm_extents[0].fe_physical < ctrl->offset) {
-            printf("\n\033[0;33mWarning\033[0m: Extent Reported on %s  PBAS: "
+        if (fiemap->fm_extents[0].fe_physical < ctrl.offset) {
+            MSG("\n\033[0;33mWarning\033[0m: Extent Reported on %s  PBAS: "
                    "0x%06llx  PBAE: 0x%06llx  SIZE: 0x%06llx\n",
-                   ctrl->bdev->dev_name,
+                   ctrl.bdev->dev_name,
                    fiemap->fm_extents[0].fe_physical >> SECTOR_SHIFT,
                    (fiemap->fm_extents[0].fe_physical +
                     fiemap->fm_extents[0].fe_length) >>
                        SECTOR_SHIFT,
                    fiemap->fm_extents[0].fe_length >> SECTOR_SHIFT);
 
-            printf("\t |--- FLAGS:  ");
+            MSG("\t |--- FLAGS:  ");
             show_extent_flags(fiemap->fm_extents[0].fe_flags);
         } else {
             extent_map->extent[extent_map->ext_ctr].phy_blk =
-                (fiemap->fm_extents[0].fe_physical - ctrl->offset) >>
+                (fiemap->fm_extents[0].fe_physical - ctrl.offset) >>
                 SECTOR_SHIFT;
             extent_map->extent[extent_map->ext_ctr].logical_blk =
                 fiemap->fm_extents[0].fe_logical >> SECTOR_SHIFT;
             extent_map->extent[extent_map->ext_ctr].len =
                 fiemap->fm_extents[0].fe_length >> SECTOR_SHIFT;
             extent_map->extent[extent_map->ext_ctr].zone_size =
-                ctrl->znsdev->zone_size;
+                ctrl.znsdev->zone_size;
             extent_map->extent[extent_map->ext_ctr].ext_nr =
                 extent_map->ext_ctr;
             extent_map->extent[extent_map->ext_ctr].flags =
@@ -232,11 +231,11 @@ static struct extent_map *get_extents(struct control *ctrl) {
                 extent_map->extent[extent_map->ext_ctr].len;
 
             extent_map->extent[extent_map->ext_ctr].zone = get_zone_number(
-                ((fiemap->fm_extents[0].fe_physical - ctrl->offset) >>
+                ((fiemap->fm_extents[0].fe_physical - ctrl.offset) >>
                  SECTOR_SHIFT),
                 extent_map->extent[extent_map->ext_ctr].zone_size);
 
-            get_zone_info(ctrl->znsdev->dev_path,
+            get_zone_info(ctrl.znsdev->dev_path,
                           &extent_map->extent[extent_map->ext_ctr]);
             extent_map->ext_ctr++;
         }
@@ -322,8 +321,7 @@ static void sort_extents(struct extent_map *extent_map) {
  * @extent_map: struct extent_map * to the extent maps
  *
  * */
-static void print_extent_report(struct control *ctrl,
-                                struct extent_map *extent_map) {
+static void print_extent_report(struct extent_map *extent_map) {
     uint32_t current_zone = 0;
     uint32_t hole_ctr = 0;
     uint64_t hole_cum_size = 0;
@@ -331,21 +329,21 @@ static void print_extent_report(struct control *ctrl,
     uint64_t hole_end = 0;
     uint64_t pbae = 0;
 
-    printf("\n================================================================="
+    MSG("\n================================================================="
            "===\n");
-    printf("\t\t\tEXTENT MAPPINGS\n");
-    printf("==================================================================="
+    MSG("\t\t\tEXTENT MAPPINGS\n");
+    MSG("==================================================================="
            "=\n");
 
     for (uint32_t i = 0; i < extent_map->ext_ctr; i++) {
         if (current_zone != extent_map->extent[i].zone) {
             current_zone = extent_map->extent[i].zone;
             extent_map->zone_ctr++;
-            print_zone_info(&extent_map->extent[i], ctrl->znsdev, current_zone);
+            print_zone_info(&extent_map->extent[i], ctrl.znsdev, current_zone);
         }
 
         // Track holes in between extents in the same zone
-        if (ctrl->show_holes && i > 0 &&
+        if (ctrl.show_holes && i > 0 &&
             (extent_map->extent[i - 1].phy_blk +
                  extent_map->extent[i - 1].len !=
              extent_map->extent[i].phy_blk)) {
@@ -359,14 +357,14 @@ static void print_extent_report(struct control *ctrl,
                 hole_cum_size += hole_size;
                 hole_ctr++;
 
-                printf("--- HOLE:    PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
+                MSG("--- HOLE:    PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
                        "  SIZE: %#-10" PRIx64 "\n",
                        extent_map->extent[i - 1].phy_blk +
                            extent_map->extent[i - 1].len,
                        extent_map->extent[i].phy_blk, hole_size);
             }
         }
-        if (ctrl->show_holes && i > 0 && i < extent_map->ext_ctr - 1 &&
+        if (ctrl.show_holes && i > 0 && i < extent_map->ext_ctr - 1 &&
             extent_map->extent[i].zone_lbas != extent_map->extent[i].phy_blk &&
             extent_map->extent[i - 1].zone != extent_map->extent[i].zone) {
             // Hole between LBAS of zone and PBAS of the extent
@@ -376,25 +374,25 @@ static void print_extent_report(struct control *ctrl,
             hole_cum_size += hole_size;
             hole_ctr++;
 
-            printf("++++ HOLE:    PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
+            MSG("++++ HOLE:    PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
                    "  SIZE: %#-10" PRIx64 "\n",
                    extent_map->extent[i].zone_lbas,
                    extent_map->extent[i].phy_blk, hole_size);
         }
 
-        printf("EXTID: %-4d  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
+        MSG("EXTID: %-4d  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
                "  SIZE: %#-10" PRIx64 "",
                extent_map->extent[i].ext_nr + 1, extent_map->extent[i].phy_blk,
                (extent_map->extent[i].phy_blk + extent_map->extent[i].len),
                extent_map->extent[i].len);
 
-        if (extent_map->extent[i].flags != 0 && ctrl->show_flags) {
-            printf("\n|--- FLAGS:  ");
+        if (extent_map->extent[i].flags != 0 && ctrl.show_flags) {
+            MSG("\n|--- FLAGS:  ");
             show_extent_flags(extent_map->extent[i].flags);
         }
 
         pbae = extent_map->extent[i].phy_blk + extent_map->extent[i].len;
-        if (ctrl->show_holes && i > 0 && i < extent_map->ext_ctr &&
+        if (ctrl.show_holes && i > 0 && i < extent_map->ext_ctr &&
             pbae != extent_map->extent[i].zone_lbae &&
             extent_map->extent[i].zone_wp > pbae &&
             extent_map->extent[i].zone != extent_map->extent[i + 1].zone) {
@@ -414,19 +412,19 @@ static void print_extent_report(struct control *ctrl,
             hole_cum_size += hole_size;
             hole_ctr++;
 
-            printf("--- HOLE:    PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
+            MSG("--- HOLE:    PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
                    "  SIZE: %#-10" PRIx64 "\n",
                    extent_map->extent[i].phy_blk + extent_map->extent[i].len,
                    hole_end, hole_size);
         }
     }
 
-    printf("\n\n==============================================================="
+    MSG("\n\n==============================================================="
            "=====\n");
-    printf("\t\t\tSTATS SUMMARY\n");
-    printf("==================================================================="
+    MSG("\t\t\tSTATS SUMMARY\n");
+    MSG("==================================================================="
            "=\n");
-    printf("\nNOE: %-4u  TES: %#-10" PRIx64 "  AES: %#-10" PRIx64
+    MSG("\nNOE: %-4u  TES: %#-10" PRIx64 "  AES: %#-10" PRIx64
            "  EAES: %-10f"
            "  NOZ: %-4u\n",
            extent_map->ext_ctr, extent_map->cum_extent_size,
@@ -434,13 +432,13 @@ static void print_extent_report(struct control *ctrl,
            (double)extent_map->cum_extent_size / (double)(extent_map->ext_ctr),
            extent_map->zone_ctr);
 
-    if (ctrl->show_holes && hole_ctr > 0) {
-        printf("NOH: %-4u  THS: %#-10" PRIx64 "  AHS: %#-10" PRIx64
+    if (ctrl.show_holes && hole_ctr > 0) {
+        MSG("NOH: %-4u  THS: %#-10" PRIx64 "  AHS: %#-10" PRIx64
                "  EAHS: %-10f\n",
                hole_ctr, hole_cum_size, hole_cum_size / hole_ctr,
                (double)hole_cum_size / (double)hole_ctr);
-    } else if (ctrl->show_holes && hole_ctr == 0) {
-        printf("NOH: 0\n");
+    } else if (ctrl.show_holes && hole_ctr == 0) {
+        MSG("NOH: 0\n");
     }
 }
 
@@ -448,39 +446,25 @@ static void print_extent_report(struct control *ctrl,
  * Run the filemap program to gather file extent
  * distribution on ZNS zones.
  *
- * @ctrl: control parameters
  *
  * */
-int filemap(struct control *ctrl) {
+int filemap() {
     struct extent_map *extent_map;
 
-    if (!ctrl) {
-        return 1;
-    }
+    fsync(ctrl.fd);
 
-    fsync(ctrl->fd);
-
-    extent_map = (struct extent_map *)get_extents(ctrl);
+    extent_map = (struct extent_map *)get_extents();
 
     if (!extent_map) {
-        fprintf(stderr, "\033[0;31mError\033[0m retrieving extents for %s\n",
-                ctrl->filename);
+        ERR_MSG("\033[0;31mError\033[0m retrieving extents for %s\n",
+                ctrl.filename);
         return 1;
     }
 
     sort_extents(extent_map);
-    print_extent_report(ctrl, extent_map);
+    print_extent_report(extent_map);
 
-    close(ctrl->fd);
-
-    free(ctrl->bdev->dev_name);
-    free(ctrl->bdev);
-    if (ctrl->multi_dev) {
-        free(ctrl->znsdev->dev_name);
-        free(ctrl->znsdev);
-    }
-    free(ctrl->stats);
-    free(ctrl);
+    close(ctrl.fd);
     free(extent_map);
 
     return 0;

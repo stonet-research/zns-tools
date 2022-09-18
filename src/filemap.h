@@ -1,7 +1,7 @@
-#ifndef FILEMAP_H
-#define FILEMAP_H
+#ifndef _FILEMAP_H_
+#define _FILEMAP_H_
 
-#include "control.h"
+#include "zonemap.h"
 #include <inttypes.h>
 #include <stdint.h>
 
@@ -26,6 +26,6 @@ struct extent_map {
     struct extent extent[]; /* Array of struct extent for each extent */
 };
 
-int filemap(struct control *ctrl);
+extern int filemap();
 
 #endif
