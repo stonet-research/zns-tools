@@ -14,6 +14,12 @@
 #include <sys/sysmacros.h>
 #include <unistd.h>
 
+/*
+ * Shift byte valus to 512B sector values.
+ *
+ * */
+#define SECTOR_SHIFT 9
+
 struct bdev {
     char *dev_name;     /* char * to device name (e.g., nvme0n2) */
     char dev_path[32];  /* device path (e.g., /dev/nvme0n2) */
@@ -43,19 +49,26 @@ extern void init_dev(struct stat *);
 extern uint8_t init_znsdev(struct bdev *);
 extern uint64_t get_dev_size(char *);
 extern uint64_t get_zone_size(char *);
-extern void init_ctrl(int, char **);
+extern void init_ctrl();
 extern uint32_t get_zone_number(uint64_t);
 extern void cleanup_ctrl();
 
 #define ERR_MSG(fmt, ...)                                                      \
     do {                                                                       \
-        printf("[%s:%d] " fmt, __func__, __LINE__, ##__VA_ARGS__);             \
+        printf("\033[0;31mError\033[0m: [%s:%d] " fmt, \
+                __func__, __LINE__, ##__VA_ARGS__);             \
         exit(1);                                                               \
     } while (0)
 
 #define DBG(fmt, ...)                                                          \
     do {                                                                       \
         printf("[%s:%4d] " fmt, __func__, __LINE__, ##__VA_ARGS__);            \
+    } while (0)
+
+#define WARN(fmt, ...)                                                          \
+    do {                                                                       \
+        printf("\033[0;33mWarning\033[0m: [%s:%4d] " fmt, \
+                __func__, __LINE__, ##__VA_ARGS__);            \
     } while (0)
 
 #define MSG(fmt, ...)                                                          \

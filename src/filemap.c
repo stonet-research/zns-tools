@@ -12,12 +12,6 @@
 #include <unistd.h>
 
 /*
- * Shift byte valus to 512B sector values.
- *
- * */
-#define SECTOR_SHIFT 9
-
-/*
  * Print the information about a zone.
  *
  * @extent: a struct extent * of the current extent
@@ -42,7 +36,7 @@ static void print_zone_info(struct extent *extent,
     hdr->nr_zones = 1;
 
     if (ioctl(fd, BLKREPORTZONE, hdr) < 0) {
-        ERR_MSG("\033[0;31mError\033[0m getting Zone Info\n");
+        ERR_MSG("getting Zone Info\n");
         return;
     }
 
@@ -84,7 +78,7 @@ static void get_zone_info(struct extent *extent) {
     hdr->nr_zones = 1;
 
     if (ioctl(fd, BLKREPORTZONE, hdr) < 0) {
-        ERR_MSG("\033[0;31mError\033[0m getting Zone Info\n");
+        ERR_MSG("getting Zone Info\n");
         return;
     }
 
@@ -173,14 +167,14 @@ static struct extent_map *get_extents() {
         }
 
         if (fiemap->fm_mapped_extents == 0) {
-            ERR_MSG("\033[0;31mError\033[0m no extents are mapped\n");
+            ERR_MSG("no extents are mapped\n");
             return NULL;
         }
 
         // If data is on the bdev, not the ZNS (e.g. inline or other reason?)
         // Disregard this extent but print warning
         if (fiemap->fm_extents[0].fe_physical < ctrl.offset) {
-            MSG("\n\033[0;33mWarning\033[0m: Extent Reported on %s  PBAS: "
+            MSG("\nExtent Reported on %s  PBAS: "
                 "0x%06llx  PBAE: 0x%06llx  SIZE: 0x%06llx\n",
                 ctrl.bdev->dev_name,
                 fiemap->fm_extents[0].fe_physical >> SECTOR_SHIFT,
@@ -432,8 +426,7 @@ void filemap() {
     extent_map = (struct extent_map *)get_extents();
 
     if (!extent_map) {
-        ERR_MSG("\033[0;31mError\033[0m retrieving extents for %s\n",
-                ctrl.filename);
+        ERR_MSG("retrieving extents for %s\n", ctrl.filename);
     }
 
     sort_extents(extent_map);

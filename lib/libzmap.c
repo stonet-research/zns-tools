@@ -18,7 +18,7 @@ uint8_t is_zoned(char *dev_path) {
 
     fd = open(dev_path, O_RDONLY);
     if (fd < 0) {
-        ERR_MSG("\033[0;31mError\033[0m: Failed opening fd on %s. Try running "
+        ERR_MSG("Failed opening fd on %s. Try running "
                 "as root.\n",
                 dev_path);
         return 0;
@@ -57,13 +57,13 @@ void init_dev(struct stat *st) {
 
     fd = open(ctrl.bdev->dev_path, O_RDONLY);
     if (fd < 0) {
-        ERR_MSG("\033[0;31mError\033[0m opening device fd for %s\n",
+        ERR_MSG("opening device fd for %s\n",
                 ctrl.bdev->dev_path);
     }
 
     if (readlink(ctrl.bdev->dev_path, ctrl.bdev->link_name,
                  sizeof(ctrl.bdev->link_name)) < 0) {
-        ERR_MSG("\033[0;31mError\033[0m opening device fd for %s\n",
+        ERR_MSG("opening device fd for %s\n",
                 ctrl.bdev->dev_path);
     }
 
@@ -91,7 +91,7 @@ uint8_t init_znsdev(struct bdev *znsdev) {
 
     fd = open(znsdev->dev_path, O_RDONLY);
     if (fd < 0) {
-        ERR_MSG("\033[0;31mError\033[0m opening device fd for %s\n",
+        ERR_MSG("opening device fd for %s\n",
                 znsdev->dev_path);
         return 0;
     }
@@ -153,121 +153,17 @@ uint64_t get_zone_size(char *dev_path) {
 }
 
 /*
- * Show the acronym information
- *
- * */
-static void show_info() {
-    MSG("\n============================================================="
-        "=======\n");
-    MSG("\t\t\tACRONYM INFO\n");
-    MSG("==============================================================="
-        "=====\n");
-    MSG("\nInfo: Extents are sorted by PBAS but have an associated "
-        "Extent Number to indicate the logical order of file data.\n\n");
-    MSG("LBAS:   Logical Block Address Start (for the Zone)\n");
-    MSG("LBAE:   Logical Block Address End (for the Zone, equal to LBAS + "
-        "ZONE CAP)\n");
-    MSG("CAP:    Zone Capacity (in 512B sectors)\n");
-    MSG("WP:     Write Pointer of the Zone\n");
-    MSG("SIZE:   Size of the Zone (in 512B sectors)\n");
-    MSG("STATE:  State of a zone (e.g, FULL, EMPTY)\n");
-    MSG("MASK:   The Zone Mask that is used to calculate LBAS of LBA "
-        "addresses in a zone\n");
-
-    MSG("EXTID:  Extent number in the order of the extents returned by "
-        "ioctl(), depciting logical file data ordering\n");
-    MSG("PBAS:   Physical Block Address Start\n");
-    MSG("PBAE:   Physical Block Address End\n");
-
-    MSG("NOE:    Number of Extent\n");
-    MSG("TES:    Total Extent Size (in 512B sectors\n");
-    MSG("AES:    Average Extent Size (floored value due to hex print, in "
-        "512B sectors)\n"
-        "\t[Meant for easier comparison with Extent Sizes\n");
-    MSG("EAES:   Exact Average Extent Size (double point precision value, "
-        "in 512B sectors\n"
-        "\t[Meant for exact calculations of average extent sizes\n");
-    MSG("NOZ:    Number of Zones (in which extents are\n");
-
-    MSG("NOH:    Number of Holes\n");
-    MSG("THS:    Total Hole Size (in 512B sectors\n");
-    MSG("AHS:    Average Hole Size (floored value due to hex print, in "
-        "512B sectors)\n");
-    MSG("EAHS:   Exact Average Hole Size (double point precision value, "
-        "in 512B sectors\n");
-}
-
-/*
- *
- * Show the command help.
- *
- *
- * */
-static void show_help() {
-    MSG("Possible flags are:\n");
-    MSG("-f\tInput file to map [Required]\n");
-    MSG("-h\tShow this help\n");
-    MSG("-l\tShow extent flags\n");
-    MSG("-s\tShow file holes\n");
-
-    show_info();
-    exit(0);
-}
-
-/*
- * Parse cmd_line options into the struct control.
- *
- * @argc: number of cmd_line args (from main)
- * @argv: chcar ** to cmd_line args (from main)
- *
- * */
-static int parse_opts(int argc, char **argv) {
-    int c;
-
-    while ((c = getopt(argc, argv, "f:hils")) != -1) {
-        switch (c) {
-        case 'h':
-            show_help();
-            break;
-        case 'f':
-            ctrl.filename = optarg;
-            break;
-        case 'l':
-            ctrl.show_flags = 1;
-            break;
-        case 's':
-            ctrl.show_holes = 1;
-            break;
-        default:
-            show_help();
-            abort();
-        }
-    }
-
-    return 1;
-}
-
-/*
  * init the control struct
  *
- * @argc: number of cmd_line args (from main)
- * @argv: char ** to cmd_line args (from main)
  *
  * */
-void init_ctrl(int argc, char **argv) {
-    memset(&ctrl, 0, sizeof(struct control));
-
-    if (!parse_opts(argc, argv)) {
-        ERR_MSG("\033[0;31mError\033[0m Invalid arguments\n");
-    } else if (!ctrl.filename) {
-        ERR_MSG("\033[0;31mError\033[0m missing filename argument -f\n");
-    }
+void init_ctrl() {
 
     ctrl.fd = open(ctrl.filename, O_RDONLY);
     fsync(ctrl.fd);
 
     if (ctrl.fd < 0) {
-        ERR_MSG("\033[0;31mError\033[0m failed opening file %s\n",
+        ERR_MSG("failed opening file %s\n",
                 ctrl.filename);
     }
 
@@ -280,7 +176,7 @@ void init_ctrl(int argc, char **argv) {
     init_dev(ctrl.stats);
 
     if (ctrl.bdev->is_zoned != 1) {
-        MSG("\033[0;33mWarning\033[0m: %s is registered as containing this "
+        MSG("%s is registered as containing this "
             "file, however it is"
             " not a ZNS.\nIf it is used with F2FS as the conventional "
             "device, enter the"
@@ -293,14 +189,14 @@ void init_ctrl(int argc, char **argv) {
         ctrl.znsdev->dev_name = malloc(sizeof(char *) * 15);
         int ret = scanf("%s", ctrl.znsdev->dev_name);
         if (!ret) {
-            ERR_MSG("\033[0;31mError\033[0m reading input\n");
+            ERR_MSG("reading input\n");
         }
 
         if (!init_znsdev(ctrl.znsdev)) {
         }
 
         if (ctrl.znsdev->is_zoned != 1) {
-            ERR_MSG("\033[0;31mError\033[0m: %s is not a ZNS device\n",
+            ERR_MSG("%s is not a ZNS device\n",
                     ctrl.znsdev->dev_name);
         }
 
