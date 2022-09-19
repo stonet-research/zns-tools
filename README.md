@@ -12,12 +12,16 @@ sh ./autogen.sh
 make
 
 cd src # executable ends up in src/
+```
 
+## zns.fibmap
+
+```bash
 # Run: zns.fibmap -f [file path to locate]
 sudo ./zns.fibmap -f /mnt/f2fs/file_to_locate
 ```
 
-We need to run with `sudo` since the program is required to open file descriptors on devices (which can only be done with privileges). The possible flags for `zns.fibmap` are (for explanations on holes see the [Holes between Extents Section](https://github.com/nicktehrany/f2fs-bench/tree/master/file-map#holes-between-extents) and for acronym definitions see the [Output Section](https://github.com/nicktehrany/f2fs-bench/tree/master/file-map#output)):
+We need to run with `sudo` since the program is required to open file descriptors on devices (which can only be done with privileges). The possible flags for `zns.fibmap` are
 
 ```bash
 sudo ./zns.fibmap [flags]
