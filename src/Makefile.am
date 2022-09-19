@@ -2,11 +2,7 @@
 
 AM_CPPFLAGS = -I$(top_srcdir)/include
 AM_CFLAGS = -O2 -Wall -Wextra -g -Wunused-parameter
-sbin_PROGRAMS = zonemap
+sbin_PROGRAMS = zns.fibmap
 
-CFILES = main.c filemap.c
-
-HFILES = filemap.h $(top_srcdir)/include/zmap.h
-
-zonemap_SOURCES = ${CFILES} ${HFILES}
-zonemap_LDADD = $(top_srcdir)/lib/libzmap.la
+zns_fibmap_SOURCES = fibmap.c fibmap.h
+zns_fibmap_LDADD = $(top_srcdir)/lib/libzmap.la
