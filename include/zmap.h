@@ -33,10 +33,11 @@ struct control {
     char *filename;      /* full file name and path to map */
     int fd;              /* file descriptor of the file to be mapped */
     struct stat *stats;  /* statistics from fstat() call */
-    struct bdev *bdev;   /* block device file is located on */
-    struct bdev *znsdev; /* additional ZNS device if file F2FS reporst file on
+    struct bdev bdev;   /* block device file is located on */
+    struct bdev znsdev; /* additional ZNS device if file F2FS reporst file on
                             prior bdev */
     uint8_t multi_dev;   /* flag if device setup is using bdev + ZNS */
+    uint8_t log_level;   /* Logging level */
     uint8_t show_holes;  /* cmd_line flag to show holes */
     uint8_t show_flags;  /* cmd_line flag to show extent flags */
     uint8_t info;        /* cmd_line flag to show info */
@@ -56,6 +57,7 @@ struct extent {
     uint64_t zone_size;   /* Size of the zone the extent is in */
     uint64_t zone_wp;     /* Write Pointer of this current zone */
     uint64_t zone_lbae;   /* LBA that can be written up to (LBAS + ZONE CAP) */
+    char *file;           /* file path to which the extent belongs */
 };
 
 struct extent_map {
@@ -68,10 +70,9 @@ struct extent_map {
 
 extern uint8_t is_zoned(char *);
 extern void init_dev(struct stat *);
-extern uint8_t init_znsdev(struct bdev *);
+extern uint8_t init_znsdev();
 extern uint64_t get_dev_size(char *);
-extern uint64_t get_zone_size(char *);
-extern void init_ctrl();
+extern uint64_t get_zone_size();
 extern uint32_t get_zone_number(uint64_t);
 extern void cleanup_ctrl();
 extern void print_zone_info(uint32_t zone);
@@ -94,6 +95,13 @@ extern void show_extent_flags(uint32_t flags);
 #define WARN(fmt, ...)                                                          \
     do {                                                                       \
         printf("\033[0;33mWarning\033[0m: " fmt, ##__VA_ARGS__);            \
+    } while (0)
+
+#define INFO(n, fmt, ...)                                                          \
+    do {                                                                       \
+        if (ctrl.log_level >= n) {   \
+            printf("\033[0;33mInfo\033[0m: " fmt, ##__VA_ARGS__);            \
+        } \
     } while (0)
 
 #define MSG(fmt, ...)                                                          \

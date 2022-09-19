@@ -17,6 +17,14 @@ zns.fibmap \- Identifying File System Extent Mapping on ZNS Devices with \fIFIBM
 .B \-s
 .I show holes between extents
 ]
+[
+.B \-w 
+.I show \fIFIBMAP\fP extent flags
+]
+[
+.B \-l [Int]
+.I logging level for output
+]
 .B \-f [File]
 .I path to the file to be mapped
 
@@ -27,11 +35,14 @@ is used for identifying the file system usage of ZNS devices by locating extents
 .BI \-h " show help menu"
 Show the help menu and acronym information.
 .TP
-.BI \-l " show \fIFIBMAP\fP extent flags"
-Show the flags of extents returned by \fIioctl()\fP with \fIFIBMAP\fP.
-.TP
 .BI \-s " show holes"
 Show holes between the different extents.
+.BI \-l " logging level for output"
+Set the logging level for output messages. 0 by default. 1 for more verbose logging.
+.TP
+.BI \-w " show \fIFIBMAP\fP extent flags"
+Show the flags of extents returned by \fIioctl()\fP with \fIFIBMAP\fP.
+.TP
 .TP
 .BI \-f " file to be mapped"
 Argument with the file path of the to be mapped file.

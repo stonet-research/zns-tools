@@ -1,4 +1,5 @@
 src/zns.fibmap
+src/zns.segmap
 
 Makefile
 configure

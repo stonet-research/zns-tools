@@ -180,13 +180,63 @@ static void show_info() {
  * */
 static void show_help() {
     MSG("Possible flags are:\n");
-    MSG("-f\tInput file to map [Required]\n");
+    MSG("-f [file]\tInput file to map [Required]\n");
     MSG("-h\tShow this help\n");
-    MSG("-l\tShow extent flags\n");
+    MSG("-l [Int]\tLog Level to print\n");
     MSG("-s\tShow file holes\n");
 
     show_info();
     exit(0);
+}
+
+/*
+ * init the control struct for 
+ *
+ *
+ * */
+static void init_ctrl() {
+
+    ctrl.fd = open(ctrl.filename, O_RDONLY);
+    fsync(ctrl.fd);
+
+    if (ctrl.fd < 0) {
+        ERR_MSG("failed opening file %s\n",
+                ctrl.filename);
+    }
+
+    ctrl.stats = calloc(sizeof(struct stat), sizeof(char *));
+    if (fstat(ctrl.fd, ctrl.stats) < 0) {
+        ERR_MSG("Failed stat on file %s\n", ctrl.filename);
+    }
+
+    init_dev(ctrl.stats);
+
+    if (ctrl.bdev.is_zoned != 1) {
+        WARN("%s is registered as containing this "
+            "file, however it is"
+            " not a ZNS.\nIf it is used with F2FS as the conventional "
+            "device, enter the"
+            " assocaited ZNS device name: ",
+            ctrl.bdev.dev_name);
+
+        ctrl.znsdev.dev_name = malloc(sizeof(char *) * 15);
+        int ret = scanf("%s", ctrl.znsdev.dev_name);
+        if (!ret) {
+            ERR_MSG("reading input\n");
+        }
+
+        if (!init_znsdev(ctrl.znsdev)) {
+        }
+
+        if (ctrl.znsdev.is_zoned != 1) {
+            ERR_MSG("%s is not a ZNS device\n",
+                    ctrl.znsdev.dev_name);
+        }
+
+        ctrl.multi_dev = 1;
+        ctrl.offset = get_dev_size(ctrl.bdev.dev_path);
+        ctrl.znsdev.zone_size = get_zone_size(ctrl.znsdev.dev_path);
+    }
 }
 
 int main(int argc, char *argv[]) {
@@ -195,7 +245,7 @@ int main(int argc, char *argv[]) {
 
     memset(&ctrl, 0, sizeof(struct control));
 
-    while ((c = getopt(argc, argv, "f:hils")) != -1) {
+    while ((c = getopt(argc, argv, "f:hil:sw")) != -1) {
         switch (c) {
         case 'h':
             show_help();
@@ -203,8 +253,11 @@ int main(int argc, char *argv[]) {
         case 'f':
             ctrl.filename = optarg;
             break;
-        case 'l':
+        case 'w':
             ctrl.show_flags = 1;
+            break;
+        case 'l':
+            ctrl.log_level = atoi(optarg);
             break;
         case 's':
             ctrl.show_holes = 1;

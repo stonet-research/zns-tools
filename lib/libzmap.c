@@ -52,27 +52,27 @@ uint8_t is_zoned(char *dev_path) {
 void init_dev(struct stat *st) {
     int fd;
 
-    sprintf(ctrl.bdev->dev_path, "/dev/block/%d:%d", major(st->st_dev),
+    sprintf(ctrl.bdev.dev_path, "/dev/block/%d:%d", major(st->st_dev),
             minor(st->st_dev));
 
-    fd = open(ctrl.bdev->dev_path, O_RDONLY);
+    fd = open(ctrl.bdev.dev_path, O_RDONLY);
     if (fd < 0) {
         ERR_MSG("opening device fd for %s\n",
-                ctrl.bdev->dev_path);
+                ctrl.bdev.dev_path);
     }
 
-    if (readlink(ctrl.bdev->dev_path, ctrl.bdev->link_name,
-                 sizeof(ctrl.bdev->link_name)) < 0) {
+    if (readlink(ctrl.bdev.dev_path, ctrl.bdev.link_name,
+                 sizeof(ctrl.bdev.link_name)) < 0) {
         ERR_MSG("opening device fd for %s\n",
-                ctrl.bdev->dev_path);
+                ctrl.bdev.dev_path);
     }
 
-    ctrl.bdev->dev_name = calloc(sizeof(char *) * 8, sizeof(char *));
-    strcpy(ctrl.bdev->dev_name, basename(ctrl.bdev->link_name));
+    ctrl.bdev.dev_name = calloc(sizeof(char *) * 8, sizeof(char *));
+    strcpy(ctrl.bdev.dev_name, basename(ctrl.bdev.link_name));
 
     close(fd);
 
-    ctrl.bdev->is_zoned = is_zoned(ctrl.bdev->dev_path);
+    ctrl.bdev.is_zoned = is_zoned(ctrl.bdev.dev_path);
 }
 
 /*
@@ -84,19 +84,19 @@ void init_dev(struct stat *st) {
  * returns: 1 on Success, else 0
  *
  * */
-uint8_t init_znsdev(struct bdev *znsdev) {
+uint8_t init_znsdev() {
     int fd;
 
-    sprintf(znsdev->dev_path, "/dev/%s", znsdev->dev_name);
+    sprintf(ctrl.znsdev.dev_path, "/dev/%s", ctrl.znsdev.dev_name);
 
-    fd = open(znsdev->dev_path, O_RDONLY);
+    fd = open(ctrl.znsdev.dev_path, O_RDONLY);
     if (fd < 0) {
         ERR_MSG("opening device fd for %s\n",
-                znsdev->dev_path);
+                ctrl.znsdev.dev_path);
         return 0;
     }
 
-    znsdev->is_zoned = is_zoned(znsdev->dev_path);
+    ctrl.znsdev.is_zoned = is_zoned(ctrl.znsdev.dev_path);
     close(fd);
 
     return 1;
@@ -130,15 +130,13 @@ uint64_t get_dev_size(char *dev_path) {
  * Get the zone size of a ZNS device.
  * Note: Assumes zone size is equal for all zones.
  *
- * @dev_path: device path (e.g., /dev/nvme0n2)
- *
  * returns: uint64_t zone size, 0 on failure
  *
  * */
-uint64_t get_zone_size(char *dev_path) {
+uint64_t get_zone_size() {
     uint64_t zone_size = 0;
 
-    int fd = open(dev_path, O_RDONLY);
+    int fd = open(ctrl.znsdev.dev_path, O_RDONLY);
     if (fd < 0) {
         return 0;
     }
@@ -153,69 +151,13 @@ uint64_t get_zone_size(char *dev_path) {
 }
 
 /*
- * init the control struct
- *
- *
- * */
-void init_ctrl() {
-
-    ctrl.fd = open(ctrl.filename, O_RDONLY);
-    fsync(ctrl.fd);
-
-    if (ctrl.fd < 0) {
-        ERR_MSG("failed opening file %s\n",
-                ctrl.filename);
-    }
-
-    ctrl.stats = calloc(sizeof(struct stat), sizeof(char *));
-    if (fstat(ctrl.fd, ctrl.stats) < 0) {
-        ERR_MSG("Failed stat on file %s\n", ctrl.filename);
-    }
-
-    ctrl.bdev = calloc(sizeof(struct bdev), sizeof(char *));
-    init_dev(ctrl.stats);
-
-    if (ctrl.bdev->is_zoned != 1) {
-        WARN("%s is registered as containing this "
-            "file, however it is"
-            " not a ZNS.\nIf it is used with F2FS as the conventional "
-            "device, enter the"
-            " assocaited ZNS device name: ",
-            ctrl.bdev->dev_name);
-
-        // TODO: is there a way we can find the associated ZNS dev in F2FS? it's
-        // in the kernel log
-        ctrl.znsdev = calloc(sizeof(struct bdev), sizeof(char *));
-        ctrl.znsdev->dev_name = malloc(sizeof(char *) * 15);
-        int ret = scanf("%s", ctrl.znsdev->dev_name);
-        if (!ret) {
-            ERR_MSG("reading input\n");
-        }
-
-        if (!init_znsdev(ctrl.znsdev)) {
-        }
-
-        if (ctrl.znsdev->is_zoned != 1) {
-            ERR_MSG("%s is not a ZNS device\n",
-                    ctrl.znsdev->dev_name);
-        }
-
-        ctrl.multi_dev = 1;
-        ctrl.offset = get_dev_size(ctrl.bdev->dev_path);
-        ctrl.znsdev->zone_size = get_zone_size(ctrl.znsdev->dev_path);
-    }
-}
-
-/*
  * Cleanup control struct - free memory
  *
  * */
 void cleanup_ctrl() {
-    free(ctrl.bdev->dev_name);
-    free(ctrl.bdev);
+    free(ctrl.bdev.dev_name);
     if (ctrl.multi_dev) {
-        free(ctrl.znsdev->dev_name);
-        free(ctrl.znsdev);
+        free(ctrl.znsdev.dev_name);
     }
     free(ctrl.stats);
 }
@@ -233,10 +175,10 @@ uint32_t get_zone_number(uint64_t lba) {
     uint64_t zone_mask = 0;
     uint64_t slba = 0;
 
-    zone_mask = ~(ctrl.znsdev->zone_size - 1);
+    zone_mask = ~(ctrl.znsdev.zone_size - 1);
     slba = (lba & zone_mask);
 
-    return slba == 0 ? 1 : (slba / ctrl.znsdev->zone_size + 1);
+    return slba == 0 ? 1 : (slba / ctrl.znsdev.zone_size + 1);
 }
 
 /*
@@ -250,9 +192,9 @@ void print_zone_info(uint32_t zone) {
     struct blk_zone_report *hdr = NULL;
     uint32_t zone_mask;
 
-    start_sector = ctrl.znsdev->zone_size * zone - ctrl.znsdev->zone_size;
+    start_sector = ctrl.znsdev.zone_size * zone - ctrl.znsdev.zone_size;
 
-    int fd = open(ctrl.znsdev->dev_path, O_RDONLY);
+    int fd = open(ctrl.znsdev.dev_path, O_RDONLY);
     if (fd < 0) {
         return;
     }
@@ -266,7 +208,7 @@ void print_zone_info(uint32_t zone) {
         return;
     }
 
-    zone_mask = ~(ctrl.znsdev->zone_size - 1);
+    zone_mask = ~(ctrl.znsdev.zone_size - 1);
     MSG("\n**** ZONE %d ****\n", zone);
     MSG("LBAS: 0x%06llx  LBAE: 0x%06llx  CAP: 0x%06llx  WP: 0x%06llx  SIZE: "
         "0x%06llx  STATE: %#-4x  MASK: 0x%06" PRIx32 "\n\n",
@@ -292,7 +234,7 @@ static void get_zone_info(struct extent *extent) {
 
     start_sector = extent->zone_size * extent->zone - extent->zone_size;
 
-    int fd = open(ctrl.znsdev->dev_path, O_RDONLY);
+    int fd = open(ctrl.znsdev.dev_path, O_RDONLY);
     if (fd < 0) {
         return;
     }
@@ -367,6 +309,7 @@ struct extent_map *get_extents() {
     struct fiemap *fiemap;
     struct extent_map *extent_map;
     uint8_t last_ext = 0;
+    uint8_t len = 0;
 
     fiemap = (struct fiemap *)calloc(sizeof(struct fiemap), sizeof(char *));
     extent_map = (struct extent_map *)calloc(
@@ -397,17 +340,18 @@ struct extent_map *get_extents() {
         // If data is on the bdev, not the ZNS (e.g. inline or other reason?)
         // Disregard this extent but print warning
         if (fiemap->fm_extents[0].fe_physical < ctrl.offset) {
-            MSG("\nExtent Reported on %s  PBAS: "
-                "0x%06llx  PBAE: 0x%06llx  SIZE: 0x%06llx\n",
-                ctrl.bdev->dev_name,
+            INFO(1, "\nExtent Reported on %s  PBAS: "
+                "0x%06llx  PBAE: 0x%06llx  SIZE: 0x%06llx\n", ctrl.bdev.dev_name,
                 fiemap->fm_extents[0].fe_physical >> SECTOR_SHIFT,
                 (fiemap->fm_extents[0].fe_physical +
                  fiemap->fm_extents[0].fe_length) >>
                     SECTOR_SHIFT,
                 fiemap->fm_extents[0].fe_length >> SECTOR_SHIFT);
 
-            MSG("\t |--- FLAGS:  ");
-            show_extent_flags(fiemap->fm_extents[0].fe_flags);
+            INFO(1, "\t |--- FLAGS:  ");
+            if (ctrl.log_level > 0) {
+                show_extent_flags(fiemap->fm_extents[0].fe_flags);
+            }
         } else {
             extent_map->extent[extent_map->ext_ctr].phy_blk =
                 (fiemap->fm_extents[0].fe_physical - ctrl.offset) >>
@@ -417,7 +361,7 @@ struct extent_map *get_extents() {
             extent_map->extent[extent_map->ext_ctr].len =
                 fiemap->fm_extents[0].fe_length >> SECTOR_SHIFT;
             extent_map->extent[extent_map->ext_ctr].zone_size =
-                ctrl.znsdev->zone_size;
+                ctrl.znsdev.zone_size;
             extent_map->extent[extent_map->ext_ctr].ext_nr =
                 extent_map->ext_ctr;
             extent_map->extent[extent_map->ext_ctr].flags =
@@ -429,6 +373,9 @@ struct extent_map *get_extents() {
             extent_map->extent[extent_map->ext_ctr].zone = get_zone_number(
                 ((fiemap->fm_extents[0].fe_physical - ctrl.offset) >>
                  SECTOR_SHIFT));
+            len = strlen(ctrl.filename);
+            extent_map->extent[extent_map->ext_ctr].file = calloc(1, len);
+            strncpy(extent_map->extent[extent_map->ext_ctr].file, ctrl.filename, len);
 
             get_zone_info(&extent_map->extent[extent_map->ext_ctr]);
             extent_map->ext_ctr++;
