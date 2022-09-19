@@ -93,8 +93,7 @@ extern void show_extent_flags(uint32_t flags);
 
 #define WARN(fmt, ...)                                                          \
     do {                                                                       \
-        printf("\033[0;33mWarning\033[0m: " fmt, \
-                __func__, __LINE__, ##__VA_ARGS__);            \
+        printf("\033[0;33mWarning\033[0m: " fmt, ##__VA_ARGS__);            \
     } while (0)
 
 #define MSG(fmt, ...)                                                          \
