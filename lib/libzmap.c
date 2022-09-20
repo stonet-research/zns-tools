@@ -1,6 +1,7 @@
 #include "zmap.h"
 
 struct control ctrl;
+uint32_t file_counter = 0;
 
 /*
  * Check if a device a zoned device.
@@ -148,6 +149,29 @@ uint64_t get_zone_size() {
     close(fd);
 
     return zone_size;
+}
+
+/*
+ * Get the number of zones on the ZNS device in ctrl.znsdev
+ *
+ * returns: uint32_t number of zones, 0 on failure
+ *
+ * */
+uint32_t get_nr_zones() {
+    uint32_t nr_zones = 0;
+
+    int fd = open(ctrl.znsdev.dev_path, O_RDONLY);
+    if (fd < 0) {
+        return 0;
+    }
+
+    if (ioctl(fd, BLKGETNRZONES, &nr_zones) < 0) {
+        return 0;
+    }
+
+    close(fd);
+
+    return nr_zones;
 }
 
 /*
@@ -339,8 +363,9 @@ struct extent_map *get_extents() {
             return NULL;
         }
 
-        // If data is on the bdev, not the ZNS (e.g. inline or other reason?)
-        // Disregard this extent but print warning
+        // If data is on the bdev (empty files that have space allocated but nothing written)
+        // or there are flags we want to ignore (inline data)
+        // Disregard this extent but print warning (if logging is set)
         if (fiemap->fm_extents[0].fe_physical < ctrl.offset) {
             INFO(2, "FILE %s\nExtent Reported on %s  PBAS: "
                 "0x%06llx  PBAE: 0x%06llx  SIZE: 0x%06llx\n", ctrl.filename, ctrl.bdev.dev_name,
@@ -352,6 +377,20 @@ struct extent_map *get_extents() {
 
             if (ctrl.log_level > 1 && ctrl.show_flags) {
                 show_extent_flags(fiemap->fm_extents[0].fe_flags);
+            }
+        } else if (fiemap->fm_extents[0].fe_flags & ctrl.exclude_flags) {
+            INFO(2, "FILE %s\nExtent Reported on %s  PBAS: "
+                    "0x%06llx  PBAE: 0x%06llx  SIZE: 0x%06llx\n", ctrl.filename, ctrl.bdev.dev_name,
+                    fiemap->fm_extents[0].fe_physical >> SECTOR_SHIFT,
+                    (fiemap->fm_extents[0].fe_physical +
+                     fiemap->fm_extents[0].fe_length) >>
+                    SECTOR_SHIFT,
+                    fiemap->fm_extents[0].fe_length >> SECTOR_SHIFT);
+
+            if (ctrl.log_level > 1) {
+                show_extent_flags(fiemap->fm_extents[0].fe_flags);
+                MSG("Disregarding extent because exclude flag is set to:\n");
+                show_extent_flags(ctrl.exclude_flags);
             }
         } else {
             extent_map->extent[extent_map->ext_ctr].phy_blk =
@@ -379,6 +418,7 @@ struct extent_map *get_extents() {
             strncpy(extent_map->extent[extent_map->ext_ctr].file, ctrl.filename, len);
 
             get_zone_info(&extent_map->extent[extent_map->ext_ctr]);
+            extent_map->extent[extent_map->ext_ctr].fileID = file_counter;
             extent_map->ext_ctr++;
         }
 
@@ -390,6 +430,8 @@ struct extent_map *get_extents() {
                             (fiemap->fm_extents[0].fe_length));
 
     } while (last_ext == 0);
+
+    file_counter++;
 
     free(fiemap);
     fiemap = NULL;

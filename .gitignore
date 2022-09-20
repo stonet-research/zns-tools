@@ -28,3 +28,6 @@ lib/*la
 
 man/Makefile
 man/Makefile.in
+
+compile_commands.json
+.cache/

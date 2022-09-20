@@ -1,13 +1,13 @@
 #ifndef __ZMAP_H__
 #define __ZMAP_H__
 
-#include <cstdint>
 #include <fcntl.h>
 #include <inttypes.h>
 #include <libgen.h>
 #include <linux/fiemap.h>
 #include <linux/blkzoned.h>
 #include <linux/fs.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -22,11 +22,17 @@
  * */
 #define SECTOR_SHIFT 9
 
+#define F2FS_BLOCK_SIZE 4096
+#define F2FS_BLOCK_SHIFT 12
+
+#define F2FS_SEGMENT_SIZE 2097152
+
 struct bdev {
     char *dev_name;     /* char * to device name (e.g., nvme0n2) */
     char dev_path[32];  /* device path (e.g., /dev/nvme0n2) */
     char link_name[32]; /* linkname from /dev/block/<major>:<minor> */
     uint8_t is_zoned;   /* flag if device is a zoned device */
+    uint32_t nr_zones;  /* Number of zones on the ZNS device */
     uint64_t zone_size; /* the size of a zone on the device */
 };
 
@@ -42,8 +48,11 @@ struct control {
     uint8_t show_holes;  /* cmd_line flag to show holes */
     uint8_t show_flags;  /* cmd_line flag to show extent flags */
     uint8_t info;        /* cmd_line flag to show info */
+    uint32_t start_zone;  /* Zone to start segmap report from */
+    uint32_t end_zone;    /* Zone to end segmap report at */
+    uint32_t nr_files;    /* Total number of files in segmap */
+    uint32_t exclude_flags; /* Flags of extents that are excluded in maintaining mapping */
     uint64_t offset;     /* offset for the ZNS - only in multi_dev setup */
-    uint8_t exclude
 };
 
 extern struct control ctrl;
@@ -52,6 +61,7 @@ struct extent {
     uint32_t zone;        /* zone index (starting with 1) of the extent */
     uint32_t flags;       /* Flags given by ioctl() FIEMAP call */
     uint32_t ext_nr;      /* Extent number as returned in the order by ioctl */
+    uint32_t fileID;      /* Unique ID of the file to simplify statistics collection */
     uint64_t logical_blk; /* LBA starting address of the extent */
     uint64_t phy_blk;     /* PBA starting address of the extent */
     uint64_t zone_lbas;   /* LBAS of the zone the extent is in */
@@ -75,6 +85,7 @@ extern void init_dev(struct stat *);
 extern uint8_t init_znsdev();
 extern uint64_t get_dev_size(char *);
 extern uint64_t get_zone_size();
+extern uint32_t get_nr_zones();
 extern uint32_t get_zone_number(uint64_t);
 extern void cleanup_ctrl();
 extern void print_zone_info(uint32_t zone);
