@@ -1,6 +1,7 @@
 #ifndef __ZMAP_H__
 #define __ZMAP_H__
 
+#include <cstdint>
 #include <fcntl.h>
 #include <inttypes.h>
 #include <libgen.h>
@@ -42,6 +43,7 @@ struct control {
     uint8_t show_flags;  /* cmd_line flag to show extent flags */
     uint8_t info;        /* cmd_line flag to show info */
     uint64_t offset;     /* offset for the ZNS - only in multi_dev setup */
+    uint8_t exclude
 };
 
 extern struct control ctrl;

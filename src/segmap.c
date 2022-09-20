@@ -1,7 +1,7 @@
 #include "segmap.h"
 
 struct segment_config segconf;
-struct extent_map extent_map;
+struct extent_map *glob_extent_map;
 
 /*
  *
@@ -108,7 +108,13 @@ static void collect_extents(char *path) { // TODO: This is broken recusion, need
            temp_map = (struct extent_map *)get_extents();
 
            if (!temp_map) {
-               INFO(1, "No extents found for empty file: %s\n", ctrl.filename);
+               WARN("No extents found for empty file: %s\n", ctrl.filename);
+           } else {
+               glob_extent_map->ext_ctr += temp_map->ext_ctr;
+               glob_extent_map = realloc(glob_extent_map, sizeof(struct extent_map) +
+                                                 sizeof(struct extent) *
+                                                     (glob_extent_map->ext_ctr + 1));
+               memcpy(&glob_extent_map->extent[glob_extent_map->ext_ctr - temp_map->ext_ctr], temp_map->extent, sizeof(struct extent) * temp_map->ext_ctr);
            }
 
            free(temp_map);
@@ -119,7 +125,6 @@ static void collect_extents(char *path) { // TODO: This is broken recusion, need
            sub_path = realloc(sub_path, len);
 
            snprintf(sub_path, len, "%s/%s/", path, dir->d_name);
-           DBG("PATH %s\n", dir->d_name);
            collect_extents(sub_path);
        }
    }
@@ -130,7 +135,6 @@ static void collect_extents(char *path) { // TODO: This is broken recusion, need
 
 int main(int argc, char *argv[]) {
     int c;
-    /* struct extent_map *extent_map; */
 
     memset(&ctrl, 0, sizeof(struct control));
     memset(&segconf, 0, sizeof(struct segment_config));
@@ -158,9 +162,15 @@ int main(int argc, char *argv[]) {
     check_dir();
 
     ctrl.stats = calloc(sizeof(struct stat), sizeof(char *));
+    glob_extent_map = calloc(sizeof(struct extent_map), sizeof(char *));
 
     collect_extents(segconf.dir);
+    sort_extents(glob_extent_map);
+    DBG("%s\n", glob_extent_map->extent[0].file);
+
     cleanup_ctrl();
+
+    free(glob_extent_map);
 
     return 0;
 }
