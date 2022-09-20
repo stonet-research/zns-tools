@@ -266,6 +266,8 @@ static void get_zone_info(struct extent *extent) {
  * */
 void show_extent_flags(uint32_t flags) {
 
+    MSG("|--- FLAGS:  ");
+
     if (flags & FIEMAP_EXTENT_UNKNOWN) {
         MSG("FIEMAP_EXTENT_UNKNOWN  ");
     }
@@ -340,16 +342,15 @@ struct extent_map *get_extents() {
         // If data is on the bdev, not the ZNS (e.g. inline or other reason?)
         // Disregard this extent but print warning
         if (fiemap->fm_extents[0].fe_physical < ctrl.offset) {
-            INFO(1, "\nExtent Reported on %s  PBAS: "
-                "0x%06llx  PBAE: 0x%06llx  SIZE: 0x%06llx\n", ctrl.bdev.dev_name,
+            INFO(2, "FILE %s\nExtent Reported on %s  PBAS: "
+                "0x%06llx  PBAE: 0x%06llx  SIZE: 0x%06llx\n", ctrl.filename, ctrl.bdev.dev_name,
                 fiemap->fm_extents[0].fe_physical >> SECTOR_SHIFT,
                 (fiemap->fm_extents[0].fe_physical +
                  fiemap->fm_extents[0].fe_length) >>
                     SECTOR_SHIFT,
                 fiemap->fm_extents[0].fe_length >> SECTOR_SHIFT);
 
-            INFO(1, "\t |--- FLAGS:  ");
-            if (ctrl.log_level > 0) {
+            if (ctrl.log_level > 1 && ctrl.show_flags) {
                 show_extent_flags(fiemap->fm_extents[0].fe_flags);
             }
         } else {

@@ -12,5 +12,6 @@ struct segment_config {
 };
 
 extern struct segment_config segconf;
+extern struct extent_map extent_map;
 
 #endif

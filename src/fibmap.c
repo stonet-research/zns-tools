@@ -67,13 +67,12 @@ static void print_filemap_report(struct extent_map *extent_map) {
         }
 
         MSG("EXTID: %-4d  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
-            "  SIZE: %#-10" PRIx64 "",
+            "  SIZE: %#-10" PRIx64 "\n",
             extent_map->extent[i].ext_nr + 1, extent_map->extent[i].phy_blk,
             (extent_map->extent[i].phy_blk + extent_map->extent[i].len),
             extent_map->extent[i].len);
 
         if (extent_map->extent[i].flags != 0 && ctrl.show_flags) {
-            MSG("\n|--- FLAGS:  ");
             show_extent_flags(extent_map->extent[i].flags);
         }
 

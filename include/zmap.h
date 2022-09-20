@@ -100,7 +100,7 @@ extern void show_extent_flags(uint32_t flags);
 #define INFO(n, fmt, ...)                                                          \
     do {                                                                       \
         if (ctrl.log_level >= n) {   \
-            printf("\033[0;33mInfo\033[0m: " fmt, ##__VA_ARGS__);            \
+            printf("\033[1;33mInfo\033[0m: " fmt, ##__VA_ARGS__);            \
         } \
     } while (0)
 
