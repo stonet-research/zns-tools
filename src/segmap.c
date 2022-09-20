@@ -3,6 +3,7 @@
 
 struct segment_config segconf;
 struct extent_map *glob_extent_map;
+struct segment_map *segment_map;
 
 /*
  *
@@ -17,9 +18,9 @@ static void show_help() {
     MSG("-l [0-2]\tSet the logging level\n");
     MSG("-i\tResolve inode locations for inline data extents\n");
     MSG("-w\tShow extent flags\n");
-    MSG("-x [uint]\tSet the starting zone to map. Default zone 1.\n");
+    MSG("-s [uint]\tSet the starting zone to map. Default zone 1.\n");
     MSG("-y [uint]\tOnly show a single zone\n");
-    MSG("-z [uint]\tSet the ending zone to map. Default last zone.\n");
+    MSG("-e [uint]\tSet the ending zone to map. Default last zone.\n");
 
     /* MSG("-s\tShow file holes\n"); */
 
@@ -136,13 +137,21 @@ static void collect_extents(char *path) { // TODO: This is broken recusion, need
    closedir(directory);
 }
 
-static void print_segmap_report() {
-    uint32_t cur_zone = 0;
+static void prep_segment_report() {
+    uint64_t cur_segment = 0;
+    uint64_t segment_id = 0;
     uint64_t start_lba = ctrl.start_zone * ctrl.znsdev.zone_size;
     uint64_t end_lba = (ctrl.end_zone + 1) * ctrl.znsdev.zone_size;
     
-    // Use bitmap to keep track of what files we encounter per segment
-    unsigned char file_bitmap[ctrl.nr_files];
+    if (glob_extent_map->ext_ctr > 0) {
+        cur_segment = (glob_extent_map->extent[0].phy_blk & F2FS_SEGMENT_MASK);
+        segment_map = calloc(0, sizeof(struct segment_map));
+        segment_map->segments = calloc(0, sizeof(struct segment));
+        segment_map->segments[0].file_extents = calloc(0, sizeof(struct file_extent));
+        segment_map->segment_ctr++;
+    } else {
+        ERR_MSG("No existing extents found.");
+    }
 
     for (uint64_t i = 0; i < glob_extent_map->ext_ctr; i++) {
         if (glob_extent_map->extent[i].phy_blk > end_lba) {
@@ -153,12 +162,32 @@ static void print_segmap_report() {
             continue;
         }
 
-       // TODO: remaining logic here 
+        segment_id = (glob_extent_map->extent[i].phy_blk & F2FS_SEGMENT_MASK);
+
+        if (cur_segment != segment_id) {
+            cur_segment = segment_id;
+            segment_map->segment_ctr++;
+            segment_map->segments = realloc(segment_map->segments, sizeof(struct segment) * segment_map->segment_ctr);
+        }
+
+        /* segment_map->segments[segment_map->segment_ctr - 1].zone = glob_extent_map->extent[i].zone; */
+        /* segment_map->segments[segment_map->segment_ctr - 1].extent_ctr++; */
+        /* segment_map->segments[segment_map->segment_ctr - 1].start_lba = segment_id; */
+        /* segment_map->segments[segment_map->segment_ctr - 1].end_lba = segment_map->segments[segment_map->segment_ctr - 1].start_lba + (F2FS_SEGMENT_SECTORS); */
+
+        ERR_MSG("FILE COUNTER SHOULD BE 0 but is: %u", segment_map->segments[0].file_ctr);
+        // TODO: check if file is already in segment (if so simply increase counter ) else realloc and initialze what's needed
+        /* if(!contains_element(segment_map->segments[segment_map->segment_ctr - 1].file_index, glob_extent_map->extent[i].fileID, segment_map->segments[segment_map->segment_ctr - 1].file_ctr)) { */
+        /*     segment_map->segments[segment_map->segment_ctr - 1].file_ctr++; */
+        /*     segment_map->total_file_ctr++; */
+            /* segment_map = realloc(segment_map, sizeof(struct segment_map) + sizeof(struct segment) * segment_map->segment_ctr + sizeof(struct file_extent) * segment_map->total_file_ctr); */
+        /* } else { */
+        /*     segment_map->segments[segment_map->segment_ctr - 1].file_extents[segment_map->segments[segment_map->segment_ctr].file_ctr].extent_ctr++; */
+        /* } */
+
+        // TODO make sure extents don't cross segment boundaries
 
     }
-
-    /* for (uint64_t i = start_lba; i < end_lba; i += F2FS_SEGMENT_SIZE) { */
-    /* } */ 
 }
 
 int main(int argc, char *argv[]) {
@@ -171,7 +200,7 @@ int main(int argc, char *argv[]) {
     memset(&segconf, 0, sizeof(struct segment_config));
     ctrl.exclude_flags = FIEMAP_EXTENT_DATA_INLINE;
 
-    while ((c = getopt(argc, argv, "d:hil:wx:y:z:")) != -1) {
+    while ((c = getopt(argc, argv, "d:hil:ws:e:z:")) != -1) {
         switch (c) {
         case 'h':
             show_help();
@@ -188,16 +217,16 @@ int main(int argc, char *argv[]) {
         case 'w':
             ctrl.show_flags = 1;
             break;
-        case 'x':
+        case 's':
             ctrl.start_zone = atoi(optarg);
             set_zone_start = 1;
             break;
-        case 'y':
+        case 'z':
             ctrl.start_zone = atoi(optarg);
             ctrl.end_zone = atoi(optarg);
             set_zone_end = 1;
             break;
-        case 'z':
+        case 'e':
             ctrl.end_zone = atoi(optarg);
             set_zone = 1;
             break;
@@ -208,16 +237,16 @@ int main(int argc, char *argv[]) {
     }
 
     if (set_zone && (set_zone_start || set_zone_end)) {
-        ERR_MSG("Flag -z cannot be used with -x or -y\n");
+        ERR_MSG("Flag -z cannot be used with -s or -e\n");
     } 
 
     check_dir();
     
-    if (ctrl.start_zone == 0) {
+    if (ctrl.start_zone == 0 && !set_zone) {
         ctrl.start_zone = 1;
     }
 
-    if (ctrl.end_zone == 0) {
+    if (ctrl.end_zone == 0 && !set_zone) {
         ctrl.end_zone = ctrl.znsdev.nr_zones;
     }
 
@@ -226,11 +255,12 @@ int main(int argc, char *argv[]) {
 
     collect_extents(segconf.dir);
     sort_extents(glob_extent_map);
-    print_segmap_report();
+    prep_segment_report();
 
     cleanup_ctrl();
 
     free(glob_extent_map);
+    free(segment_map);
 
     return 0;
 }

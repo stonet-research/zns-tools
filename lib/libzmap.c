@@ -449,7 +449,7 @@ struct extent_map *get_extents() {
  * returns: 1 if contained otherwise 0.
  *
  * */
-static int contains_element(uint32_t list[], uint32_t element, uint32_t size) {
+int contains_element(uint32_t list[], uint32_t element, uint32_t size) {
 
     for (uint32_t i = 0; i < size; i++) {
         if (list[i] == element) {

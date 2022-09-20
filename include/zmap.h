@@ -22,10 +22,14 @@
  * */
 #define SECTOR_SHIFT 9
 
-#define F2FS_BLOCK_SIZE 4096
 #define F2FS_BLOCK_SHIFT 12
+#define F2FS_BLOCK_BYTES 4096
+#define F2FS_BLOCK_MASK ~((F2FS_BLOCK_BYTES >> SECTOR_SHIFT) - 1)
 
-#define F2FS_SEGMENT_SIZE 2097152
+#define F2FS_SEGMENT_BYTES 2097152
+#define F2FS_SEGMENT_SECTORS F2FS_SEGMENT_BYTES >> SECTOR_SHIFT
+#define F2FS_SEGMENT_MASK ~((F2FS_SEGMENT_BYTES >> SECTOR_SHIFT) - 1) 
+
 
 struct bdev {
     char *dev_name;     /* char * to device name (e.g., nvme0n2) */
@@ -90,6 +94,7 @@ extern uint32_t get_zone_number(uint64_t);
 extern void cleanup_ctrl();
 extern void print_zone_info(uint32_t zone);
 extern struct extent_map *get_extents();
+extern int contains_element(uint32_t [], uint32_t, uint32_t);
 extern void sort_extents(struct extent_map *extent_map);
 extern void show_extent_flags(uint32_t flags);
 
