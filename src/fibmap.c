@@ -26,6 +26,7 @@ static void print_filemap_report(struct extent_map *extent_map) {
             current_zone = extent_map->extent[i].zone;
             extent_map->zone_ctr++;
             print_zone_info(current_zone);
+            MSG("\n");
         }
 
         // Track holes in between extents in the same zone
@@ -60,7 +61,7 @@ static void print_filemap_report(struct extent_map *extent_map) {
             hole_cum_size += hole_size;
             hole_ctr++;
 
-            MSG("++++ HOLE:    PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
+            MSG("---- HOLE:    PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
                 "  SIZE: %#-10" PRIx64 "\n",
                 extent_map->extent[i].zone_lbas, extent_map->extent[i].phy_blk,
                 hole_size);

@@ -28,8 +28,7 @@
 
 #define F2FS_SEGMENT_BYTES 2097152
 #define F2FS_SEGMENT_SECTORS F2FS_SEGMENT_BYTES >> SECTOR_SHIFT
-#define F2FS_SEGMENT_MASK ~((F2FS_SEGMENT_BYTES >> SECTOR_SHIFT) - 1) 
-
+#define F2FS_SEGMENT_MASK ~((F2FS_SEGMENT_SECTORS) - 1) 
 
 struct bdev {
     char *dev_name;     /* char * to device name (e.g., nvme0n2) */
@@ -52,6 +51,22 @@ struct control {
     uint8_t show_holes;  /* cmd_line flag to show holes */
     uint8_t show_flags;  /* cmd_line flag to show extent flags */
     uint8_t info;        /* cmd_line flag to show info */
+
+    unsigned int sector_size; /* Size of sectors on the ZNS device */
+
+    /* 
+     * F2FS Segments contain a power of 2 number of Sectors. Based on the device
+     * sector size we can use bit shifts to convert between blocks and segments.
+     *
+     * 4KiB sector size means there are 512 = 2^9 blocks (sectors) in each F2FS Segment,
+     * assuming default segment size of 2MiB
+     * 512B sector size menas there are 4096 = 2^12 blocks in each F2FS segment
+     *
+     * Default to 512B, changed during init of program if device has different
+     * sector size.
+     *
+     * */
+    unsigned int segment_shift; 
     uint32_t start_zone;  /* Zone to start segmap report from */
     uint32_t end_zone;    /* Zone to end segmap report at */
     uint32_t nr_files;    /* Total number of files in segmap */
@@ -92,11 +107,11 @@ extern uint64_t get_zone_size();
 extern uint32_t get_nr_zones();
 extern uint32_t get_zone_number(uint64_t);
 extern void cleanup_ctrl();
-extern void print_zone_info(uint32_t zone);
+extern void print_zone_info(uint32_t);
 extern struct extent_map *get_extents();
 extern int contains_element(uint32_t [], uint32_t, uint32_t);
-extern void sort_extents(struct extent_map *extent_map);
-extern void show_extent_flags(uint32_t flags);
+extern void sort_extents(struct extent_map *);
+extern void show_extent_flags(uint32_t);
 
 #define ERR_MSG(fmt, ...)                                                      \
     do {                                                                       \

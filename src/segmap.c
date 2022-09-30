@@ -3,7 +3,7 @@
 
 struct segment_config segconf;
 struct extent_map *glob_extent_map;
-struct segment_map *segment_map;
+struct segment_map segment_map;
 
 /*
  *
@@ -137,21 +137,18 @@ static void collect_extents(char *path) { // TODO: This is broken recusion, need
    closedir(directory);
 }
 
-static void prep_segment_report() {
+static void show_segment_report() {
+    uint32_t current_zone = 0;
     uint64_t cur_segment = 0;
     uint64_t segment_id = 0;
     uint64_t start_lba = ctrl.start_zone * ctrl.znsdev.zone_size;
     uint64_t end_lba = (ctrl.end_zone + 1) * ctrl.znsdev.zone_size;
-    
-    if (glob_extent_map->ext_ctr > 0) {
-        cur_segment = (glob_extent_map->extent[0].phy_blk & F2FS_SEGMENT_MASK);
-        segment_map = calloc(0, sizeof(struct segment_map));
-        segment_map->segments = calloc(0, sizeof(struct segment));
-        segment_map->segments[0].file_extents = calloc(0, sizeof(struct file_extent));
-        segment_map->segment_ctr++;
-    } else {
-        ERR_MSG("No existing extents found.");
-    }
+
+    MSG("\n================================================================="
+        "===\n");
+    MSG("\t\t\tSEGMENT MAPPINGS\n");
+    MSG("==================================================================="
+        "=\n");
 
     for (uint64_t i = 0; i < glob_extent_map->ext_ctr; i++) {
         if (glob_extent_map->extent[i].phy_blk > end_lba) {
@@ -162,31 +159,69 @@ static void prep_segment_report() {
             continue;
         }
 
-        segment_id = (glob_extent_map->extent[i].phy_blk & F2FS_SEGMENT_MASK);
+        segment_id = (glob_extent_map->extent[i].phy_blk & F2FS_SEGMENT_MASK) >> ctrl.segment_shift;
 
-        if (cur_segment != segment_id) {
-            cur_segment = segment_id;
-            segment_map->segment_ctr++;
-            segment_map->segments = realloc(segment_map->segments, sizeof(struct segment) * segment_map->segment_ctr);
+        if (current_zone != glob_extent_map->extent[i].zone) {
+            current_zone = glob_extent_map->extent[i].zone;
+            glob_extent_map->zone_ctr++;
+            print_zone_info(current_zone);
         }
 
-        /* segment_map->segments[segment_map->segment_ctr - 1].zone = glob_extent_map->extent[i].zone; */
-        /* segment_map->segments[segment_map->segment_ctr - 1].extent_ctr++; */
-        /* segment_map->segments[segment_map->segment_ctr - 1].start_lba = segment_id; */
-        /* segment_map->segments[segment_map->segment_ctr - 1].end_lba = segment_map->segments[segment_map->segment_ctr - 1].start_lba + (F2FS_SEGMENT_SECTORS); */
+        // If the extent of the file does not span across the segment boundary, so ends before or at the ending address of the segment
+        if (glob_extent_map->extent[i].phy_blk + glob_extent_map->extent[i].len <= (glob_extent_map->extent[i].phy_blk & F2FS_SEGMENT_MASK) + (F2FS_SEGMENT_SECTORS)) {
+            if (segment_id != cur_segment) {
+                MSG("\nSEGMENT: %-4lu  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
+                        "  SIZE: %#-10" PRIx64 "\n",
+                        segment_id, segment_id << ctrl.segment_shift, (glob_extent_map->extent[i].phy_blk & F2FS_SEGMENT_MASK) + (F2FS_SEGMENT_SECTORS),
+                        (unsigned long)F2FS_SEGMENT_SECTORS);
+            }
 
-        ERR_MSG("FILE COUNTER SHOULD BE 0 but is: %u", segment_map->segments[0].file_ctr);
-        // TODO: check if file is already in segment (if so simply increase counter ) else realloc and initialze what's needed
-        /* if(!contains_element(segment_map->segments[segment_map->segment_ctr - 1].file_index, glob_extent_map->extent[i].fileID, segment_map->segments[segment_map->segment_ctr - 1].file_ctr)) { */
-        /*     segment_map->segments[segment_map->segment_ctr - 1].file_ctr++; */
-        /*     segment_map->total_file_ctr++; */
-            /* segment_map = realloc(segment_map, sizeof(struct segment_map) + sizeof(struct segment) * segment_map->segment_ctr + sizeof(struct file_extent) * segment_map->total_file_ctr); */
-        /* } else { */
-        /*     segment_map->segments[segment_map->segment_ctr - 1].file_extents[segment_map->segments[segment_map->segment_ctr].file_ctr].extent_ctr++; */
-        /* } */
+            MSG("---- EXTENT:  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
+                    "  SIZE: %#-10" PRIx64 "  FILE: %s  EXTID: %-4d\n", glob_extent_map->extent[i].phy_blk, glob_extent_map->extent[i].phy_blk + glob_extent_map->extent[i].len,
+                    glob_extent_map->extent[i].len, glob_extent_map->extent[i].file, glob_extent_map->extent[i].ext_nr + 1);
+        } else {
+            // If the extent spans across segment boundaries we need to break it up per segment and print accordingly
+            
+            uint64_t ext_len = (glob_extent_map->extent[i].phy_blk & F2FS_SEGMENT_MASK) + (F2FS_SEGMENT_SECTORS) - glob_extent_map->extent[i].phy_blk;
+            uint64_t segs_for_cur_extent = (glob_extent_map->extent[i].len - ext_len) >> ctrl.segment_shift;
+            DBG("File %s len %lu", glob_extent_map->extent[i].file, glob_extent_map->extent[i].len);
 
-        // TODO make sure extents don't cross segment boundaries
+            if (segs_for_cur_extent > 1) {
+                uint64_t segb = (segment_id + 1) << ctrl.segment_shift;
+                uint64_t sege = (segment_id + segs_for_cur_extent + 1) << ctrl.segment_shift;
 
+                MSG("\nSEGMENT RANGE: %-4lu-%-4lu  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
+                        "  SIZE: %#-10" PRIx64 "\n",
+                        segment_id + 1, segment_id + segs_for_cur_extent, segb, sege,
+                        sege - segb);
+
+                MSG("---- EXTENT:  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
+                        "  SIZE: %#-10" PRIx64 "  FILE: %s  EXTID: %-4d\n", (segment_id + 1) << ctrl.segment_shift, (segment_id + segs_for_cur_extent) << ctrl.segment_shift,
+                        sege - segb, glob_extent_map->extent[i].file, glob_extent_map->extent[i].ext_nr + 1);
+
+                uint64_t remainder = glob_extent_map->extent[i].len - (sege - segb + ext_len);
+                // left over fragment of extent in another following segment
+                if (remainder != 0) {
+                    segment_id = (sege >> ctrl.segment_shift);
+
+                    MSG("\nSEGMENT: %-4lu  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
+                            "  SIZE: %#-10" PRIx64 "\n",
+                            segment_id, segment_id << ctrl.segment_shift, (segment_id + 1) << ctrl.segment_shift,
+                            (unsigned long)F2FS_SEGMENT_SECTORS);
+
+                    MSG("---- asdfEXTENT:  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
+                            "  SIZE: %#-10" PRIx64 "  FILE: %s  EXTID: %-4d\n", segment_id << ctrl.segment_shift, (segment_id << ctrl.segment_shift) + remainder,
+                            remainder, glob_extent_map->extent[i].file, glob_extent_map->extent[i].ext_nr + 1);
+                }
+            } else {
+                // Fragment of extent is until the end of the segment
+                MSG("---- EXTENT:  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
+                        "  SIZE: %#-10" PRIx64 "  FILE: %s  EXTID: %-4d\n", segment_id << ctrl.segment_shift, (segment_id << ctrl.segment_shift) + ext_len,
+                        ext_len, glob_extent_map->extent[i].file, glob_extent_map->extent[i].ext_nr + 1);
+            }
+        }
+
+        cur_segment = segment_id;
     }
 }
 
@@ -255,12 +290,12 @@ int main(int argc, char *argv[]) {
 
     collect_extents(segconf.dir);
     sort_extents(glob_extent_map);
-    prep_segment_report();
+    show_segment_report();
+    /* prep_segment_report(); */
 
     cleanup_ctrl();
 
     free(glob_extent_map);
-    free(segment_map);
 
     return 0;
 }

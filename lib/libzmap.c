@@ -44,6 +44,36 @@ uint8_t is_zoned(char *dev_path) {
     }
 }
 
+/* 
+ * Get the hardware sector size for a device
+ *
+ * @dev_name: device name to look up sector size for
+ *
+ * returns: unsigned int sector size
+ *
+ * */
+static unsigned int get_sector_size(char *dev_name) {
+    char sys_path[50];
+    FILE *file;
+    unsigned int size;
+
+    sprintf(sys_path, "/sys/block/%s/queue/hw_sector_size", dev_name);
+    file = fopen(sys_path, "r");
+    if (!file) {
+        ERR_MSG("getting sector size from %s\n",
+                sys_path);
+    }
+    
+    if (fscanf(file, "%d", &size) == 0) {
+        ERR_MSG("getting sector size from %s\n",
+                sys_path);
+    }
+
+    fclose(file);
+
+    return size;
+}
+
 /*
  * Get the device name of block device from its major:minor ID.
  *
@@ -74,6 +104,11 @@ void init_dev(struct stat *st) {
     close(fd);
 
     ctrl.bdev.is_zoned = is_zoned(ctrl.bdev.dev_path);
+
+    if (ctrl.bdev.is_zoned) {
+        ctrl.sector_size = get_sector_size(ctrl.bdev.dev_name);
+        ctrl.segment_shift = ctrl.sector_size == 512 ? 9 : 12;
+    }
 }
 
 /*
@@ -99,6 +134,10 @@ uint8_t init_znsdev() {
 
     ctrl.znsdev.is_zoned = is_zoned(ctrl.znsdev.dev_path);
     close(fd);
+
+
+    ctrl.sector_size = get_sector_size(ctrl.znsdev.dev_name);
+    ctrl.segment_shift = ctrl.sector_size == 512 ? 12 : 9;
 
     return 1;
 }
@@ -235,7 +274,7 @@ void print_zone_info(uint32_t zone) {
     zone_mask = ~(ctrl.znsdev.zone_size - 1);
     MSG("\n**** ZONE %d ****\n", zone);
     MSG("LBAS: 0x%06llx  LBAE: 0x%06llx  CAP: 0x%06llx  WP: 0x%06llx  SIZE: "
-        "0x%06llx  STATE: %#-4x  MASK: 0x%06" PRIx32 "\n\n",
+        "0x%06llx  STATE: %#-4x  MASK: 0x%06" PRIx32 "\n",
         hdr->zones[0].start, hdr->zones[0].start + hdr->zones[0].capacity,
         hdr->zones[0].capacity, hdr->zones[0].wp, hdr->zones[0].len,
         hdr->zones[0].cond << 4, zone_mask);
