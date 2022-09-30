@@ -1,6 +1,7 @@
 #include "zmap.h"
 
 struct control ctrl;
+struct file_counter_map *file_counter_map;
 uint32_t file_counter = 0;
 
 /*
@@ -368,7 +369,6 @@ struct extent_map *get_extents() {
     struct fiemap *fiemap;
     struct extent_map *extent_map;
     uint8_t last_ext = 0;
-    uint8_t len = 0;
 
     fiemap = (struct fiemap *)calloc(sizeof(struct fiemap), sizeof(char *));
     extent_map = (struct extent_map *)calloc(
@@ -450,13 +450,12 @@ struct extent_map *get_extents() {
             extent_map->extent[extent_map->ext_ctr].zone = get_zone_number(
                 ((fiemap->fm_extents[0].fe_physical - ctrl.offset) >>
                  SECTOR_SHIFT));
-            len = strlen(ctrl.filename);
-            extent_map->extent[extent_map->ext_ctr].file = calloc(1, len);
+            extent_map->extent[extent_map->ext_ctr].file = calloc(1, sizeof(char) * MAX_FILE_LENGTH);
             strncpy(extent_map->extent[extent_map->ext_ctr].file, ctrl.filename,
-                    len);
+                    MAX_FILE_LENGTH);
 
             get_zone_info(&extent_map->extent[extent_map->ext_ctr]);
-            extent_map->extent[extent_map->ext_ctr].fileID = file_counter;
+            extent_map->extent[extent_map->ext_ctr].fileID = ctrl.nr_files;
             extent_map->ext_ctr++;
         }
 
@@ -469,7 +468,7 @@ struct extent_map *get_extents() {
 
     } while (last_ext == 0);
 
-    file_counter++;
+    ctrl.nr_files++;
 
     free(fiemap);
     fiemap = NULL;
@@ -496,6 +495,55 @@ int contains_element(uint32_t list[], uint32_t element, uint32_t size) {
     }
 
     return 0;
+}
+
+/* 
+ * Get the total number of extents for a particular file.
+ *
+ * @file: char * to the file name (full path)
+ *
+ * returns: uint32_t counter of extents for the file
+ *
+ * */
+uint32_t get_file_counter(char *file) {
+   for (uint32_t i = 0; i < file_counter_map->cur_ctr; i++) {
+        if (strncmp(file_counter_map->file[i].file, file, strlen(file_counter_map->file[i].file)) == 0) {
+            return file_counter_map->file[i].ctr;
+        }
+   } 
+
+   return 0;
+}
+
+/* 
+ * Increase the extent counts for a particular file
+ *
+ * @file: char * to file name (full path)
+ *
+ * */
+static void increase_file_counter(char *file) {
+    for (uint32_t i = 0; i < file_counter_map->cur_ctr; i++) {
+        if (strncmp(file_counter_map->file[i].file, file, strlen(file_counter_map->file[i].file)) == 0) {
+            DBG("INCREASING FOR %s %s\n", file, file_counter_map->file[i].file);
+            file_counter_map->file[i].ctr++;
+            return;
+        } 
+    }
+
+    uint32_t len = strlen(file_counter_map->file[file_counter_map->cur_ctr].file);
+    strncpy(file_counter_map->file[file_counter_map->cur_ctr].file, file, len);
+    DBG("ADDING %d %s %s\n",file_counter_map->cur_ctr, file, file_counter_map->file[file_counter_map->cur_ctr].file);
+    file_counter_map->file[file_counter_map->cur_ctr].ctr = 1;
+    file_counter_map->cur_ctr++;
+}
+
+void set_file_counters(struct extent_map *extent_map) {
+    file_counter_map = (struct file_counter_map *) calloc(1, sizeof(struct file_counter_map));
+    file_counter_map->file = (struct file_counter *) calloc(1, sizeof(struct file_counter) * ctrl.nr_files);
+
+    for (uint32_t i = 0; i < extent_map->ext_ctr; i++) {
+        increase_file_counter(extent_map->extent[i].file);
+    } 
 }
 
 /*
