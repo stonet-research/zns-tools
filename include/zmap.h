@@ -103,17 +103,19 @@ struct extent_map {
 
 // count for each file the number of extents
 struct file_counter {
-    char file[MAX_FILE_LENGTH];      /* file name, fix maximum file length to avoid messy reallocs */
-    uint32_t ctr;       /* extent counter for the file */
+    char file[MAX_FILE_LENGTH]; /* file name, fix maximum file length to avoid
+                                   messy reallocs */
+    uint32_t ctr;               /* extent counter for the file */
 };
 
 struct file_counter_map {
     struct file_counter *file; /* track the file counters */
-    uint32_t cur_ctr;       /* track how many we have initialized */
+    uint32_t cur_ctr;          /* track how many we have initialized */
 };
 
 extern struct control ctrl;
-extern struct file_counter_map *file_counter_map; /* tracking extent counters per file */
+extern struct file_counter_map
+    *file_counter_map; /* tracking extent counters per file */
 
 extern uint8_t is_zoned(char *);
 extern void init_dev(struct stat *);

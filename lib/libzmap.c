@@ -450,9 +450,10 @@ struct extent_map *get_extents() {
             extent_map->extent[extent_map->ext_ctr].zone = get_zone_number(
                 ((fiemap->fm_extents[0].fe_physical - ctrl.offset) >>
                  SECTOR_SHIFT));
-            extent_map->extent[extent_map->ext_ctr].file = calloc(1, sizeof(char) * MAX_FILE_LENGTH);
+            extent_map->extent[extent_map->ext_ctr].file =
+                calloc(1, sizeof(char) * MAX_FILE_LENGTH);
             memcpy(extent_map->extent[extent_map->ext_ctr].file, ctrl.filename,
-                    sizeof(char) * MAX_FILE_LENGTH);
+                   sizeof(char) * MAX_FILE_LENGTH);
 
             get_zone_info(&extent_map->extent[extent_map->ext_ctr]);
             extent_map->extent[extent_map->ext_ctr].fileID = ctrl.nr_files;
@@ -497,7 +498,7 @@ int contains_element(uint32_t list[], uint32_t element, uint32_t size) {
     return 0;
 }
 
-/* 
+/*
  * Get the total number of extents for a particular file.
  *
  * @file: char * to the file name (full path)
@@ -506,16 +507,17 @@ int contains_element(uint32_t list[], uint32_t element, uint32_t size) {
  *
  * */
 uint32_t get_file_counter(char *file) {
-   for (uint32_t i = 0; i < file_counter_map->cur_ctr; i++) {
-        if (strncmp(file_counter_map->file[i].file, file, strlen(file_counter_map->file[i].file)) == 0) {
+    for (uint32_t i = 0; i < file_counter_map->cur_ctr; i++) {
+        if (strncmp(file_counter_map->file[i].file, file,
+                    strlen(file_counter_map->file[i].file)) == 0) {
             return file_counter_map->file[i].ctr;
         }
-   } 
+    }
 
-   return 0;
+    return 0;
 }
 
-/* 
+/*
  * Increase the extent counts for a particular file
  *
  * @file: char * to file name (full path)
@@ -523,24 +525,28 @@ uint32_t get_file_counter(char *file) {
  * */
 static void increase_file_counter(char *file) {
     for (uint32_t i = 0; i < file_counter_map->cur_ctr; i++) {
-        if (strncmp(file_counter_map->file[i].file, file, strlen(file_counter_map->file[i].file)) == 0) {
+        if (strncmp(file_counter_map->file[i].file, file,
+                    strlen(file_counter_map->file[i].file)) == 0) {
             file_counter_map->file[i].ctr++;
             return;
-        } 
+        }
     }
 
-    memcpy(file_counter_map->file[file_counter_map->cur_ctr].file, file, MAX_FILE_LENGTH);
+    memcpy(file_counter_map->file[file_counter_map->cur_ctr].file, file,
+           MAX_FILE_LENGTH);
     file_counter_map->file[file_counter_map->cur_ctr].ctr = 1;
     file_counter_map->cur_ctr++;
 }
 
 void set_file_counters(struct extent_map *extent_map) {
-    file_counter_map = (struct file_counter_map *) calloc(1, sizeof(struct file_counter_map));
-    file_counter_map->file = (struct file_counter *) calloc(1, sizeof(struct file_counter) * ctrl.nr_files);
+    file_counter_map =
+        (struct file_counter_map *)calloc(1, sizeof(struct file_counter_map));
+    file_counter_map->file = (struct file_counter *)calloc(
+        1, sizeof(struct file_counter) * ctrl.nr_files);
 
     for (uint32_t i = 0; i < extent_map->ext_ctr; i++) {
         increase_file_counter(extent_map->extent[i].file);
-    } 
+    }
 }
 
 /*
