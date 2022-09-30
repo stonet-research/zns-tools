@@ -451,8 +451,8 @@ struct extent_map *get_extents() {
                 ((fiemap->fm_extents[0].fe_physical - ctrl.offset) >>
                  SECTOR_SHIFT));
             extent_map->extent[extent_map->ext_ctr].file = calloc(1, sizeof(char) * MAX_FILE_LENGTH);
-            strncpy(extent_map->extent[extent_map->ext_ctr].file, ctrl.filename,
-                    MAX_FILE_LENGTH);
+            memcpy(extent_map->extent[extent_map->ext_ctr].file, ctrl.filename,
+                    sizeof(char) * MAX_FILE_LENGTH);
 
             get_zone_info(&extent_map->extent[extent_map->ext_ctr]);
             extent_map->extent[extent_map->ext_ctr].fileID = ctrl.nr_files;
@@ -524,15 +524,12 @@ uint32_t get_file_counter(char *file) {
 static void increase_file_counter(char *file) {
     for (uint32_t i = 0; i < file_counter_map->cur_ctr; i++) {
         if (strncmp(file_counter_map->file[i].file, file, strlen(file_counter_map->file[i].file)) == 0) {
-            DBG("INCREASING FOR %s %s\n", file, file_counter_map->file[i].file);
             file_counter_map->file[i].ctr++;
             return;
         } 
     }
 
-    uint32_t len = strlen(file_counter_map->file[file_counter_map->cur_ctr].file);
-    strncpy(file_counter_map->file[file_counter_map->cur_ctr].file, file, len);
-    DBG("ADDING %d %s %s\n",file_counter_map->cur_ctr, file, file_counter_map->file[file_counter_map->cur_ctr].file);
+    memcpy(file_counter_map->file[file_counter_map->cur_ctr].file, file, MAX_FILE_LENGTH);
     file_counter_map->file[file_counter_map->cur_ctr].ctr = 1;
     file_counter_map->cur_ctr++;
 }
