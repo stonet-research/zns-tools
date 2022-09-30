@@ -137,6 +137,79 @@ static void collect_extents(char *path) { // TODO: This is broken recusion, need
    closedir(directory);
 }
 
+/* 
+ * Shows the beginning of a segment, from its starting point up to the end of the segment.
+ *
+ * Note, this function is only called if the extent occupies multiple segments, which is
+ * only possible if the extent goes from somewhere in the segment until the end of this
+ * segment, and continues in the next segment (which is printed by any of the other functions,
+ * show_consecutive_segments() or show_remainder_segment())
+ *
+ * */
+static void show_beginning_segment(uint64_t i) {
+    uint64_t segment_start = (glob_extent_map->extent[i].phy_blk & F2FS_SEGMENT_MASK);
+    uint64_t segment_end = segment_start + (F2FS_SEGMENT_SECTORS);
+
+    MSG("---- EXTENT:  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
+            "  SIZE: %#-10" PRIx64 "  FILE: %s  EXTID: %-4d\n", glob_extent_map->extent[i].phy_blk, segment_end,
+            segment_end - segment_start, glob_extent_map->extent[i].file, glob_extent_map->extent[i].ext_nr + 1);
+}
+
+/* 
+ *
+ * Show consecutive segment ranges that the extent occupies.
+ * This only shows fully utilized segments, which contain only that extent.
+ * In the case where the extent occupies a full segment and part of the next segment,
+ * we do not show it as a range, but rather as a SEGMENT FULL, and the remainder in the
+ * next segment is shown by show_remainder_segment().
+ *
+ * */
+static void show_consecutive_segments(uint64_t i, uint64_t segment_start) {
+    uint64_t segment_end = ((glob_extent_map->extent[i].phy_blk + glob_extent_map->extent[i].len) & F2FS_SEGMENT_MASK) >> ctrl.segment_shift;
+    uint64_t num_segments = segment_end - segment_start;
+    
+    if (num_segments == 1) {
+        // The extent starts exactly at the segment beginning and ends somewhere in the next segment
+        // then we just want to show the 1st segment (2nd segment will be printed in the function after this)
+        MSG("\n>> SEGMENT FULL: %-4lu  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
+                "  SIZE: %#-10" PRIx64 "\n",
+                segment_start, segment_start << ctrl.segment_shift, segment_end << ctrl.segment_shift,
+                (unsigned long)F2FS_SEGMENT_SECTORS);
+
+        MSG("---- EXTENT:  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
+                "  SIZE: %#-10" PRIx64 "  FILE: %s  EXTID: %-4d\n", glob_extent_map->extent[i].phy_blk, segment_end << ctrl.segment_shift,
+                (unsigned long)F2FS_SEGMENT_SECTORS, glob_extent_map->extent[i].file, glob_extent_map->extent[i].ext_nr + 1);
+    } else { 
+        MSG("\n++ SEGMENT RANGE: %-4lu-%-4lu  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
+                "  SIZE: %#-10" PRIx64 "  FILE: %s  EXTID: %-4d\n", segment_start, segment_end, segment_start << ctrl.segment_shift, segment_end << ctrl.segment_shift, 
+                num_segments * F2FS_SEGMENT_SECTORS, glob_extent_map->extent[i].file, glob_extent_map->extent[i].ext_nr + 1);
+    }
+}
+
+/* 
+ *
+ * Shows the remainder of an extent in the last segment it occupies.
+ * 
+ * */
+static void show_remainder_segment(uint64_t i) {
+    uint64_t segment_end = ((glob_extent_map->extent[i].phy_blk + glob_extent_map->extent[i].len) & F2FS_SEGMENT_MASK) >> ctrl.segment_shift;
+    uint64_t remainder = glob_extent_map->extent[i].phy_blk + glob_extent_map->extent[i].len - (segment_end << ctrl.segment_shift);
+
+    MSG("\nSEGMENT: %-4lu  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
+            "  SIZE: %#-10" PRIx64 "\n",
+            segment_end, segment_end << ctrl.segment_shift, (segment_end + 1) << ctrl.segment_shift,
+            (unsigned long)F2FS_SEGMENT_SECTORS);
+
+    MSG("---- EXTENT:  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
+            "  SIZE: %#-10" PRIx64 "  FILE: %s  EXTID: %-4d\n", segment_end << ctrl.segment_shift, (segment_end << ctrl.segment_shift) + remainder,
+            remainder, glob_extent_map->extent[i].file, glob_extent_map->extent[i].ext_nr + 1);
+
+}
+
+/* 
+ * Print the segment report from the global extent map
+ *
+ * */
 static void show_segment_report() {
     uint32_t current_zone = 0;
     uint64_t cur_segment = 0;
@@ -167,8 +240,11 @@ static void show_segment_report() {
             print_zone_info(current_zone);
         }
 
-        // If the extent of the file does not span across the segment boundary, so ends before or at the ending address of the segment
-        if (glob_extent_map->extent[i].phy_blk + glob_extent_map->extent[i].len <= (glob_extent_map->extent[i].phy_blk & F2FS_SEGMENT_MASK) + (F2FS_SEGMENT_SECTORS)) {
+
+        uint64_t segment_start = (glob_extent_map->extent[i].phy_blk & F2FS_SEGMENT_MASK);
+
+        // if the beginning of the extent and the ending of the extent are in the same segment
+        if (segment_start == ((glob_extent_map->extent[i].phy_blk + glob_extent_map->extent[i].len) & F2FS_SEGMENT_MASK)) {
             if (segment_id != cur_segment) {
                 MSG("\nSEGMENT: %-4lu  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
                         "  SIZE: %#-10" PRIx64 "\n",
@@ -180,47 +256,25 @@ static void show_segment_report() {
                     "  SIZE: %#-10" PRIx64 "  FILE: %s  EXTID: %-4d\n", glob_extent_map->extent[i].phy_blk, glob_extent_map->extent[i].phy_blk + glob_extent_map->extent[i].len,
                     glob_extent_map->extent[i].len, glob_extent_map->extent[i].file, glob_extent_map->extent[i].ext_nr + 1);
         } else {
-            // If the extent spans across segment boundaries we need to break it up per segment and print accordingly
+            // Else the extent spans across multiple segments, so we need to break it up
             
-            uint64_t ext_len = (glob_extent_map->extent[i].phy_blk & F2FS_SEGMENT_MASK) + (F2FS_SEGMENT_SECTORS) - glob_extent_map->extent[i].phy_blk;
-            uint64_t segs_for_cur_extent = (glob_extent_map->extent[i].len - ext_len) >> ctrl.segment_shift;
-            DBG("File %s len %lu", glob_extent_map->extent[i].file, glob_extent_map->extent[i].len);
-
-            if (segs_for_cur_extent > 1) {
-                uint64_t segb = (segment_id + 1) << ctrl.segment_shift;
-                uint64_t sege = (segment_id + segs_for_cur_extent + 1) << ctrl.segment_shift;
-
-                MSG("\nSEGMENT RANGE: %-4lu-%-4lu  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
-                        "  SIZE: %#-10" PRIx64 "\n",
-                        segment_id + 1, segment_id + segs_for_cur_extent, segb, sege,
-                        sege - segb);
-
-                MSG("---- EXTENT:  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
-                        "  SIZE: %#-10" PRIx64 "  FILE: %s  EXTID: %-4d\n", (segment_id + 1) << ctrl.segment_shift, (segment_id + segs_for_cur_extent) << ctrl.segment_shift,
-                        sege - segb, glob_extent_map->extent[i].file, glob_extent_map->extent[i].ext_nr + 1);
-
-                uint64_t remainder = glob_extent_map->extent[i].len - (sege - segb + ext_len);
-                // left over fragment of extent in another following segment
-                if (remainder != 0) {
-                    segment_id = (sege >> ctrl.segment_shift);
-
-                    MSG("\nSEGMENT: %-4lu  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
-                            "  SIZE: %#-10" PRIx64 "\n",
-                            segment_id, segment_id << ctrl.segment_shift, (segment_id + 1) << ctrl.segment_shift,
-                            (unsigned long)F2FS_SEGMENT_SECTORS);
-
-                    MSG("---- asdfEXTENT:  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
-                            "  SIZE: %#-10" PRIx64 "  FILE: %s  EXTID: %-4d\n", segment_id << ctrl.segment_shift, (segment_id << ctrl.segment_shift) + remainder,
-                            remainder, glob_extent_map->extent[i].file, glob_extent_map->extent[i].ext_nr + 1);
-                }
-            } else {
-                // Fragment of extent is until the end of the segment
-                MSG("---- EXTENT:  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
-                        "  SIZE: %#-10" PRIx64 "  FILE: %s  EXTID: %-4d\n", segment_id << ctrl.segment_shift, (segment_id << ctrl.segment_shift) + ext_len,
-                        ext_len, glob_extent_map->extent[i].file, glob_extent_map->extent[i].ext_nr + 1);
+            // part 1: the beginning of extent to end of that single segment
+            if (glob_extent_map->extent[i].phy_blk != segment_start) {
+                show_beginning_segment(i);
+                segment_id++;
             }
-        }
+            
+            // part 2: all in between segments after the 1st segment and the last (in case the last is only partially used by the segment)
+            show_consecutive_segments(i, segment_id);
+            
+            // part 3: any remaining parts of the last segment, which do not fill the entire last segment
+            // only if the segment actually has a remaining fragment
+            uint64_t segment_end = ((glob_extent_map->extent[i].phy_blk + glob_extent_map->extent[i].len) & F2FS_SEGMENT_MASK);
+            if (segment_end != glob_extent_map->extent[i].phy_blk + glob_extent_map->extent[i].len) {
+                show_remainder_segment(i);
+            }
 
+        }
         cur_segment = segment_id;
     }
 }
