@@ -3,7 +3,6 @@
 
 struct segment_config segconf;
 struct extent_map *glob_extent_map;
-struct segment_map segment_map;
 
 /*
  *
@@ -13,11 +12,11 @@ struct segment_map segment_map;
  * */
 static void show_help() {
     MSG("Possible flags are:\n");
-    MSG("-d [dir]\tMount dir to map [Required]\n");
-    MSG("-h\tShow this help\n");
+    MSG("-d [dir]\tMounted dir to map [Required]\n");
+    MSG("-h\t\tShow this help\n");
     MSG("-l [0-2]\tSet the logging level\n");
-    MSG("-i\tResolve inode locations for inline data extents\n");
-    MSG("-w\tShow extent flags\n");
+    MSG("-i\t\tResolve inlined file data in inodes\n");
+    MSG("-w\t\tShow extent flags\n");
     MSG("-s [uint]\tSet the starting zone to map. Default zone 1.\n");
     MSG("-z [uint]\tOnly show a single zone\n");
     MSG("-e [uint]\tSet the ending zone to map. Default last zone.\n");
