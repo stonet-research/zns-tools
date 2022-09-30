@@ -19,7 +19,7 @@ static void show_help() {
     MSG("-i\tResolve inode locations for inline data extents\n");
     MSG("-w\tShow extent flags\n");
     MSG("-s [uint]\tSet the starting zone to map. Default zone 1.\n");
-    MSG("-y [uint]\tOnly show a single zone\n");
+    MSG("-z [uint]\tOnly show a single zone\n");
     MSG("-e [uint]\tSet the ending zone to map. Default last zone.\n");
 
     /* MSG("-s\tShow file holes\n"); */
@@ -214,8 +214,8 @@ static void show_segment_report() {
     uint32_t current_zone = 0;
     uint64_t cur_segment = 0;
     uint64_t segment_id = 0;
-    uint64_t start_lba = ctrl.start_zone * ctrl.znsdev.zone_size;
-    uint64_t end_lba = (ctrl.end_zone + 1) * ctrl.znsdev.zone_size;
+    uint64_t start_lba = ctrl.start_zone * ctrl.znsdev.zone_size - ctrl.znsdev.zone_size;
+    uint64_t end_lba = (ctrl.end_zone + 1) * ctrl.znsdev.zone_size - ctrl.znsdev.zone_size;
 
     MSG("\n================================================================="
         "===\n");
@@ -224,15 +224,14 @@ static void show_segment_report() {
         "=\n");
 
     for (uint64_t i = 0; i < glob_extent_map->ext_ctr; i++) {
-        if (glob_extent_map->extent[i].phy_blk > end_lba) {
+        segment_id = (glob_extent_map->extent[i].phy_blk & F2FS_SEGMENT_MASK) >> ctrl.segment_shift;
+        if ((segment_id << ctrl.segment_shift) >= end_lba) {
             break;
         }
 
-        if (glob_extent_map->extent[i].phy_blk < start_lba) {
+        if ((segment_id << ctrl.segment_shift) < start_lba) {
             continue;
         }
-
-        segment_id = (glob_extent_map->extent[i].phy_blk & F2FS_SEGMENT_MASK) >> ctrl.segment_shift;
 
         if (current_zone != glob_extent_map->extent[i].zone) {
             current_zone = glob_extent_map->extent[i].zone;
@@ -313,11 +312,11 @@ int main(int argc, char *argv[]) {
         case 'z':
             ctrl.start_zone = atoi(optarg);
             ctrl.end_zone = atoi(optarg);
-            set_zone_end = 1;
+            set_zone = 1;
             break;
         case 'e':
             ctrl.end_zone = atoi(optarg);
-            set_zone = 1;
+            set_zone_end = 1;
             break;
         default:
             show_help();
