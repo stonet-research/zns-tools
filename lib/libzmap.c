@@ -266,7 +266,7 @@ void print_zone_info(uint32_t zone) {
     }
 
     zone_mask = ~(ctrl.znsdev.zone_size - 1);
-    MSG("\n**** ZONE %d ****\n", zone);
+    MSG("\n============ ZONE %d ============\n", zone);
     MSG("LBAS: 0x%06llx  LBAE: 0x%06llx  CAP: 0x%06llx  WP: 0x%06llx  SIZE: "
         "0x%06llx  STATE: %#-4x  MASK: 0x%06" PRIx32 "\n",
         hdr->zones[0].start, hdr->zones[0].start + hdr->zones[0].capacity,

@@ -21,6 +21,8 @@ static void show_help() {
     MSG("-z [uint]\tOnly show a single zone\n");
     MSG("-e [uint]\tSet the ending zone to map. Default last zone.\n");
 
+
+
     exit(0);
 }
 
@@ -156,8 +158,8 @@ static void show_beginning_segment(uint64_t i) {
         (glob_extent_map->extent[i].phy_blk & F2FS_SEGMENT_MASK);
     uint64_t segment_end = segment_start + (F2FS_SEGMENT_SECTORS);
 
-    MSG("---- EXTENT:  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
-        "  SIZE: %#-10" PRIx64 "  FILE: %s  EXTID: %-4d\n",
+    MSG("***** EXTENT:  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
+        "  SIZE: %#-10" PRIx64 "  FILE: %50s  EXTID: %-4d\n",
         glob_extent_map->extent[i].phy_blk, segment_end,
         segment_end - segment_start, glob_extent_map->extent[i].file,
         glob_extent_map->extent[i].ext_nr + 1);
@@ -168,8 +170,8 @@ static void show_beginning_segment(uint64_t i) {
  * Show consecutive segment ranges that the extent occupies.
  * This only shows fully utilized segments, which contain only that extent.
  * In the case where the extent occupies a full segment and part of the next
- * segment, we do not show it as a range, but rather as a SEGMENT FULL, and the
- * remainder in the next segment is shown by show_remainder_segment().
+ * segment, we show it as a regular segment, not a range, and the remainder in
+ * the next segment is shown by show_remainder_segment().
  *
  * */
 static void show_consecutive_segments(uint64_t i, uint64_t segment_start) {
@@ -183,24 +185,34 @@ static void show_consecutive_segments(uint64_t i, uint64_t segment_start) {
         // The extent starts exactly at the segment beginning and ends somewhere
         // in the next segment then we just want to show the 1st segment (2nd
         // segment will be printed in the function after this)
-        MSG("\n>> SEGMENT FULL: %-4lu  PBAS: %#-10" PRIx64
+        MSG("\n_______________________________________________________________________________________________________________________________________\n");
+        MSG("---------------------------------------------------------------------------------------------------------------------------------------\n");
+        MSG("SEGMENT: %-4lu  PBAS: %#-10" PRIx64
             "  PBAE: %#-10" PRIx64 "  SIZE: %#-10" PRIx64 "\n",
             segment_start, segment_start << ctrl.segment_shift,
             segment_end << ctrl.segment_shift,
             (unsigned long)F2FS_SEGMENT_SECTORS);
+        MSG("---------------------------------------------------------------------------------------------------------------------------------------\n");
 
-        MSG("---- EXTENT:  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
-            "  SIZE: %#-10" PRIx64 "  FILE: %s  EXTID: %-4d\n",
+        MSG("***** EXTENT:  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
+            "  SIZE: %#-10" PRIx64 "  FILE: %50s  EXTID: %-4d\n",
             glob_extent_map->extent[i].phy_blk,
             segment_end << ctrl.segment_shift,
             (unsigned long)F2FS_SEGMENT_SECTORS,
             glob_extent_map->extent[i].file,
             glob_extent_map->extent[i].ext_nr + 1);
     } else {
-        MSG("\n++ SEGMENT RANGE: %-4lu-%-4lu  PBAS: %#-10" PRIx64
-            "  PBAE: %#-10" PRIx64 "  SIZE: %#-10" PRIx64
-            "  FILE: %s  EXTID: %-4d\n",
-            segment_start, segment_end, segment_start << ctrl.segment_shift,
+        MSG("\n_______________________________________________________________________________________________________________________________________\n");
+        MSG("---------------------------------------------------------------------------------------------------------------------------------------\n");
+        MSG(">> SEGMENT RANGE: %-4lu-%-4lu  PBAS: %#-10" PRIx64
+            "  PBAE: %#-10" PRIx64 "  SIZE: %#-10" PRIx64"\n",
+            segment_start, segment_end - 1, segment_start << ctrl.segment_shift,
+            segment_end << ctrl.segment_shift,
+            num_segments * F2FS_SEGMENT_SECTORS);
+        MSG("---------------------------------------------------------------------------------------------------------------------------------------\n");
+        MSG("***** EXTENT:  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
+            "  SIZE: %#-10" PRIx64 "  FILE: %50s  EXTID: %-4d\n",
+            segment_start << ctrl.segment_shift,
             segment_end << ctrl.segment_shift,
             num_segments * F2FS_SEGMENT_SECTORS,
             glob_extent_map->extent[i].file,
@@ -222,14 +234,17 @@ static void show_remainder_segment(uint64_t i) {
                          glob_extent_map->extent[i].len -
                          (segment_end << ctrl.segment_shift);
 
-    MSG("\nSEGMENT: %-4lu  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
+    MSG("\n_______________________________________________________________________________________________________________________________________\n");
+    MSG("---------------------------------------------------------------------------------------------------------------------------------------\n");
+    MSG("SEGMENT: %-4lu  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
         "  SIZE: %#-10" PRIx64 "\n",
         segment_end, segment_end << ctrl.segment_shift,
         (segment_end + 1) << ctrl.segment_shift,
         (unsigned long)F2FS_SEGMENT_SECTORS);
+    MSG("---------------------------------------------------------------------------------------------------------------------------------------\n");
 
-    MSG("---- EXTENT:  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
-        "  SIZE: %#-10" PRIx64 "  FILE: %s  EXTID: %-4d\n",
+    MSG("***** EXTENT:  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
+        "  SIZE: %#-10" PRIx64 "  FILE: %50s  EXTID: %-4d\n",
         segment_end << ctrl.segment_shift,
         (segment_end << ctrl.segment_shift) + remainder, remainder,
         glob_extent_map->extent[i].file, glob_extent_map->extent[i].ext_nr + 1);
@@ -240,6 +255,7 @@ static void show_remainder_segment(uint64_t i) {
  *
  * */
 static void show_segment_report() {
+    uint8_t printed_segment = 0;
     uint32_t current_zone = 0;
     uint64_t cur_segment = 0;
     uint64_t segment_id = 0;
@@ -266,6 +282,9 @@ static void show_segment_report() {
         }
 
         if (current_zone != glob_extent_map->extent[i].zone) {
+            if (current_zone != 0) {
+                MSG("---------------------------------------------------------------------------------------------------------------------------------------\n");
+            }
             current_zone = glob_extent_map->extent[i].zone;
             glob_extent_map->zone_ctr++;
             print_zone_info(current_zone);
@@ -280,16 +299,20 @@ static void show_segment_report() {
                                glob_extent_map->extent[i].len) &
                               F2FS_SEGMENT_MASK)) {
             if (segment_id != cur_segment) {
-                MSG("\nSEGMENT: %-4lu  PBAS: %#-10" PRIx64
+                MSG("\n_______________________________________________________________________________________________________________________________________\n");
+                MSG("---------------------------------------------------------------------------------------------------------------------------------------\n");
+                MSG("SEGMENT: %-4lu  PBAS: %#-10" PRIx64
                     "  PBAE: %#-10" PRIx64 "  SIZE: %#-10" PRIx64 "\n",
                     segment_id, segment_id << ctrl.segment_shift,
                     (glob_extent_map->extent[i].phy_blk & F2FS_SEGMENT_MASK) +
                         (F2FS_SEGMENT_SECTORS),
                     (unsigned long)F2FS_SEGMENT_SECTORS);
+                MSG("---------------------------------------------------------------------------------------------------------------------------------------\n");
+                printed_segment = 1;
             }
 
-            MSG("---- EXTENT:  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
-                "  SIZE: %#-10" PRIx64 "  FILE: %s  EXTID: %-4d\n",
+            MSG("***** EXTENT:  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
+                "  SIZE: %#-10" PRIx64 "  FILE: %50s  EXTID: %-4d\n",
                 glob_extent_map->extent[i].phy_blk,
                 glob_extent_map->extent[i].phy_blk +
                     glob_extent_map->extent[i].len,
@@ -301,6 +324,17 @@ static void show_segment_report() {
 
             // part 1: the beginning of extent to end of that single segment
             if (glob_extent_map->extent[i].phy_blk != segment_start) {
+                if (printed_segment == 0) {
+                    uint64_t start = glob_extent_map->extent[i].phy_blk & F2FS_SEGMENT_MASK;
+                    MSG("\n_______________________________________________________________________________________________________________________________________\n");
+                    MSG("---------------------------------------------------------------------------------------------------------------------------------------\n");
+                    MSG("SEGMENT: %-4lu  PBAS: %#-10" PRIx64
+                            "  PBAE: %#-10" PRIx64 "  SIZE: %#-10" PRIx64 "\n",
+                            start >> ctrl.segment_shift, start,
+                            start + (F2FS_SEGMENT_SECTORS),
+                            (unsigned long)F2FS_SEGMENT_SECTORS);
+                    MSG("---------------------------------------------------------------------------------------------------------------------------------------\n");
+                }
                 show_beginning_segment(i);
                 segment_id++;
             }
@@ -321,6 +355,7 @@ static void show_segment_report() {
             }
         }
         cur_segment = segment_id;
+        printed_segment = 0;
     }
 }
 
