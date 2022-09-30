@@ -1,4 +1,5 @@
-src/zonemap
+src/zns.fibmap
+src/zns.segmap
 
 Makefile
 configure
@@ -8,15 +9,28 @@ build-aux/*
 config.h
 config.h.in
 config.status
+config.log
+configure~
 libtool
-src/.deps
-src/Makefile
-stamp-h1
 Makefile.in
 config.h.in~
+stamp-h1
+
+src/.libs
+src/.deps
+src/Makefile
 
 m4/*
 !m4/.gitkeep
 
+lib/.libs
+lib/.deps
+lib/*.lo
+lib/*la
+
 man/Makefile
 man/Makefile.in
+
+compile_commands.json
+.cache/
+*.o
