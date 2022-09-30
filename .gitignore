@@ -9,6 +9,8 @@ build-aux/*
 config.h
 config.h.in
 config.status
+config.log
+configure~
 libtool
 Makefile.in
 config.h.in~
@@ -31,3 +33,4 @@ man/Makefile.in
 
 compile_commands.json
 .cache/
+*.o

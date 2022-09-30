@@ -44,7 +44,7 @@ uint8_t is_zoned(char *dev_path) {
     }
 }
 
-/* 
+/*
  * Get the hardware sector size for a device
  *
  * @dev_name: device name to look up sector size for
@@ -60,13 +60,11 @@ static unsigned int get_sector_size(char *dev_name) {
     sprintf(sys_path, "/sys/block/%s/queue/hw_sector_size", dev_name);
     file = fopen(sys_path, "r");
     if (!file) {
-        ERR_MSG("getting sector size from %s\n",
-                sys_path);
+        ERR_MSG("getting sector size from %s\n", sys_path);
     }
-    
+
     if (fscanf(file, "%d", &size) == 0) {
-        ERR_MSG("getting sector size from %s\n",
-                sys_path);
+        ERR_MSG("getting sector size from %s\n", sys_path);
     }
 
     fclose(file);
@@ -88,14 +86,12 @@ void init_dev(struct stat *st) {
 
     fd = open(ctrl.bdev.dev_path, O_RDONLY);
     if (fd < 0) {
-        ERR_MSG("opening device fd for %s\n",
-                ctrl.bdev.dev_path);
+        ERR_MSG("opening device fd for %s\n", ctrl.bdev.dev_path);
     }
 
     if (readlink(ctrl.bdev.dev_path, ctrl.bdev.link_name,
                  sizeof(ctrl.bdev.link_name)) < 0) {
-        ERR_MSG("opening device fd for %s\n",
-                ctrl.bdev.dev_path);
+        ERR_MSG("opening device fd for %s\n", ctrl.bdev.dev_path);
     }
 
     ctrl.bdev.dev_name = calloc(sizeof(char *) * 8, sizeof(char *));
@@ -127,14 +123,12 @@ uint8_t init_znsdev() {
 
     fd = open(ctrl.znsdev.dev_path, O_RDONLY);
     if (fd < 0) {
-        ERR_MSG("opening device fd for %s\n",
-                ctrl.znsdev.dev_path);
+        ERR_MSG("opening device fd for %s\n", ctrl.znsdev.dev_path);
         return 0;
     }
 
     ctrl.znsdev.is_zoned = is_zoned(ctrl.znsdev.dev_path);
     close(fd);
-
 
     ctrl.sector_size = get_sector_size(ctrl.znsdev.dev_name);
     ctrl.segment_shift = ctrl.sector_size == 512 ? 12 : 9;
@@ -402,29 +396,33 @@ struct extent_map *get_extents() {
             return NULL;
         }
 
-        // If data is on the bdev (empty files that have space allocated but nothing written)
-        // or there are flags we want to ignore (inline data)
+        // If data is on the bdev (empty files that have space allocated but
+        // nothing written) or there are flags we want to ignore (inline data)
         // Disregard this extent but print warning (if logging is set)
         if (fiemap->fm_extents[0].fe_physical < ctrl.offset) {
-            INFO(2, "FILE %s\nExtent Reported on %s  PBAS: "
-                "0x%06llx  PBAE: 0x%06llx  SIZE: 0x%06llx\n", ctrl.filename, ctrl.bdev.dev_name,
-                fiemap->fm_extents[0].fe_physical >> SECTOR_SHIFT,
-                (fiemap->fm_extents[0].fe_physical +
-                 fiemap->fm_extents[0].fe_length) >>
-                    SECTOR_SHIFT,
-                fiemap->fm_extents[0].fe_length >> SECTOR_SHIFT);
+            INFO(2,
+                 "FILE %s\nExtent Reported on %s  PBAS: "
+                 "0x%06llx  PBAE: 0x%06llx  SIZE: 0x%06llx\n",
+                 ctrl.filename, ctrl.bdev.dev_name,
+                 fiemap->fm_extents[0].fe_physical >> SECTOR_SHIFT,
+                 (fiemap->fm_extents[0].fe_physical +
+                  fiemap->fm_extents[0].fe_length) >>
+                     SECTOR_SHIFT,
+                 fiemap->fm_extents[0].fe_length >> SECTOR_SHIFT);
 
             if (ctrl.log_level > 1 && ctrl.show_flags) {
                 show_extent_flags(fiemap->fm_extents[0].fe_flags);
             }
         } else if (fiemap->fm_extents[0].fe_flags & ctrl.exclude_flags) {
-            INFO(2, "FILE %s\nExtent Reported on %s  PBAS: "
-                    "0x%06llx  PBAE: 0x%06llx  SIZE: 0x%06llx\n", ctrl.filename, ctrl.bdev.dev_name,
-                    fiemap->fm_extents[0].fe_physical >> SECTOR_SHIFT,
-                    (fiemap->fm_extents[0].fe_physical +
-                     fiemap->fm_extents[0].fe_length) >>
-                    SECTOR_SHIFT,
-                    fiemap->fm_extents[0].fe_length >> SECTOR_SHIFT);
+            INFO(2,
+                 "FILE %s\nExtent Reported on %s  PBAS: "
+                 "0x%06llx  PBAE: 0x%06llx  SIZE: 0x%06llx\n",
+                 ctrl.filename, ctrl.bdev.dev_name,
+                 fiemap->fm_extents[0].fe_physical >> SECTOR_SHIFT,
+                 (fiemap->fm_extents[0].fe_physical +
+                  fiemap->fm_extents[0].fe_length) >>
+                     SECTOR_SHIFT,
+                 fiemap->fm_extents[0].fe_length >> SECTOR_SHIFT);
 
             if (ctrl.log_level > 1) {
                 show_extent_flags(fiemap->fm_extents[0].fe_flags);
@@ -454,7 +452,8 @@ struct extent_map *get_extents() {
                  SECTOR_SHIFT));
             len = strlen(ctrl.filename);
             extent_map->extent[extent_map->ext_ctr].file = calloc(1, len);
-            strncpy(extent_map->extent[extent_map->ext_ctr].file, ctrl.filename, len);
+            strncpy(extent_map->extent[extent_map->ext_ctr].file, ctrl.filename,
+                    len);
 
             get_zone_info(&extent_map->extent[extent_map->ext_ctr]);
             extent_map->extent[extent_map->ext_ctr].fileID = file_counter;
@@ -536,4 +535,3 @@ void sort_extents(struct extent_map *extent_map) {
     free(temp);
     temp = NULL;
 }
-

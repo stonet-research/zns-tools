@@ -190,7 +190,7 @@ static void show_help() {
 }
 
 /*
- * init the control struct for 
+ * init the control struct for
  *
  *
  * */
@@ -200,8 +200,7 @@ static void init_ctrl() {
     fsync(ctrl.fd);
 
     if (ctrl.fd < 0) {
-        ERR_MSG("failed opening file %s\n",
-                ctrl.filename);
+        ERR_MSG("failed opening file %s\n", ctrl.filename);
     }
 
     ctrl.stats = calloc(sizeof(struct stat), sizeof(char *));
@@ -213,11 +212,11 @@ static void init_ctrl() {
 
     if (ctrl.bdev.is_zoned != 1) {
         WARN("%s is registered as containing this "
-            "file, however it is"
-            " not a ZNS.\nIf it is used with F2FS as the conventional "
-            "device, enter the"
-            " assocaited ZNS device name: ",
-            ctrl.bdev.dev_name);
+             "file, however it is"
+             " not a ZNS.\nIf it is used with F2FS as the conventional "
+             "device, enter the"
+             " assocaited ZNS device name: ",
+             ctrl.bdev.dev_name);
 
         ctrl.znsdev.dev_name = malloc(sizeof(char *) * 15);
         int ret = scanf("%s", ctrl.znsdev.dev_name);
@@ -229,8 +228,7 @@ static void init_ctrl() {
         }
 
         if (ctrl.znsdev.is_zoned != 1) {
-            ERR_MSG("%s is not a ZNS device\n",
-                    ctrl.znsdev.dev_name);
+            ERR_MSG("%s is not a ZNS device\n", ctrl.znsdev.dev_name);
         }
 
         ctrl.multi_dev = 1;
