@@ -1,4 +1,111 @@
 .TH zns.segmap 8
 
 .SH NAME
-zns.segmap \- The the F2FS segment layout over the zones on ZNS Devices for all files at the mountpoint
+zns.segmap \- Map file extents to F2FS segments on ZNS devices. Running this tool on the mount directory will locate all file extents and show a summary of their mapping into F2FS segments, as well as their placement on the ZNS device.
+
+.SH SYNOPSIS
+.B zns.segmap
+.B \-d [dir]
+.I path to directory to be mapped
+[
+.B \-h
+.I show help menu
+]
+[
+.B \-l
+.I set the logging level [1-2] (default 0)
+]
+[
+.B \-w 
+.I show \fIFIBMAP\fP extent flags (Currently only during logging)
+]
+[
+.B \-s
+.I show mappings starting from this zone (Default 1)
+]
+[
+.B \-e
+.I show mappings up to this zone (Default to last zone)
+]
+[
+.B \-z
+.I show only mappings in this zone
+]
+
+.SH DESCRIPTION
+takes extents of files and maps these to segments on the ZNS device. The aim being to locate data placement across segments, with fragmentation, as well as indicating good/bad hotness classification. The tool calls FIBMAP on all files in a directory and maps these in LBA order to the segments on the device. Since there are thousands of segments, we recommend analyzing zones individually, for which the tool provides the option for, or depicting zone ranges. The directory to be mapped is typically the mount location of the file system, however any subdirectory of it can also be mapped, e.g., if there is particular interest for locating WAL files only for a database, such as with RocksDB.
+
+.SH OPTIONS
+.B \-d [dir] " path to directory to be mapped"
+The path to the directory for which all files to be mapped are in. Can be file system mount directory, or any of its subdirectories.
+.TP
+.BI \-h " show help menu"
+Show the help menu with flag and acronym information.
+.TP
+.BI \-l " set the logging level"
+Set the logging level to show information duriong \fIioctl()\fP calls.
+.TP
+.BI \-w " show \fIFIBMAP\fP extent flags"
+Show the flags returned by the \fIioctl()\fP call (Currently only during logging).
+.TP
+.BI \-s " show mappings starting from this zone"
+With lots of output, show mappings only starting from this zone (Default: zone 1).
+.TP
+.BI \-e " show mappings up to this zone"
+Similarly, show only mappings up to this particular zone (Default: last zone).
+.TP
+.BI \-z " show only mappings in this zone"
+Decrease output further by only showing mappings for this particular zone.
+
+.SH OUTPUT
+.B zns.segmap
+outputs which zones contain what extents and segments. For convenience we include zone information in the output, such as the starting and ending addresses, such that it is easier to understand if the file is occupying the entire zone or only parts. The important information is the range of the block addresses, which we depict with a start and ending address of the extent. The output contains several acronyms:
+.TP
+
+.BI LBAS
+Logical Block Address Start (for the Zone)
+.TP
+.BI LBAE
+Logical Block Address End (for the Zone, equal to LBAS + ZONE CAP)
+.TP
+.BI CAP
+Zone Capacity (in 512B sectors)
+.TP
+.BI WP
+Write Pointer of the Zone
+.TP
+.BI SIZE
+Size of the Zone (in 512B sectors)
+.TP
+.BI STATE
+State of a zone
+.TP
+.BI MASK
+The Zone Mask that is used to calculate LBAS of LBA addresses in a zone
+.TP
+.BI EXTID
+Extent number in the order of the extents returned by ioctl(), depciting logical file data ordering
+.TP
+.BI PBAS
+Physical Block Address Start
+.TP
+.BI PBAE
+Physical Block Address End 
+
+.SH Limitations
+F2FS utilizes all devices (zoned and conventional) as one address space, hence extent mappings return offsets in this range. This requires to subtract the conventional device size from offsets to get the location on the ZNS. Therefore, the utility only works with a single ZNS device currently, and relies on the address space being conventional followed by ZNS (which is how F2FS handles it anyways). 
+.TP
+F2FS also does not directly tell us which devices it is using. If we have a setup with a conventional device and a ZNS, it is mounted as the ZNS device, and \fIioctl()\fP stat calls on all files return the conventional space device ID. Therefore, we cannot easily know which ZNS device it is actually using. The only place currently is the Kernel Log, however it's too cumbersome to parse all this, and there must be better ways. Therefore, program will currently ask the user for the associated ZNS devices.
+.TP
+Extents that are out of the address range for the ZNS device are not included in the statistics, which occurs when F2FS allocates space for files but has not written them. We show these with info prints if the logging level is set above the default of 0.
+
+
+.SH AUTHORS
+The code was written by Nick Tehrany <nicktehrany1@gmail.com>.
+
+.SH AVAILABILITY
+.B zns.segmap
+is available from https://github.com/nicktehrany/zns-tools.git
+
+.SH SEE ALSO
+.BR zns.fibmap(8)

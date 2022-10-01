@@ -27,8 +27,10 @@
 #define F2FS_BLOCK_MASK ~((F2FS_BLOCK_BYTES >> SECTOR_SHIFT) - 1)
 
 #define F2FS_SEGMENT_BYTES 2097152
-#define F2FS_SEGMENT_SECTORS F2FS_SEGMENT_BYTES >> SECTOR_SHIFT
-#define F2FS_SEGMENT_MASK ~((F2FS_SEGMENT_SECTORS)-1)
+#define F2FS_SEGMENT_SECTORS (F2FS_SEGMENT_BYTES >> SECTOR_SHIFT)
+#define F2FS_SEGMENT_MASK (~((F2FS_SEGMENT_SECTORS)-1))
+
+#define MAX_FILE_LENGTH 50
 
 struct bdev {
     char *dev_name;     /* char * to device name (e.g., nvme0n2) */
@@ -73,9 +75,9 @@ struct control {
     uint32_t exclude_flags; /* Flags of extents that are excluded in maintaining
                                mapping */
     uint64_t offset;        /* offset for the ZNS - only in multi_dev setup */
+    uint64_t
+        cur_segment; /* tracking which segment we are currently in for segmap */
 };
-
-extern struct control ctrl;
 
 struct extent {
     uint32_t zone;   /* zone index (starting with 1) of the extent */
@@ -101,6 +103,22 @@ struct extent_map {
     struct extent extent[]; /* Array of struct extent for each extent */
 };
 
+// count for each file the number of extents
+struct file_counter {
+    char file[MAX_FILE_LENGTH]; /* file name, fix maximum file length to avoid
+                                   messy reallocs */
+    uint32_t ctr;               /* extent counter for the file */
+};
+
+struct file_counter_map {
+    struct file_counter *file; /* track the file counters */
+    uint32_t cur_ctr;          /* track how many we have initialized */
+};
+
+extern struct control ctrl;
+extern struct file_counter_map
+    *file_counter_map; /* tracking extent counters per file */
+
 extern uint8_t is_zoned(char *);
 extern void init_dev(struct stat *);
 extern uint8_t init_znsdev();
@@ -114,6 +132,8 @@ extern struct extent_map *get_extents();
 extern int contains_element(uint32_t[], uint32_t, uint32_t);
 extern void sort_extents(struct extent_map *);
 extern void show_extent_flags(uint32_t);
+extern uint32_t get_file_counter(char *);
+extern void set_file_counters(struct extent_map *);
 
 #define ERR_MSG(fmt, ...)                                                      \
     do {                                                                       \

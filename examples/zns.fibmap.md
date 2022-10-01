@@ -36,6 +36,33 @@ Unwritten extent - the extent is allocated but its data has not been initialized
 `FIEMAP_EXTENT_MERGED`
 This will be set when a file does not support extents, i.e., it uses a block based addressing scheme. Since returning an extent for each block back to userspace would be highly inefficient, the kernel will try to merge most adjacent blocks into 'extents'.
 
+## Holes between Extents
+
+When F2FS run GC it will generate file fragments, which are referred to as `extents`, where an extent depicts a contiguous region of data. Over time files are broken up and extents end up in different areas (and zones) on the device. As a result of this file fragmentation extents can be reordered and/or mixed with other extents in zones. Therefore, we define a metric of identifying the space of other data (other than the data of the file that is being mapped) between extents. This can happen in three cases.
+
+1. When extents are in a single zone, however in between extents there is different data. Note, this different data can be any other data, such as other file data, or invalid data. We do not need to know what data it is exactly, all we know that it is not data of the current file being mapped, and hence results in file fragmentation (since file data is not contiguous and being broken up). The space between extents we define as a `hole`. A visual of this scenario can be seen in the following layout of a zone
+
+    ```bash
+    | Extent 1 Fila A | HOLE | Extent 2 FILE A | HOLE | Extent 3 File A |
+    0x0               0x10  0x15              0x20   0x22              0x30
+    ```
+    As can be seen, the zone starts at `0x0` where the first extent continues until `0x10`, followed by the next extent starting at `0x15`, hence a hole of `0x05` from `0x10` to `0x15`.
+2. When an extent starts at an offset that is greater than the starting LBA of a zone, only if there exists an extent in a prior zone on the device. This means that file data was written to a zone, and in a higher zone the file data is also written but does not start at the beginning of the zone. Hence, there is a hole between the file data starting and the zone beginning LBA. **Note** we disregard how many zones are between the file data, but only consider the difference between zone LBAS and start of the extent data. Visually we can depict this scenario as
+    ```bash
+    LBAS   ZONE 1    LBAE          LBAS       ZONE 2        LBAE
+    | Extent 1 Fila A |             | HOLE | Extent 2 FILE A | 
+    0x0              0x30          0x50   0x55              0x70
+    ```
+    As can be seen, there is a hole between the start of extent 2 of File A, and the beginning of zone 2, meaning there must be some other data (invalid or other file data) between the zone LBAS and the start of the extent, creating file fragmentation.
+3. Similar to the LBAS of a zone, there can also be a hole if the extent does not go until the write pointer (`WP`) of the zone, and there exists an extent in a higher zone. Why wasn't the following extent written in the space after the prior extent up to the WP? Hence we also have a hole here. Visually depicting this is as follows
+    ```bash
+    LBAS        ZONE 1       WP    LBAS     ZONE 2     LBAE
+    | Extent 1 Fila A | HOLE |       |  Extent 2 FILE A  | 
+    0x0              0x30   0x40    0x50                0x70
+    ```
+    As can be seen, Zone 1 has an extent of file A up to `0x30`, and the next extent starting in Zone 2 at `0x50`. However, the WP of Zone 1 is past the ending LBA of the first extent (at `0x40`, also the Zone LBAE). Hencer, there is a gap of `0x10` between Extent 1 of File A and Extent 2 of File A, which is a hole.
+
+
 ## Example Run
 
 The issue of F2FS associating the file with the conventional namespace is handled by the program by asking for the ZNS device. An example execution with our setup of `nvme0n1` being the conventional namespace on a ZNS device (hence randomly writable and not zones) and `nvme0n2` being the zoned namespace on the ZNS device. In the example we write several times from `/dev/urandom` to a file on the mount point and map the file with `zns.fibmap`
