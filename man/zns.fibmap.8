@@ -37,6 +37,7 @@ Show the help menu and acronym information.
 .TP
 .BI \-s " show holes"
 Show holes between the different extents.
+.TP
 .BI \-l " logging level for output"
 Set the logging level for output messages. 0 by default. 1 for more verbose logging.
 .TP
@@ -120,7 +121,7 @@ F2FS also does not directly tell us which devices it is using. If we have a setu
 Extents that are out of the address range for the ZNS device are not included in the statistics (e.g., when F2FS uses inline data the extent is not on the ZNS but the conventional block device). We still show a warning about such as extents and their info.
 
 .SH AUTHORS
-The code was written by Nick Tehrany <tehrany.nick@gmail.com>.
+The code was written by Nick Tehrany <nicktehrany1@gmail.com>.
 
 .SH AVAILABILITY
 .B zns.fibmap

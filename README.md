@@ -4,14 +4,12 @@ This repository contains several tools for evaluating file system usage of ZNS d
 
 ## Compiling and Running
 
-Building uses `autoconf`. It relies on `FIEMAP`, which the file system and kernel must support (F2FS has support for it). We use this tool to evaluate mapping of files on ZNS with F2FS.
+It relies on `FIEMAP`, which the file system and kernel must support (F2FS has support for it). We use this tool to evaluate mapping of files on ZNS with F2FS. After building, executables are located in `src/`.
 
 ```bash
 sh ./autogen.sh
 ./configure
 make
-
-cd src # executable ends up in src/
 ```
 
 ## zns.fibmap

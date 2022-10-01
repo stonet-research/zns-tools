@@ -27,8 +27,8 @@
 #define F2FS_BLOCK_MASK ~((F2FS_BLOCK_BYTES >> SECTOR_SHIFT) - 1)
 
 #define F2FS_SEGMENT_BYTES 2097152
-#define F2FS_SEGMENT_SECTORS F2FS_SEGMENT_BYTES >> SECTOR_SHIFT
-#define F2FS_SEGMENT_MASK ~((F2FS_SEGMENT_SECTORS)-1)
+#define F2FS_SEGMENT_SECTORS (F2FS_SEGMENT_BYTES >> SECTOR_SHIFT)
+#define F2FS_SEGMENT_MASK (~((F2FS_SEGMENT_SECTORS)-1))
 
 #define MAX_FILE_LENGTH 50
 
@@ -75,6 +75,7 @@ struct control {
     uint32_t exclude_flags; /* Flags of extents that are excluded in maintaining
                                mapping */
     uint64_t offset;        /* offset for the ZNS - only in multi_dev setup */
+    uint64_t cur_segment;   /* tracking which segment we are currently in for segmap */
 };
 
 struct extent {
