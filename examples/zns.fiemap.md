@@ -1,6 +1,6 @@
-# zns.fibmap
+# zns.fiemap
 
-This shows example runs of `zns.fibmap` on a file with F2FS. For acronyms and more information about definitions, see the man (running `man man/zns.fibmap.8`).
+This shows example runs of `zns.fiemap` on a file with F2FS. For acronyms and more information about definitions, see the man (running `man man/zns.fiemap.8`).
 
 ## Extent Flags
 
@@ -65,14 +65,14 @@ When F2FS run GC it will generate file fragments, which are referred to as `exte
 
 ## Example Run
 
-The issue of F2FS associating the file with the conventional namespace is handled by the program by asking for the ZNS device. An example execution with our setup of `nvme0n1` being the conventional namespace on a ZNS device (hence randomly writable and not zones) and `nvme0n2` being the zoned namespace on the ZNS device. In the example we write several times from `/dev/urandom` to a file on the mount point and map the file with `zns.fibmap`
+The issue of F2FS associating the file with the conventional namespace is handled by the program by asking for the ZNS device. An example execution with our setup of `nvme0n1` being the conventional namespace on a ZNS device (hence randomly writable and not zones) and `nvme0n2` being the zoned namespace on the ZNS device. In the example we write several times from `/dev/urandom` to a file on the mount point and map the file with `zns.fiemap`
 
 ```bash
 user@stosys:~/src/zns-tools/src$ dd if=/dev/urandom bs=100M count=1 >> /mnt/f2fs/test
 1+0 records in
 1+0 records out
 104857600 bytes (105 MB, 100 MiB) copied, 0.389088 s, 269 MB/s
-user@stosys:~/src/zns-tools/src$ sudo ./zns.fibmap -f /mnt/f2fs/test
+user@stosys:~/src/zns-tools/src$ sudo ./zns.fiemap -f /mnt/f2fs/test
 Warning: nvme0n1 is registered as containing this file, however it is not a ZNS.
 If it is used with F2FS as the conventional device, enter the assocaited ZNS device name: nvme0n2
 
@@ -99,7 +99,7 @@ As can be seen, a single write creates only one extent without any fragmentation
 This example shows how F2FS rearranges the segments in the file, resulting in out of order extents in different zones (and possibly out of order in the same zone!), which hence are not truly consecutive anymore, by being fragmented. This data is a result of running RocksDB with `db_bench` over the entire file system space (hence generating more extents and fragmentation). The output also depicts the holes between extents.
 
 ```bash
-user@stosys:~/src/zns-tools/src$ sudo ./zns.fibmap -f /mnt/f2fs/db0/LOG -s
+user@stosys:~/src/zns-tools/src$ sudo ./zns.fiemap -f /mnt/f2fs/db0/LOG -s
 Warning: nvme0n1 is registered as containing this file, however it is not a ZNS.
 If it is used with F2FS as the conventional device, enter the assocaited ZNS device name: nvme0n2
 

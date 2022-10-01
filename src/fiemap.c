@@ -1,4 +1,4 @@
-#include "fibmap.h"
+#include "fiemap.h"
 
 /*
  * Print the report summary of extent_map.
@@ -44,11 +44,13 @@ static void print_filemap_report(struct extent_map *extent_map) {
                 hole_cum_size += hole_size;
                 hole_ctr++;
 
+                HOLE_FORMATTER;
                 MSG("--- HOLE:    PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
                     "  SIZE: %#-10" PRIx64 "\n",
                     extent_map->extent[i - 1].phy_blk +
                         extent_map->extent[i - 1].len,
                     extent_map->extent[i].phy_blk, hole_size);
+                HOLE_FORMATTER;
             }
         }
         if (ctrl.show_holes && i > 0 && i < extent_map->ext_ctr - 1 &&
@@ -61,10 +63,12 @@ static void print_filemap_report(struct extent_map *extent_map) {
             hole_cum_size += hole_size;
             hole_ctr++;
 
+            HOLE_FORMATTER;
             MSG("---- HOLE:    PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
                 "  SIZE: %#-10" PRIx64 "\n",
                 extent_map->extent[i].zone_lbas, extent_map->extent[i].phy_blk,
                 hole_size);
+            HOLE_FORMATTER;
         }
 
         MSG("EXTID: %-4d  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
@@ -98,10 +102,12 @@ static void print_filemap_report(struct extent_map *extent_map) {
             hole_cum_size += hole_size;
             hole_ctr++;
 
+            HOLE_FORMATTER;
             MSG("--- HOLE:    PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
                 "  SIZE: %#-10" PRIx64 "\n",
                 extent_map->extent[i].phy_blk + extent_map->extent[i].len,
                 hole_end, hole_size);
+            HOLE_FORMATTER;
         }
     }
 

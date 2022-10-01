@@ -1,3 +1,3 @@
 ## Makefile.am
 
-dist_man8_MANS = zns.fibmap.8
+dist_man8_MANS = zns.fiemap.8
