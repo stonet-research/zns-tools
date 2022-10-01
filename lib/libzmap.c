@@ -538,11 +538,11 @@ static void increase_file_counter(char *file) {
     file_counter_map->cur_ctr++;
 }
 
-/* 
+/*
  * Initialize and set per file extent counters based on the provided
  * extent map
  *
- * @extent_map: extents to count file extents 
+ * @extent_map: extents to count file extents
  *
  * */
 void set_file_counters(struct extent_map *extent_map) {

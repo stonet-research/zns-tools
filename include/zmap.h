@@ -75,7 +75,8 @@ struct control {
     uint32_t exclude_flags; /* Flags of extents that are excluded in maintaining
                                mapping */
     uint64_t offset;        /* offset for the ZNS - only in multi_dev setup */
-    uint64_t cur_segment;   /* tracking which segment we are currently in for segmap */
+    uint64_t
+        cur_segment; /* tracking which segment we are currently in for segmap */
 };
 
 struct extent {

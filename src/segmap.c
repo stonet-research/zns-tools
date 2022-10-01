@@ -3,7 +3,7 @@
 struct segment_config segconf;
 struct extent_map *glob_extent_map;
 
-/* 
+/*
  * Show the acronym info
  *
  * */
@@ -24,8 +24,8 @@ static void show_info() {
         "addresses in a zone\n");
 
     MSG("EXTID:  Extent number out of total number of extents, in the order"
-           " of the extents\n\treturned by ioctl(), depciting logical file"
-           " data ordering\n");
+        " of the extents\n\treturned by ioctl(), depciting logical file"
+        " data ordering\n");
     MSG("PBAS:   Physical Block Address Start\n");
     MSG("PBAE:   Physical Block Address End\n");
 }
@@ -206,8 +206,8 @@ static void show_beginning_segment(uint64_t i) {
     MSG("***** EXTENT:  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
         "  SIZE: %#-10" PRIx64 "  FILE: %50s  EXTID: %4d/%-4d\n",
         glob_extent_map->extent[i].phy_blk, segment_end,
-        segment_end - glob_extent_map->extent[i].phy_blk, glob_extent_map->extent[i].file,
-        glob_extent_map->extent[i].ext_nr + 1,
+        segment_end - glob_extent_map->extent[i].phy_blk,
+        glob_extent_map->extent[i].file, glob_extent_map->extent[i].ext_nr + 1,
         get_file_counter(glob_extent_map->extent[i].file));
 }
 
@@ -358,7 +358,9 @@ static void show_segment_report() {
             if (glob_extent_map->extent[i].phy_blk != segment_start) {
                 if (segment_id != ctrl.cur_segment) {
                     uint64_t segment_start =
-                        (glob_extent_map->extent[i].phy_blk & F2FS_SEGMENT_MASK) >> ctrl.segment_shift;
+                        (glob_extent_map->extent[i].phy_blk &
+                         F2FS_SEGMENT_MASK) >>
+                        ctrl.segment_shift;
                     show_segment_info(segment_start);
                 }
                 show_beginning_segment(i);
