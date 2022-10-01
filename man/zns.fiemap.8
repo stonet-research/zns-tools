@@ -1,7 +1,7 @@
-.TH zns.fibmap 8
+.TH zns.fiemap 8
 
 .SH NAME
-zns.fibmap \- Identifying File System Extent Mapping on ZNS Devices with \fIFIBMAP\fP
+zns.fiemap \- Identifying File System Extent Mapping on ZNS Devices with \fIFIEMAP\fP
 
     MSG("-f [file]\tInput file to map [Required]\n");
     MSG("-h\t\tShow this help\n");
@@ -9,7 +9,7 @@ zns.fibmap \- Identifying File System Extent Mapping on ZNS Devices with \fIFIBM
     MSG("-s\t\tShow file holes\n");
 
 .SH SYNOPSIS
-.B zns.fibmap
+.B zns.febmap
 .B \-f [File]
 .I path to the file to be mapped
 [
@@ -49,7 +49,7 @@ Set the logging level for output messages. 0 by default. 1 for more verbose logg
 Show the flags of extents returned by \fIioctl()\fP with \fIFIBMAP\fP.
 
 .SH OUTPUT
-.B zns.fibmap
+.B zns.fiemap
 outputs which zones contain what extents. For convenience we include zone information in the output, such as the starting and ending addresses, such that it is easier to understand if the file is occupying the entire zone or only parts. The important information is the range of the block addresses, which we depict with a start and ending address of the extent. The output contains several acronyms:
 .TP
 
@@ -124,7 +124,7 @@ Extents that are out of the address range for the ZNS device are not included in
 The code was written by Nick Tehrany <nicktehrany1@gmail.com>.
 
 .SH AVAILABILITY
-.B zns.fibmap
+.B zns.fiemap
 is available from https://github.com/nicktehrany/zns-tools.git
 
 .SH SEE ALSO

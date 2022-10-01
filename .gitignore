@@ -1,4 +1,4 @@
-src/zns.fibmap
+src/zns.fiemap
 src/zns.segmap
 
 Makefile
