@@ -112,34 +112,7 @@ Average Hole Size (floored value due to hex print, in 512B sectors). Meant for e
 .BI EAHS
 Exact Average Hole Size (double point precision value, in 512B sectors). Meant for exact calculations of average hole sizes.
 
-.SH Holes between Extents
-.B zns.fibmap
-shows holes between the different extents of a file. When a \fILFS\fP system, such as \fIF2FS\fP, runs GC it will generate file fragments, which are referred to as \fIextents\fP, where an extent depicts a contiguous region of data. Over time files are broken up and extents end up in different areas (and zones) on the device. As a result of this file fragmentation extents can be reordered and/or mixed with other extents in zones. Therefore, we define a metric of identifying the space of other data (other than the data of the file that is being mapped) between extents. This can happen in three cases.
-.PP
-1. When extents are in a single zone, however in between extents there is different data. Note, this different data can be any other data, such as other file data, or invalid data. We do not need to know what data it is exactly, all we know that it is not data of the current file being mapped, and hence results in file fragmentation (since file data is not contiguous and being broken up). The space between extents we define as a \fIhole\fP. A visual of this scenario can be seen in the following layout of a zone
-
-    | Extent 1 Fila A | \fIHOLE\fP | Extent 2 FILE A | \fIHOLE\fP | Extent 3 File A |
-    \fI0x0\fP               \fI0x10\fP  \fI0x15\fP              \fI0x20\fP   \fI0x22\fP              \fI0x30\fP
-.PP
-As can be seen, the zone starts at \fI0x0\fP where the first extent continues until \fI0x10\fP, followed by the next extent starting at \fI0x15\fP, hence a hole of \fI0x05\fP from \fI0x10\fP to \fI0x15\fP.
-.PP
-2. When an extent starts at an offset that is greater than the starting LBA of a zone, only if there exists an extent in a prior zone on the device. This means that file data was written to a zone, and in a higher zone the file data is also written but does not start at the beginning of the zone. Hence, there is a hole between the file data starting and the zone beginning LBA. **Note** we disregard how many zones are between the file data, but only consider the difference between zone LBAS and start of the extent data. Visually we can depict this scenario as
-.PP
-    LBAS   \fIZONE 1\fP    LBAE          LBAS       \fIZONE 2\fP        LBAE
-    | Extent 1 Fila A |             | \fIHOLE\fP | Extent 2 FILE A | 
-    \fI0x0\fP              \fI0x30\fP          \fI0x50\fP   \fI0x55\fP              \fI0x70\fP
-.PP
-As can be seen, there is a hole between the start of extent 2 of File A, and the beginning of zone 2, meaning there must be some other data (invalid or other file data) between the zone LBAS and the start of the extent, creating file fragmentation.
-.PP
-3. Similar to the LBAS of a zone, there can also be a hole if the extent does not go until the write pointer (\fIWP\fP) of the zone, and there exists an extent in a higher zone. Why wasn't the following extent written in the space after the prior extent up to the WP? Hence we also have a hole here. Visually depicting this is as follows
-.PP
-    LBAS        \fIZONE 1\fP       WP    LBAS     \fIZONE 2\fP     LBAE
-    | Extent 1 Fila A | HOLE |       |  Extent 2 FILE A  | 
-    \fI0x0\fP              \fI0x30\fP   \fI0x40\fP    \fI0x50\fP                \fI0x70\fP
-.PP
-As can be seen, Zone 1 has an extent of file A up to \fI0x30\fP, and the next extent starting in Zone 2 at \fI0x50\fP. However, the WP of Zone 1 is past the ending LBA of the first extent (at \fI0x40\fP, also the Zone LBAE). Hencer, there is a gap of \fI0x10\fP between Extent 1 of File A and Extent 2 of File A, which is a hole.
-
-.SH BUGS
+.SH Limitations
 F2FS utilizes all devices (zoned and conventional) as one address space, hence extent mappings return offsets in this range. This requires to subtract the conventional device size from offsets to get the location on the ZNS. Therefore, the utility only works with a single ZNS device currently, and relies on the address space being conventional followed by ZNS (which is how F2FS handles it anyways). 
 .TP
 F2FS also does not directly tell us which devices it is using. If we have a setup with a conventional device and a ZNS, it is mounted as the ZNS device, and \fIioctl()\fP stat calls on all files return the conventional space device ID. Therefore, we cannot easily know which ZNS device it is actually using. The only place currently is the Kernel Log, however it's too cumbersome to parse all this, and there must be better ways. Therefore, program will currently ask the user for the associated ZNS devices.

@@ -4,6 +4,33 @@
 struct segment_config segconf;
 struct extent_map *glob_extent_map;
 
+/* 
+ * Show the acronym info
+ *
+ * */
+static void show_info() {
+    MSG("\n============================================================="
+        "=======\n");
+    MSG("\t\t\tACRONYM INFO\n");
+    MSG("==============================================================="
+        "=====\n");
+    MSG("LBAS:   Logical Block Address Start (for the Zone)\n");
+    MSG("LBAE:   Logical Block Address End (for the Zone, equal to LBAS + "
+        "ZONE CAP)\n");
+    MSG("CAP:    Zone Capacity (in 512B sectors)\n");
+    MSG("WP:     Write Pointer of the Zone\n");
+    MSG("SIZE:   Size of the Zone (in 512B sectors)\n");
+    MSG("STATE:  State of a zone (e.g, FULL, EMPTY)\n");
+    MSG("MASK:   The Zone Mask that is used to calculate LBAS of LBA "
+        "addresses in a zone\n");
+
+    MSG("EXTID:  Extent number out of total number of extents, in the order"
+           " of the extents\n\treturned by ioctl(), depciting logical file"
+           " data ordering\n");
+    MSG("PBAS:   Physical Block Address Start\n");
+    MSG("PBAE:   Physical Block Address End\n");
+}
+
 /*
  *
  * Show the command help.
@@ -18,9 +45,10 @@ static void show_help() {
     MSG("-i\t\tResolve inlined file data in inodes\n");
     MSG("-w\t\tShow extent flags\n");
     MSG("-s [uint]\tSet the starting zone to map. Default zone 1.\n");
-    MSG("-z [uint]\tOnly show a single zone\n");
+    MSG("-z [uint]\tOnly show this single zone\n");
     MSG("-e [uint]\tSet the ending zone to map. Default last zone.\n");
 
+    show_info();
     exit(0);
 }
 
@@ -469,7 +497,7 @@ int main(int argc, char *argv[]) {
 
     free(glob_extent_map);
     free(file_counter_map->file);
-    /* free(file_counter_map); */
+    free(file_counter_map);
 
     return 0;
 }
