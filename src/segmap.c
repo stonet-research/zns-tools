@@ -214,7 +214,7 @@ static void show_consecutive_segments(uint64_t i, uint64_t segment_start) {
         MSG("------------------------------------------------------------------"
             "------------------------------------------------------------------"
             "--------\n");
-        MSG(">> SEGMENT RANGE: %-4lu-%-4lu  PBAS: %#-10" PRIx64
+        MSG(">>>>> SEGMENT RANGE: %-4lu-%-4lu   PBAS: %#-10" PRIx64
             "  PBAE: %#-10" PRIx64 "  SIZE: %#-10" PRIx64 "\n",
             segment_start, segment_end - 1, segment_start << ctrl.segment_shift,
             segment_end << ctrl.segment_shift,

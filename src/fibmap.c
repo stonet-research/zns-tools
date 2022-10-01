@@ -181,9 +181,9 @@ static void show_info() {
 static void show_help() {
     MSG("Possible flags are:\n");
     MSG("-f [file]\tInput file to map [Required]\n");
-    MSG("-h\tShow this help\n");
+    MSG("-h\t\tShow this help\n");
     MSG("-l [Int]\tLog Level to print\n");
-    MSG("-s\tShow file holes\n");
+    MSG("-s\t\tShow file holes\n");
 
     show_info();
     exit(0);
