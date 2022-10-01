@@ -3,15 +3,22 @@
 .SH NAME
 zns.fibmap \- Identifying File System Extent Mapping on ZNS Devices with \fIFIBMAP\fP
 
+    MSG("-f [file]\tInput file to map [Required]\n");
+    MSG("-h\t\tShow this help\n");
+    MSG("-l [Int]\tLog Level to print\n");
+    MSG("-s\t\tShow file holes\n");
+
 .SH SYNOPSIS
 .B zns.fibmap
+.B \-f [File]
+.I path to the file to be mapped
 [
 .B \-h
 .I show help menu
 ]
 [
 .B \-l
-.I show \fIFIBMAP\fP flags with extents
+.I set the logging level [1-2] (default 0)
 ]
 [
 .B \-s
@@ -21,17 +28,14 @@ zns.fibmap \- Identifying File System Extent Mapping on ZNS Devices with \fIFIBM
 .B \-w 
 .I show \fIFIBMAP\fP extent flags
 ]
-[
-.B \-l [Int]
-.I logging level for output
-]
-.B \-f [File]
-.I path to the file to be mapped
 
 .SH DESCRIPTION
 is used for identifying the file system usage of ZNS devices by locating extents, contiguous regions of file data, on the ZNS device, and showing the fragmentation of file data over the zones. It locates the physical block address (\fIPBA\fP) ranges and zones in which files are located on \fIZNS\fP devices, listing the specific ranges of \fIPBAs\fP and which zones these are in. 
 
 .SH OPTIONS
+.BI \-f " file to be mapped"
+Argument with the file path of the to be mapped file.
+.TP
 .BI \-h " show help menu"
 Show the help menu and acronym information.
 .TP
@@ -43,10 +47,6 @@ Set the logging level for output messages. 0 by default. 1 for more verbose logg
 .TP
 .BI \-w " show \fIFIBMAP\fP extent flags"
 Show the flags of extents returned by \fIioctl()\fP with \fIFIBMAP\fP.
-.TP
-.TP
-.BI \-f " file to be mapped"
-Argument with the file path of the to be mapped file.
 
 .SH OUTPUT
 .B zns.fibmap
@@ -118,7 +118,7 @@ F2FS utilizes all devices (zoned and conventional) as one address space, hence e
 .TP
 F2FS also does not directly tell us which devices it is using. If we have a setup with a conventional device and a ZNS, it is mounted as the ZNS device, and \fIioctl()\fP stat calls on all files return the conventional space device ID. Therefore, we cannot easily know which ZNS device it is actually using. The only place currently is the Kernel Log, however it's too cumbersome to parse all this, and there must be better ways. Therefore, program will currently ask the user for the associated ZNS devices.
 .TP
-Extents that are out of the address range for the ZNS device are not included in the statistics (e.g., when F2FS uses inline data the extent is not on the ZNS but the conventional block device). We still show a warning about such as extents and their info.
+Extents that are out of the address range for the ZNS device are not included in the statistics, which occurs when F2FS allocates space for files but has not written them. We show these with info prints if the logging level is set above the default of 0.
 
 .SH AUTHORS
 The code was written by Nick Tehrany <nicktehrany1@gmail.com>.

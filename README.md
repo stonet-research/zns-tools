@@ -28,7 +28,8 @@ sudo ./zns.fibmap [flags]
 -f [file_name]: The file to be mapped (Required)
 -h:             Show the help menu
 -s:             Show holes in between extents
--l:             Show flags of extents (as returned by ioctl())
+-w:             Show Extent Flags
+-l:             Set the logging level [1-2] (Default 0)
 -i:             Show info prints with the results
 ```
 
