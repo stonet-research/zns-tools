@@ -99,8 +99,6 @@ void init_dev(struct stat *st) {
     strcpy(ctrl.bdev.dev_name, basename(ctrl.bdev.link_name));
 
     close(fd);
-
-
 }
 
 /*
@@ -587,7 +585,8 @@ void set_super_block_info(struct f2fs_super_block f2fs_sb) {
     // We currently assume a 2 device setup (conventional followed by ZNS)
     for (uint8_t i = 0; i < ZMAP_MAX_DEVS; i++) {
         if (f2fs_sb.devs[ZMAP_MAX_DEVS].total_segments > 0) {
-            WARN("Found more than 2 devices in F2FS superblock. Tools can currently only use the first 2 devices.");
+            WARN("Found more than 2 devices in F2FS superblock. Tools can "
+                 "currently only use the first 2 devices.");
             break;
         } else {
             INFO(1, "Found device in superblock %s\n", f2fs_sb.devs[i].path);
@@ -599,7 +598,8 @@ void set_super_block_info(struct f2fs_super_block f2fs_sb) {
     memcpy(ctrl.bdev.dev_name, f2fs_sb.devs[0].path + 5, MAX_PATH_LEN);
     memcpy(ctrl.bdev.dev_path, f2fs_sb.devs[0].path, MAX_PATH_LEN);
 
-    // First cannot be zoned, we call function to initialize values and print info
+    // First cannot be zoned, we call function to initialize values and print
+    // info
     ctrl.bdev.is_zoned = is_zoned(ctrl.bdev.dev_path);
     ctrl.sector_size = get_sector_size(ctrl.bdev.dev_path);
     ctrl.segment_shift = ctrl.sector_size == 512 ? 9 : 12;
