@@ -73,9 +73,6 @@ user@stosys:~/src/zns-tools/src$ dd if=/dev/urandom bs=100M count=1 >> /mnt/f2fs
 1+0 records out
 104857600 bytes (105 MB, 100 MiB) copied, 0.389088 s, 269 MB/s
 user@stosys:~/src/zns-tools/src$ sudo ./zns.fiemap -f /mnt/f2fs/test
-Warning: nvme0n1 is registered as containing this file, however it is not a ZNS.
-If it is used with F2FS as the conventional device, enter the assocaited ZNS device name: nvme0n2
-
 ====================================================================
                         EXTENT MAPPINGS
 ====================================================================
@@ -100,9 +97,6 @@ This example shows how F2FS rearranges the segments in the file, resulting in ou
 
 ```bash
 user@stosys:~/src/zns-tools/src$ sudo ./zns.fiemap -f /mnt/f2fs/db0/LOG -s
-Warning: nvme0n1 is registered as containing this file, however it is not a ZNS.
-If it is used with F2FS as the conventional device, enter the assocaited ZNS device name: nvme0n2
-
 ====================================================================
                         EXTENT MAPPINGS
 ====================================================================
