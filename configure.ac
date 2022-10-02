@@ -21,8 +21,22 @@ AC_PROG_CC
 AM_PROG_CC_C_O
 
 # Checks for header files.
-AC_CHECK_HEADER(linux/blkzoned.h, [],
-		[AC_MSG_ERROR([Couldn't find linux/blkzoned.h])])
+AC_CHECK_HEADERS(m4_flatten([
+	fcntl.h
+	linux/blkzoned.h
+	linux/fiemap.h
+	linux/fs.h
+	linux/types.h
+	stdlib.h
+	string.h
+	sys/ioctl.h
+	sys/stat.h
+	sys/syscall.h
+	sys/sysmacros.h
+	unistd.h
+]))
+
+# Checks for header files.
 AC_CHECK_HEADER(linux/fiemap.h, [],
             [AC_MSG_ERROR([Couldn't find linux/fiemap.h])])
 AC_CHECK_HEADER(linux/fs.h, [],

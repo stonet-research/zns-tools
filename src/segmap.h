@@ -2,8 +2,8 @@
 #define _SEGMAP_H_
 
 #include "zmap.h"
+
 #include <dirent.h>
-#include <stdint.h>
 
 struct segment_config {
     char *dir; /* Storing the cmd_line arg */
