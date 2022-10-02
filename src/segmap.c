@@ -112,7 +112,7 @@ static void collect_extents(char *path) {
             temp_map = (struct extent_map *)get_extents();
 
             if (!temp_map) {
-                INFO(1, "No extents found for empty file: %s\n", ctrl.filename);
+                INFO(2, "No extents found for empty file: %s\n", ctrl.filename);
             } else {
                 glob_extent_map->ext_ctr += temp_map->ext_ctr;
                 glob_extent_map = realloc(
@@ -411,36 +411,13 @@ int main(int argc, char *argv[]) {
 
     check_dir();
 
-    if (ctrl.bdev.is_zoned != 1) {
-        WARN("%s is registered for this file system, however it is"
-             " not a ZNS.\nIf it is used with F2FS as the conventional "
-             "device, enter the"
-             " assocaited ZNS device name: ",
-             ctrl.bdev.dev_name);
+    f2fs_read_super_block(ctrl.bdev.dev_path);
+    set_super_block_info(f2fs_sb);
 
-        ctrl.znsdev.dev_name = malloc(sizeof(char *) * 15);
-        int ret = scanf("%s", ctrl.znsdev.dev_name);
-        if (!ret) {
-            ERR_MSG("reading input\n");
-        }
-
-        // TODO: TEMP, get all info from sb now!
-        f2fs_read_super_block(ctrl.bdev.dev_path);
-        DBG("%s\n", f2fs_sb.devs[1].path);
-
-
-        if (!init_znsdev(ctrl.znsdev)) {
-        }
-
-        if (ctrl.znsdev.is_zoned != 1) {
-            ERR_MSG("%s is not a ZNS device\n", ctrl.znsdev.dev_name);
-        }
-
-        ctrl.multi_dev = 1;
-        ctrl.offset = get_dev_size(ctrl.bdev.dev_path);
-        ctrl.znsdev.zone_size = get_zone_size();
-        ctrl.znsdev.nr_zones = get_nr_zones();
-    }
+    ctrl.multi_dev = 1;
+    ctrl.offset = get_dev_size(ctrl.bdev.dev_path);
+    ctrl.znsdev.zone_size = get_zone_size();
+    ctrl.znsdev.nr_zones = get_nr_zones();
 
     if (ctrl.start_zone == 0 && !set_zone) {
         ctrl.start_zone = 1;

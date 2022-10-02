@@ -95,7 +95,6 @@ void init_dev(struct stat *st) {
         ERR_MSG("opening device fd for %s\n", ctrl.bdev.dev_path);
     }
 
-    ctrl.bdev.dev_name = calloc(sizeof(char *) * 8, sizeof(char *));
     strcpy(ctrl.bdev.dev_name, basename(ctrl.bdev.link_name));
 
     close(fd);
@@ -213,10 +212,6 @@ uint32_t get_nr_zones() {
  *
  * */
 void cleanup_ctrl() {
-    free(ctrl.bdev.dev_name);
-    if (ctrl.multi_dev) {
-        free(ctrl.znsdev.dev_name);
-    }
     free(ctrl.stats);
 }
 
@@ -592,4 +587,18 @@ void sort_extents(struct extent_map *extent_map) {
 
     free(temp);
     temp = NULL;
+}
+
+void set_super_block_info(struct f2fs_super_block f2fs_sb) {
+    memcpy(ctrl.znsdev.dev_name, f2fs_sb.devs[1].path + 5, MAX_PATH_LEN);
+    
+    if (!init_znsdev()) {
+        ERR_MSG("Failed initializing %s\n", ctrl.znsdev.dev_path);
+    }
+
+    if (ctrl.znsdev.is_zoned != 1) {
+        ERR_MSG("%s is not a ZNS device\n", ctrl.znsdev.dev_name);
+    }
+
+    INFO(1, "Found ZNS device in superblock: %s\n", f2fs_sb.devs[1].path);
 }

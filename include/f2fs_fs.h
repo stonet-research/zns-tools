@@ -11,6 +11,9 @@
   *
   * Dual licensed under the GPL or LGPL version 2 licenses.
   *
+  * Contents were partially modified to fit our needs:
+  *     - Remove not needed parts
+  *     - Adapt includes
   */
 #ifndef __F2FS_FS_H__
 #define __F2FS_FS_H__

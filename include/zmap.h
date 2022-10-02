@@ -1,6 +1,8 @@
 #ifndef __ZMAP_H__
 #define __ZMAP_H__
 
+#include "f2fs_fs.h"
+
 #include <fcntl.h>
 #include <libgen.h>
 #include <stdint.h>
@@ -38,11 +40,12 @@
 #define F2FS_SEGMENT_MASK (~((F2FS_SEGMENT_SECTORS)-1))
 
 #define MAX_FILE_LENGTH 50
+#define MAX_DEV_NAME 15
 
 struct bdev {
-    char *dev_name;     /* char * to device name (e.g., nvme0n2) */
-    char dev_path[32];  /* device path (e.g., /dev/nvme0n2) */
-    char link_name[32]; /* linkname from /dev/block/<major>:<minor> */
+    char dev_name[MAX_DEV_NAME];     /* char * to device name (e.g., nvme0n2) */
+    char dev_path[MAX_PATH_LEN];  /* device path (e.g., /dev/nvme0n2) */
+    char link_name[MAX_PATH_LEN]; /* linkname from /dev/block/<major>:<minor> */
     uint8_t is_zoned;   /* flag if device is a zoned device */
     uint32_t nr_zones;  /* Number of zones on the ZNS device */
     uint64_t zone_size; /* the size of a zone on the device */
@@ -141,34 +144,6 @@ extern void sort_extents(struct extent_map *);
 extern void show_extent_flags(uint32_t);
 extern uint32_t get_file_counter(char *);
 extern void set_file_counters(struct extent_map *);
-
-#define ERR_MSG(fmt, ...)                                                      \
-    do {                                                                       \
-        printf("\033[0;31mError\033[0m: [%s:%d] " fmt, __func__, __LINE__,     \
-               ##__VA_ARGS__);                                                 \
-        exit(1);                                                               \
-    } while (0)
-
-#define DBG(fmt, ...)                                                          \
-    do {                                                                       \
-        printf("[%s:%4d] " fmt, __func__, __LINE__, ##__VA_ARGS__);            \
-    } while (0)
-
-#define WARN(fmt, ...)                                                         \
-    do {                                                                       \
-        printf("\033[0;33mWarning\033[0m: " fmt, ##__VA_ARGS__);               \
-    } while (0)
-
-#define INFO(n, fmt, ...)                                                      \
-    do {                                                                       \
-        if (ctrl.log_level >= n) {                                             \
-            printf("\033[1;33mInfo\033[0m: " fmt, ##__VA_ARGS__);              \
-        }                                                                      \
-    } while (0)
-
-#define MSG(fmt, ...)                                                          \
-    do {                                                                       \
-        printf(fmt, ##__VA_ARGS__);                                            \
-    } while (0)
+extern void set_super_block_info(struct f2fs_super_block);
 
 #endif

@@ -217,31 +217,13 @@ static void init_ctrl() {
 
     init_dev(ctrl.stats);
 
-    if (ctrl.bdev.is_zoned != 1) {
-        WARN("%s is registered as containing this "
-             "file, however it is"
-             " not a ZNS.\nIf it is used with F2FS as the conventional "
-             "device, enter the"
-             " assocaited ZNS device name: ",
-             ctrl.bdev.dev_name);
+    f2fs_read_super_block(ctrl.bdev.dev_path);
+    set_super_block_info(f2fs_sb);
 
-        ctrl.znsdev.dev_name = malloc(sizeof(char *) * 15);
-        int ret = scanf("%s", ctrl.znsdev.dev_name);
-        if (!ret) {
-            ERR_MSG("reading input\n");
-        }
-
-        if (!init_znsdev(ctrl.znsdev)) {
-        }
-
-        if (ctrl.znsdev.is_zoned != 1) {
-            ERR_MSG("%s is not a ZNS device\n", ctrl.znsdev.dev_name);
-        }
-
-        ctrl.multi_dev = 1;
-        ctrl.offset = get_dev_size(ctrl.bdev.dev_path);
-        ctrl.znsdev.zone_size = get_zone_size(ctrl.znsdev.dev_path);
-    }
+    ctrl.multi_dev = 1;
+    ctrl.offset = get_dev_size(ctrl.bdev.dev_path);
+    ctrl.znsdev.zone_size = get_zone_size();
+    ctrl.znsdev.nr_zones = get_nr_zones();
 }
 
 int main(int argc, char *argv[]) {

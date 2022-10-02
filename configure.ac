@@ -23,7 +23,6 @@ AM_PROG_CC_C_O
 # Checks for header files.
 AC_CHECK_HEADERS(m4_flatten([
 	fcntl.h
-	kernel/uapi/linux/blkzoned.h
 	linux/blkzoned.h
 	linux/fiemap.h
 	linux/fs.h
@@ -47,14 +46,8 @@ AC_CHECK_MEMBER([struct blk_zone.capacity],
 		[AC_DEFINE(HAVE_BLK_ZONE_REP_V2, [1],
 			   [includes zone capacity])],
 		[AC_MSG_ERROR([missing zone capacity. Kernel 5.12+ required])], 
-        [[
-#ifdef HAVE_KERNEL_UAPI_LINUX_BLKZONED_H
-#include <kernel/uapi/linux/blkzoned.h>
-#elif defined(HAVE_LINUX_BLKZONED_H)
-#include <linux/blkzoned.h>
-#endif
-         ]])
-       
+        [[#include <linux/blkzoned.h>]])
+
 AC_CONFIG_FILES([
     Makefile
     man/Makefile
