@@ -2,11 +2,7 @@
 #define __ZMAP_H__
 
 #include <fcntl.h>
-#include <inttypes.h>
 #include <libgen.h>
-#include <linux/blkzoned.h>
-#include <linux/fiemap.h>
-#include <linux/fs.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,6 +11,17 @@
 #include <sys/stat.h>
 #include <sys/sysmacros.h>
 #include <unistd.h>
+
+#include <linux/fiemap.h>
+#include <linux/fs.h>
+
+#include <inttypes.h>
+#ifdef HAVE_LINUX_TYPES_H
+#include <linux/types.h>
+#endif
+#include <sys/types.h>
+
+#include <linux/blkzoned.h>
 
 /*
  * Shift byte valus to 512B sector values.

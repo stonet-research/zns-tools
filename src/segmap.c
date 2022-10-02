@@ -435,6 +435,8 @@ int main(int argc, char *argv[]) {
         ERR_MSG("Flag -z cannot be used with -s or -e\n");
     }
 
+    DBG("%d\n", test());
+
     check_dir();
 
     if (ctrl.start_zone == 0 && !set_zone) {

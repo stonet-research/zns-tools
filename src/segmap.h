@@ -2,6 +2,8 @@
 #define _SEGMAP_H_
 
 #include "zmap.h"
+#include "f2fs_fs.h"
+
 #include <dirent.h>
 #include <stdint.h>
 
