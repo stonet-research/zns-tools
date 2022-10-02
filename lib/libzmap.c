@@ -211,9 +211,7 @@ uint32_t get_nr_zones() {
  * Cleanup control struct - free memory
  *
  * */
-void cleanup_ctrl() {
-    free(ctrl.stats);
-}
+void cleanup_ctrl() { free(ctrl.stats); }
 
 /*
  * Calculate the zone number (starting with zone 1) of an LBA
@@ -591,7 +589,7 @@ void sort_extents(struct extent_map *extent_map) {
 
 void set_super_block_info(struct f2fs_super_block f2fs_sb) {
     memcpy(ctrl.znsdev.dev_name, f2fs_sb.devs[1].path + 5, MAX_PATH_LEN);
-    
+
     if (!init_znsdev()) {
         ERR_MSG("Failed initializing %s\n", ctrl.znsdev.dev_path);
     }

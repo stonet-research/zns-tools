@@ -43,12 +43,12 @@
 #define MAX_DEV_NAME 15
 
 struct bdev {
-    char dev_name[MAX_DEV_NAME];     /* char * to device name (e.g., nvme0n2) */
+    char dev_name[MAX_DEV_NAME];  /* char * to device name (e.g., nvme0n2) */
     char dev_path[MAX_PATH_LEN];  /* device path (e.g., /dev/nvme0n2) */
     char link_name[MAX_PATH_LEN]; /* linkname from /dev/block/<major>:<minor> */
-    uint8_t is_zoned;   /* flag if device is a zoned device */
-    uint32_t nr_zones;  /* Number of zones on the ZNS device */
-    uint64_t zone_size; /* the size of a zone on the device */
+    uint8_t is_zoned;             /* flag if device is a zoned device */
+    uint32_t nr_zones;            /* Number of zones on the ZNS device */
+    uint64_t zone_size;           /* the size of a zone on the device */
 };
 
 struct control {

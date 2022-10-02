@@ -2,7 +2,7 @@
 
 struct f2fs_super_block f2fs_sb;
 
-/* 
+/*
  * Read a block of specified size from the device
  *
  * @fd: open file descriptor to the device containg the block
@@ -25,7 +25,7 @@ static int f2fs_read_block(int fd, void *dest, __u64 offset, size_t size) {
     return 1;
 }
 
-/* 
+/*
  * Read the superblock from the provided device
  *
  * @dev_path: char * to the device containing the superblock
@@ -41,7 +41,8 @@ extern void f2fs_read_super_block(char *dev_path) {
         ERR_MSG("opening device fd for %s\n", dev_path);
     }
 
-    if (!f2fs_read_block(fd, &f2fs_sb, F2FS_SUPER_OFFSET, sizeof(struct f2fs_super_block))) {
+    if (!f2fs_read_block(fd, &f2fs_sb, F2FS_SUPER_OFFSET,
+                         sizeof(struct f2fs_super_block))) {
         ERR_MSG("reading superblock from %s\n", dev_path);
     }
 
