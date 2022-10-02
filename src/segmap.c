@@ -70,32 +70,6 @@ static void check_dir() {
     }
 
     init_dev(&stats);
-
-    if (ctrl.bdev.is_zoned != 1) {
-        WARN("%s is registered for this file system, however it is"
-             " not a ZNS.\nIf it is used with F2FS as the conventional "
-             "device, enter the"
-             " assocaited ZNS device name: ",
-             ctrl.bdev.dev_name);
-
-        ctrl.znsdev.dev_name = malloc(sizeof(char *) * 15);
-        int ret = scanf("%s", ctrl.znsdev.dev_name);
-        if (!ret) {
-            ERR_MSG("reading input\n");
-        }
-
-        if (!init_znsdev(ctrl.znsdev)) {
-        }
-
-        if (ctrl.znsdev.is_zoned != 1) {
-            ERR_MSG("%s is not a ZNS device\n", ctrl.znsdev.dev_name);
-        }
-
-        ctrl.multi_dev = 1;
-        ctrl.offset = get_dev_size(ctrl.bdev.dev_path);
-        ctrl.znsdev.zone_size = get_zone_size();
-        ctrl.znsdev.nr_zones = get_nr_zones();
-    }
 }
 
 /*
@@ -435,9 +409,38 @@ int main(int argc, char *argv[]) {
         ERR_MSG("Flag -z cannot be used with -s or -e\n");
     }
 
-    DBG("%d\n", test());
-
     check_dir();
+
+    if (ctrl.bdev.is_zoned != 1) {
+        WARN("%s is registered for this file system, however it is"
+             " not a ZNS.\nIf it is used with F2FS as the conventional "
+             "device, enter the"
+             " assocaited ZNS device name: ",
+             ctrl.bdev.dev_name);
+
+        ctrl.znsdev.dev_name = malloc(sizeof(char *) * 15);
+        int ret = scanf("%s", ctrl.znsdev.dev_name);
+        if (!ret) {
+            ERR_MSG("reading input\n");
+        }
+
+        // TODO: TEMP, get all info from sb now!
+        f2fs_read_super_block(ctrl.bdev.dev_path);
+        DBG("%s\n", f2fs_sb.devs[1].path);
+
+
+        if (!init_znsdev(ctrl.znsdev)) {
+        }
+
+        if (ctrl.znsdev.is_zoned != 1) {
+            ERR_MSG("%s is not a ZNS device\n", ctrl.znsdev.dev_name);
+        }
+
+        ctrl.multi_dev = 1;
+        ctrl.offset = get_dev_size(ctrl.bdev.dev_path);
+        ctrl.znsdev.zone_size = get_zone_size();
+        ctrl.znsdev.nr_zones = get_nr_zones();
+    }
 
     if (ctrl.start_zone == 0 && !set_zone) {
         ctrl.start_zone = 1;

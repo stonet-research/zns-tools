@@ -15,6 +15,11 @@
 #ifndef __F2FS_FS_H__
 #define __F2FS_FS_H__
 
+#include <stdlib.h>
+#include <stdio.h>
+#include <fcntl.h>
+#include <unistd.h>
+
 #include <inttypes.h>
 #ifdef HAVE_LINUX_TYPES_H
 #include <linux/types.h>
@@ -33,6 +38,7 @@
 #define VERSION_LEN		256
 #define MAX_DEVICES		8
 #define F2FS_MAX_QUOTAS		3
+#define F2FS_SUPER_OFFSET       1024    /* byte-size offset */
 
 /*
  * For superblock
@@ -96,6 +102,35 @@ static_assert(sizeof(struct f2fs_super_block) == 3072, "");
 
 extern struct f2fs_super_block f2fs_sb;
 
-extern int test();
+extern void f2fs_read_super_block();
+
+#define ERR_MSG(fmt, ...)                                                      \
+    do {                                                                       \
+        printf("\033[0;31mError\033[0m: [%s:%d] " fmt, __func__, __LINE__,     \
+               ##__VA_ARGS__);                                                 \
+        exit(1);                                                               \
+    } while (0)
+
+#define DBG(fmt, ...)                                                          \
+    do {                                                                       \
+        printf("[%s:%4d] " fmt, __func__, __LINE__, ##__VA_ARGS__);            \
+    } while (0)
+
+#define WARN(fmt, ...)                                                         \
+    do {                                                                       \
+        printf("\033[0;33mWarning\033[0m: " fmt, ##__VA_ARGS__);               \
+    } while (0)
+
+#define INFO(n, fmt, ...)                                                      \
+    do {                                                                       \
+        if (ctrl.log_level >= n) {                                             \
+            printf("\033[1;33mInfo\033[0m: " fmt, ##__VA_ARGS__);              \
+        }                                                                      \
+    } while (0)
+
+#define MSG(fmt, ...)                                                          \
+    do {                                                                       \
+        printf(fmt, ##__VA_ARGS__);                                            \
+    } while (0)
 
 #endif
