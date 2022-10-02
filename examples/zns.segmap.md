@@ -8,9 +8,6 @@ This contains dummy data from several RocksDB databases, and fio runs. We only s
 
 ```bash
 user@stosys:~/src/zns-tools$ sudo ./src/zns.segmap -d /mnt/f2fs/ -z 2 -i
-Warning: nvme0n1 is registered for this file system, however it is not a ZNS.
-If it is used with F2FS as the conventional device, enter the assocaited ZNS device name: nvme0n2
-
 ====================================================================
                         SEGMENT MAPPINGS
 ====================================================================
@@ -41,9 +38,6 @@ We can also run over a specific range of zones, identifying what segments in the
 
 ```bash
 user@stosys:~/src/zns-tools$ sudo ./src/zns.segmap -d /mnt/f2fs/db0/ -s 4 -e 8
-Warning: nvme0n1 is registered for this file system, however it is not a ZNS.
-If it is used with F2FS as the conventional device, enter the assocaited ZNS device name: nvme0n2
-
 ====================================================================
                         SEGMENT MAPPINGS
 ====================================================================
@@ -106,9 +100,6 @@ Since we only have a few GB written, we can write out all segments that we can m
 
 ```bash
 user@stosys:~/src/zns-tools$ sudo ./src/zns.segmap -d /mnt/f2fs/
-Warning: nvme0n1 is registered for this file system, however it is not a ZNS.
-If it is used with F2FS as the conventional device, enter the assocaited ZNS device name: nvme0n2
-
 ====================================================================
                         SEGMENT MAPPINGS
 ====================================================================

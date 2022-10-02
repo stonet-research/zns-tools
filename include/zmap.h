@@ -42,6 +42,8 @@
 #define MAX_FILE_LENGTH 50
 #define MAX_DEV_NAME 15
 
+#define ZMAP_MAX_DEVS 2
+
 struct bdev {
     char dev_name[MAX_DEV_NAME];  /* char * to device name (e.g., nvme0n2) */
     char dev_path[MAX_PATH_LEN];  /* device path (e.g., /dev/nvme0n2) */

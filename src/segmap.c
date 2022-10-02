@@ -275,7 +275,7 @@ static void show_segment_report() {
     uint64_t end_lba =
         (ctrl.end_zone + 1) * ctrl.znsdev.zone_size - ctrl.znsdev.zone_size;
 
-    MSG("\n================================================================="
+    MSG("================================================================="
         "===\n");
     MSG("\t\t\tSEGMENT MAPPINGS\n");
     MSG("==================================================================="

@@ -32,11 +32,13 @@ uint8_t is_zoned(char *dev_path) {
     hdr->nr_zones = nr_zones;
 
     if (ioctl(fd, BLKREPORTZONE, hdr) < 0) {
+        INFO(1, "Device is conventional block device: %s\n", dev_path);
         free(hdr);
         hdr = NULL;
 
         return 0;
     } else {
+        INFO(1, "Device is ZNS: %s\n", dev_path);
         close(fd);
         free(hdr);
         hdr = NULL;
@@ -53,24 +55,23 @@ uint8_t is_zoned(char *dev_path) {
  * returns: unsigned int sector size
  *
  * */
-static unsigned int get_sector_size(char *dev_name) {
-    char sys_path[50];
-    FILE *file;
-    unsigned int size;
+static unsigned int get_sector_size(char *dev_path) {
+    uint64_t sector_size = 0;
+    int fd;
 
-    sprintf(sys_path, "/sys/block/%s/queue/hw_sector_size", dev_name);
-    file = fopen(sys_path, "r");
-    if (!file) {
-        ERR_MSG("getting sector size from %s\n", sys_path);
+    fd = open(dev_path, O_RDONLY);
+    if (fd < 0) {
+        ERR_MSG("opening device fd for %s\n", dev_path);
+        return 0;
     }
 
-    if (fscanf(file, "%d", &size) == 0) {
-        ERR_MSG("getting sector size from %s\n", sys_path);
+    if (ioctl(fd, BLKSSZGET, &sector_size)) {
+        ERR_MSG("failed getting sector size for %s\n", dev_path);
     }
 
-    fclose(file);
+    INFO(1, "Device %s has sector size %lu\n", dev_path, sector_size);
 
-    return size;
+    return sector_size;
 }
 
 /*
@@ -99,12 +100,7 @@ void init_dev(struct stat *st) {
 
     close(fd);
 
-    ctrl.bdev.is_zoned = is_zoned(ctrl.bdev.dev_path);
 
-    if (ctrl.bdev.is_zoned) {
-        ctrl.sector_size = get_sector_size(ctrl.bdev.dev_name);
-        ctrl.segment_shift = ctrl.sector_size == 512 ? 9 : 12;
-    }
 }
 
 /*
@@ -130,7 +126,7 @@ uint8_t init_znsdev() {
     ctrl.znsdev.is_zoned = is_zoned(ctrl.znsdev.dev_path);
     close(fd);
 
-    ctrl.sector_size = get_sector_size(ctrl.znsdev.dev_name);
+    ctrl.sector_size = get_sector_size(ctrl.znsdev.dev_path);
     ctrl.segment_shift = ctrl.sector_size == 512 ? 12 : 9;
 
     return 1;
@@ -588,6 +584,26 @@ void sort_extents(struct extent_map *extent_map) {
 }
 
 void set_super_block_info(struct f2fs_super_block f2fs_sb) {
+    // We currently assume a 2 device setup (conventional followed by ZNS)
+    for (uint8_t i = 0; i < ZMAP_MAX_DEVS; i++) {
+        if (f2fs_sb.devs[ZMAP_MAX_DEVS].total_segments > 0) {
+            WARN("Found more than 2 devices in F2FS superblock. Tools can currently only use the first 2 devices.");
+            break;
+        } else {
+            INFO(1, "Found device in superblock %s\n", f2fs_sb.devs[i].path);
+        }
+    }
+
+    // Updated prior bdev info (as it's in <major:minor> format)
+    memset(ctrl.bdev.dev_name, 0, MAX_DEV_NAME);
+    memcpy(ctrl.bdev.dev_name, f2fs_sb.devs[0].path + 5, MAX_PATH_LEN);
+    memcpy(ctrl.bdev.dev_path, f2fs_sb.devs[0].path, MAX_PATH_LEN);
+
+    // First cannot be zoned, we call function to initialize values and print info
+    ctrl.bdev.is_zoned = is_zoned(ctrl.bdev.dev_path);
+    ctrl.sector_size = get_sector_size(ctrl.bdev.dev_path);
+    ctrl.segment_shift = ctrl.sector_size == 512 ? 9 : 12;
+
     memcpy(ctrl.znsdev.dev_name, f2fs_sb.devs[1].path + 5, MAX_PATH_LEN);
 
     if (!init_znsdev()) {
@@ -597,6 +613,4 @@ void set_super_block_info(struct f2fs_super_block f2fs_sb) {
     if (ctrl.znsdev.is_zoned != 1) {
         ERR_MSG("%s is not a ZNS device\n", ctrl.znsdev.dev_name);
     }
-
-    INFO(1, "Found ZNS device in superblock: %s\n", f2fs_sb.devs[1].path);
 }
