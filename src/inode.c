@@ -18,7 +18,7 @@ int main(int argc, char *argv[]) {
     int c;
     uint8_t set_file = 0;
 
-    while ((c = getopt(argc, argv, "f:hl:s")) != -1) {
+    while ((c = getopt(argc, argv, "cf:hl:s")) != -1) {
         switch (c) {
         case 'f':
             ctrl.filename = optarg;
@@ -32,6 +32,9 @@ int main(int argc, char *argv[]) {
             break;
         case 's':
             ctrl.show_superblock = 1;
+            break;
+        case 'c':
+            ctrl.show_checkpoint = 1;
             break;
         default:
             show_help();
@@ -49,6 +52,12 @@ int main(int argc, char *argv[]) {
     if (ctrl.show_superblock) {
         show_super_block();
     }
+
+    if (ctrl.show_checkpoint) {
+        f2fs_read_checkpoint(ctrl.bdev.dev_path);
+        show_checkpoint();
+    }
+
 
     cleanup_ctrl();
 

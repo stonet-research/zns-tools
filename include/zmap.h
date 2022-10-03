@@ -90,6 +90,7 @@ struct control {
     uint64_t
         cur_segment; /* tracking which segment we are currently in for segmap */
     uint8_t show_superblock; /* zns.inode flag to print superblock */
+    uint8_t show_checkpoint; /* zns.inode flag to print checkpoint */
 };
 
 struct extent {
