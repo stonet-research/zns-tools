@@ -1,4 +1,7 @@
 #include "f2fs_fs.h"
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
 
 struct f2fs_super_block f2fs_sb;
 struct f2fs_checkpoint f2fs_cp;
@@ -54,7 +57,7 @@ void f2fs_read_super_block(char *dev_path) {
  * Print all information in the superblock
  *
  * */
-void show_super_block() {
+void f2fs_show_super_block() {
 
     MSG("================================================================"
         "=\n");
@@ -134,7 +137,7 @@ void f2fs_read_checkpoint(char *dev_path) {
     close(fd);
 }
 
-void show_checkpoint() {
+void f2fs_show_checkpoint() {
     MSG("================================================================"
         "=\n");
     MSG("\t\t\tCHECKPOINT\n");
@@ -180,4 +183,84 @@ void show_checkpoint() {
     MSG("cur_data_blkoff[0]: \t\t%u\n", f2fs_cp.cur_data_blkoff[0]);
     MSG("cur_data_blkoff[1]: \t\t%u\n", f2fs_cp.cur_data_blkoff[1]);
     MSG("cur_data_blkoff[2]: \t\t%u\n", f2fs_cp.cur_data_blkoff[2]);
+}
+
+struct f2fs_nat_entry * f2fs_get_inode_nat_entry(char *dev_path, uint32_t inode_number) {
+    int fd;
+    uint32_t nat_segments = 0;
+    uint32_t nat_blocks = 0;
+    uint64_t cur_nat_blkaddress;
+    struct f2fs_nat_block *nat_block = NULL;
+    struct f2fs_nat_entry *nat_entry = NULL;
+
+    /* from:f2fs.tools mount.c:1680
+     * segment_count_nat includes pair segment so divide to 2. */
+    nat_segments = f2fs_sb.segment_count_nat >> 1;
+    nat_blocks = nat_segments << f2fs_sb.log_blocks_per_seg;
+
+    nat_block = (struct f2fs_nat_block *) calloc(BLOCK_SZ, 1);
+    nat_entry = (struct f2fs_nat_entry *) calloc(sizeof(struct f2fs_nat_entry), 1);
+
+    fd = open(dev_path, O_RDONLY);
+    if (fd < 0) {
+        ERR_MSG("opening device fd for %s\n", dev_path);
+    }
+
+    for (uint32_t i = 0; i < nat_blocks; i++) {
+        cur_nat_blkaddress = (f2fs_sb.nat_blkaddr << F2FS_BLKSIZE_BITS) + (i * BLOCK_SZ);
+
+        if (!f2fs_read_block(fd, nat_block, cur_nat_blkaddress,
+                    BLOCK_SZ)) {
+            ERR_MSG("reading NAT Block %#" PRIx64" from %s\n", cur_nat_blkaddress, dev_path);
+        }
+
+        for (uint32_t i = 0; i < NAT_ENTRY_PER_BLOCK; i++) {
+            // TODO hardcoded inode number for now
+            if (nat_block->entries[i].ino == inode_number) {
+                nat_entry->version = nat_block->entries[i].version;
+                nat_entry->ino = nat_block->entries[i].ino;
+                nat_entry->block_addr = nat_block->entries[i].block_addr;
+
+                close(fd);
+                free(nat_block);
+
+                return nat_entry;
+            }
+        }
+    } 
+
+    close(fd);
+    free(nat_block);
+
+    free(nat_entry);
+
+    return NULL;
+}
+
+struct f2fs_inode * f2fs_get_inode_block(char *dev_path, uint32_t block_addr) {
+    struct f2fs_inode *inode = NULL;
+    struct f2fs_node *node_block;
+    int fd;
+
+    inode = (struct f2fs_inode *) calloc(sizeof(struct f2fs_inode), 1);
+    node_block = (struct f2fs_node *) calloc(sizeof(struct f2fs_node), 1);
+
+    fd = open(dev_path, O_RDONLY);
+    if (fd < 0) {
+        ERR_MSG("opening device fd for %s\n", dev_path);
+    }
+
+    if (!f2fs_read_block(fd, node_block, block_addr << F2FS_BLKSIZE_BITS,
+                sizeof(struct f2fs_node))) {
+        ERR_MSG("reading NAT Block %#" PRIx32" from %s\n", block_addr, dev_path);
+    }
+
+    ERR_MSG("GOT %llu\n", node_block->i.i_blocks);
+    memcpy(inode, &node_block->i, sizeof(struct f2fs_inode));
+
+    close(fd);
+
+    free(node_block);
+
+    return inode;
 }

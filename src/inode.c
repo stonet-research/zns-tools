@@ -10,6 +10,8 @@ static void show_help() {
     MSG("Possible flags are:\n");
     MSG("-f [file]\tInput file retrieve inode for [Required]\n");
     MSG("-l [Int, 0-2]\tLog Level to print (Default 0)\n");
+    MSG("-s \tShow info in the superblock\n");
+    MSG("-c \tShow info in the checkpoint\n");
 
     exit(0);
 }
@@ -50,16 +52,31 @@ int main(int argc, char *argv[]) {
     fsync(ctrl.fd);
 
     if (ctrl.show_superblock) {
-        show_super_block();
+        f2fs_show_super_block();
     }
 
     if (ctrl.show_checkpoint) {
         f2fs_read_checkpoint(ctrl.bdev.dev_path);
-        show_checkpoint();
+        f2fs_show_checkpoint();
     }
 
+    INFO(1, "File %s has inode number %lu\n", ctrl.filename, ctrl.stats->st_ino);
 
+    struct f2fs_nat_entry *nat_entry = f2fs_get_inode_nat_entry(ctrl.bdev.dev_path, ctrl.stats->st_ino);
+
+    if (!nat_entry) {
+        ERR_MSG("finding NAT entry for %s with inode %lu\n", ctrl.filename, ctrl.stats->st_ino);
+    }
+
+    INFO(1, "Found inode %u for file %s\n", nat_entry->ino, ctrl.filename);
+
+    // TODO: how do we know which device to it is on (will it always be ZNS? only metadat, sb, cp on conventional?)
+    struct f2fs_inode *inode = f2fs_get_inode_block(ctrl.znsdev.dev_path, nat_entry->block_addr);
+    
     cleanup_ctrl();
+
+    free(nat_entry);
+    free(inode);
 
     return 0;
 }

@@ -151,4 +151,11 @@ extern void set_file_counters(struct extent_map *);
 extern void set_super_block_info(struct f2fs_super_block);
 extern void init_ctrl();
 
+#define INFO(n, fmt, ...)                                                      \
+    do {                                                                       \
+        if (ctrl.log_level >= n) {                                             \
+            printf("\033[1;33mInfo\033[0m: " fmt, ##__VA_ARGS__);              \
+        }                                                                      \
+    } while (0)
+
 #endif
