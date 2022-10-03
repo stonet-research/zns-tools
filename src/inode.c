@@ -10,8 +10,8 @@ static void show_help() {
     MSG("Possible flags are:\n");
     MSG("-f [file]\tInput file retrieve inode for [Required]\n");
     MSG("-l [Int, 0-2]\tLog Level to print (Default 0)\n");
-    MSG("-s \tShow info in the superblock\n");
-    MSG("-c \tShow info in the checkpoint\n");
+    MSG("-s \tShow the superblock\n");
+    MSG("-c \tShow the checkpoint\n");
 
     exit(0);
 }

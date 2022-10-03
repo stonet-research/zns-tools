@@ -293,6 +293,10 @@ struct f2fs_nat_entry * f2fs_get_inode_nat_entry(char *, uint32_t);
 struct f2fs_inode * f2fs_get_inode_block(char *, uint32_t );
 extern void f2fs_show_inode_info(struct f2fs_inode *);
 
+static inline int IS_INODE(struct f2fs_node *node)                               {                                                                               
+    return ((node)->footer.nid == (node)->footer.ino);                         
+}
+
 #define ERR_MSG(fmt, ...)                                                      \
     do {                                                                       \
         printf("\033[0;31mError\033[0m: [%s:%d] " fmt, __func__, __LINE__,     \

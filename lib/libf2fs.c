@@ -219,6 +219,8 @@ struct f2fs_nat_entry * f2fs_get_inode_nat_entry(char *dev_path, uint32_t inode_
                 nat_entry->ino = nat_block->entries[i].ino;
                 nat_entry->block_addr = nat_block->entries[i].block_addr;
 
+                // TODO: ISSUE iS HERE, nat could have multiple entries for same inode
+                // need to check which is the actual inode
                 close(fd);
                 free(nat_block);
 
@@ -251,6 +253,10 @@ struct f2fs_inode * f2fs_get_inode_block(char *dev_path, uint32_t block_addr) {
     if (!f2fs_read_block(fd, node_block, block_addr << F2FS_BLKSIZE_BITS,
                 sizeof(struct f2fs_node))) {
         ERR_MSG("reading NAT Block %#" PRIx32" from %s\n", block_addr, dev_path);
+    }
+
+    if (!IS_INODE(node_block)) {
+        ERR_MSG("TODO: fix this, it's not an inode\n");
     }
 
     memcpy(inode, &node_block->i, sizeof(struct f2fs_inode));
