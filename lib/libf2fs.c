@@ -292,9 +292,9 @@ void f2fs_show_inode_info(struct f2fs_inode *inode) {
     MSG("i_namelen: \t\t%u\n", inode->i_namelen);
     MSG("i_name: \t\t%s\n", inode->i_name);
     MSG("i_dir_level: \t\t%u\n", inode->i_dir_level);
-    MSG("i_nid[0]: \t\t%u\n", inode->i_nid[0]); /* direct */
-    MSG("i_nid[1]: \t\t%u\n", inode->i_nid[1]); /* direct */
-    MSG("i_nid[2]: \t\t%u\n", inode->i_nid[2]); /* indirect */
-    MSG("i_nid[3]: \t\t%u\n", inode->i_nid[3]); /* indirect */
-    MSG("i_nid[4]: \t\t%u\n", inode->i_nid[4]); /* double indirect */
+    MSG("i_nid[0] (direct): \t%u\n", inode->i_nid[0]); /* direct */
+    MSG("i_nid[1] (direct): \t%u\n", inode->i_nid[1]); /* direct */
+    MSG("i_nid[2] (indirect): \t%u\n", inode->i_nid[2]); /* indirect */
+    MSG("i_nid[3] (indirect): \t%u\n", inode->i_nid[3]); /* indirect */
+    MSG("i_nid[4] (2x indirect): %u\n", inode->i_nid[4]); /* double indirect */
 }

@@ -82,7 +82,7 @@ int main(int argc, char *argv[]) {
             ERR_MSG("finding NAT entry for %s with inode %lu\n", ctrl.filename, ctrl.stats->st_ino);
         }
 
-        INFO(1, "Found NAT entry for inode %u at blkadd %u\n", nat_entry->ino, nat_entry->block_addr);
+        INFO(1, "Found NAT entry for inode %u at block_address %u\n", nat_entry->ino, nat_entry->block_addr);
 
         // TODO: how do we know which device to it is on (will it always be ZNS? only metadata, sb, cp on conventional?)
         node_block = f2fs_get_node_block(ctrl.znsdev.dev_path, nat_entry->block_addr);
@@ -104,13 +104,20 @@ int main(int argc, char *argv[]) {
     MSG("\n***** INODE:  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
             "  SIZE: %#-10" PRIx64 "  FILE: %s\n", lba, lba + F2FS_SECS_PER_BLOCK, (unsigned long) F2FS_SECS_PER_BLOCK, ctrl.filename);
 
-    MSG("\n");
+    MSG("\n>>>>> NODE FOOTER:\n");
+    
+    MSG("nid: \t\t\t%u\n", node_block->footer.nid);
+    MSG("ino: \t\t\t%u\n", node_block->footer.ino);
+    MSG("flag: \t\t\t%u\n", node_block->footer.flag);
+    MSG("next_blkaddr: \t\t%u\n", node_block->footer.next_blkaddr);
+    MSG("\n>>>>> INODE:\n");
     
     f2fs_show_inode_info(inode);
     
     cleanup_ctrl();
 
     free(nat_entry);
+    free(node_block);
     free(inode);
 
     return 0;
