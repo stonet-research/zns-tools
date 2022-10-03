@@ -1,6 +1,5 @@
 #include "f2fs_fs.h"
 #include <stdint.h>
-#include <stdio.h>
 #include <string.h>
 
 struct f2fs_super_block f2fs_sb;
@@ -215,7 +214,6 @@ struct f2fs_nat_entry * f2fs_get_inode_nat_entry(char *dev_path, uint32_t inode_
         }
 
         for (uint32_t i = 0; i < NAT_ENTRY_PER_BLOCK; i++) {
-            // TODO hardcoded inode number for now
             if (nat_block->entries[i].ino == inode_number) {
                 nat_entry->version = nat_block->entries[i].version;
                 nat_entry->ino = nat_block->entries[i].ino;
@@ -255,7 +253,6 @@ struct f2fs_inode * f2fs_get_inode_block(char *dev_path, uint32_t block_addr) {
         ERR_MSG("reading NAT Block %#" PRIx32" from %s\n", block_addr, dev_path);
     }
 
-    ERR_MSG("GOT %llu\n", node_block->i.i_blocks);
     memcpy(inode, &node_block->i, sizeof(struct f2fs_inode));
 
     close(fd);
@@ -263,4 +260,34 @@ struct f2fs_inode * f2fs_get_inode_block(char *dev_path, uint32_t block_addr) {
     free(node_block);
 
     return inode;
+}
+
+void f2fs_show_inode_info(struct f2fs_inode *inode) {
+    // TODO: show flags in text and see what else we need
+    MSG("i_mode: \t\t%hu\n", inode->i_mode);
+    MSG("i_advise: \t\t%hu\n", inode->i_advise);
+    MSG("i_inline: \t\t%hu\n", inode->i_inline);
+    MSG("i_uid: \t\t\t%u\n", inode->i_uid);
+    MSG("i_gid: \t\t\t%u\n", inode->i_gid);
+    MSG("i_links: \t\t%u\n", inode->i_links);
+    MSG("i_size: \t\t%llu\n", inode->i_size);
+    MSG("i_blocks: \t\t%llu\n", inode->i_blocks);
+    MSG("i_atime: \t\t%llu\n", inode->i_atime);
+    MSG("i_ctime: \t\t%llu\n", inode->i_ctime);
+    MSG("i_mtime: \t\t%llu\n", inode->i_mtime);
+    MSG("i_atime_nsec: \t\t%u\n", inode->i_atime_nsec);
+    MSG("i_ctime_nsec: \t\t%u\n", inode->i_ctime_nsec);
+    MSG("i_mtime_nsec: \t\t%u\n", inode->i_mtime_nsec);
+    MSG("i_generation: \t\t%u\n", inode->i_generation);
+    MSG("i_xattr_nid: \t\t%u\n", inode->i_xattr_nid);
+    MSG("i_flags: \t\t%u\n", inode->i_flags);
+    MSG("i_pino: \t\t%u\n", inode->i_pino);
+    MSG("i_namelen: \t\t%u\n", inode->i_namelen);
+    MSG("i_name: \t\t%s\n", inode->i_name);
+    MSG("i_dir_level: \t\t%u\n", inode->i_dir_level);
+    MSG("i_nid[0]: \t\t%u\n", inode->i_nid[0]); /* direct */
+    MSG("i_nid[1]: \t\t%u\n", inode->i_nid[1]); /* direct */
+    MSG("i_nid[2]: \t\t%u\n", inode->i_nid[2]); /* indirect */
+    MSG("i_nid[3]: \t\t%u\n", inode->i_nid[3]); /* indirect */
+    MSG("i_nid[4]: \t\t%u\n", inode->i_nid[4]); /* double indirect */
 }

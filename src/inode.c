@@ -68,10 +68,28 @@ int main(int argc, char *argv[]) {
         ERR_MSG("finding NAT entry for %s with inode %lu\n", ctrl.filename, ctrl.stats->st_ino);
     }
 
-    INFO(1, "Found inode %u for file %s\n", nat_entry->ino, ctrl.filename);
+    INFO(1, "Found NAT entry for inode %u\n", nat_entry->ino);
 
-    // TODO: how do we know which device to it is on (will it always be ZNS? only metadat, sb, cp on conventional?)
+    // TODO: how do we know which device to it is on (will it always be ZNS? only metadata, sb, cp on conventional?)
     struct f2fs_inode *inode = f2fs_get_inode_block(ctrl.znsdev.dev_path, nat_entry->block_addr);
+
+    MSG("================================================================"
+        "=\n");
+    MSG("\t\t\tINODE\n");
+    MSG("================================================================"
+        "=\n");
+
+    uint64_t lba = nat_entry->block_addr << F2FS_BLKSIZE_BITS >> SECTOR_SHIFT;
+    uint32_t zone_number = get_zone_number(lba);
+    MSG("\nFile %s with inode %u is located in zone %u\n", ctrl.filename, nat_entry->ino, zone_number);
+    print_zone_info(zone_number);
+
+    MSG("\n***** INODE:  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
+            "  SIZE: %#-10" PRIx64 "  FILE: %s\n", lba, lba + F2FS_SECS_PER_BLOCK, (unsigned long) F2FS_SECS_PER_BLOCK, ctrl.filename);
+
+    MSG("\n");
+    
+    f2fs_show_inode_info(inode);
     
     cleanup_ctrl();
 

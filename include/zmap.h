@@ -43,6 +43,7 @@
 #define MAX_DEV_NAME 15
 
 #define ZMAP_MAX_DEVS 2
+#define F2FS_SECS_PER_BLOCK 9
 
 struct bdev {
     char dev_name[MAX_DEV_NAME];  /* char * to device name (e.g., nvme0n2) */

@@ -291,6 +291,7 @@ extern void f2fs_read_checkpoint(char *);
 extern void f2fs_show_checkpoint();
 struct f2fs_nat_entry * f2fs_get_inode_nat_entry(char *, uint32_t);
 struct f2fs_inode * f2fs_get_inode_block(char *, uint32_t );
+extern void f2fs_show_inode_info(struct f2fs_inode *);
 
 #define ERR_MSG(fmt, ...)                                                      \
     do {                                                                       \

@@ -211,7 +211,6 @@ void cleanup_ctrl() { free(ctrl.stats); }
  * Calculate the zone number (starting with zone 1) of an LBA
  *
  * @lba: LBA to calculate zone number of
- * @zone_size: size of the zone
  *
  * returns: number of the zone (starting with 1)
  *
