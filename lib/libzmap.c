@@ -614,3 +614,33 @@ void set_super_block_info(struct f2fs_super_block f2fs_sb) {
         ERR_MSG("%s is not a ZNS device\n", ctrl.znsdev.dev_name);
     }
 }
+
+/*
+ * init the control struct for zns.fiemap and zns.inode
+ *
+ *
+ * */
+void init_ctrl() {
+
+    ctrl.fd = open(ctrl.filename, O_RDONLY);
+    fsync(ctrl.fd);
+
+    if (ctrl.fd < 0) {
+        ERR_MSG("failed opening file %s\n", ctrl.filename);
+    }
+
+    ctrl.stats = calloc(sizeof(struct stat), sizeof(char *));
+    if (fstat(ctrl.fd, ctrl.stats) < 0) {
+        ERR_MSG("Failed stat on file %s\n", ctrl.filename);
+    }
+
+    init_dev(ctrl.stats);
+
+    f2fs_read_super_block(ctrl.bdev.dev_path);
+    set_super_block_info(f2fs_sb);
+
+    ctrl.multi_dev = 1;
+    ctrl.offset = get_dev_size(ctrl.bdev.dev_path);
+    ctrl.znsdev.zone_size = get_zone_size();
+    ctrl.znsdev.nr_zones = get_nr_zones();
+}

@@ -89,6 +89,7 @@ struct control {
     uint64_t offset;        /* offset for the ZNS - only in multi_dev setup */
     uint64_t
         cur_segment; /* tracking which segment we are currently in for segmap */
+    uint8_t show_superblock; /* zns.inode flag to print superblock */
 };
 
 struct extent {
@@ -147,5 +148,6 @@ extern void show_extent_flags(uint32_t);
 extern uint32_t get_file_counter(char *);
 extern void set_file_counters(struct extent_map *);
 extern void set_super_block_info(struct f2fs_super_block);
+extern void init_ctrl();
 
 #endif

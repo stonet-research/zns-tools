@@ -11,9 +11,10 @@
  *
  * Dual licensed under the GPL or LGPL version 2 licenses.
  *
- * Contents were partially modified to fit our needs:
+ * Contents were modified to fit our needs:
  *     - Remove not needed parts
  *     - Adapt includes
+ *     - Add our function/variable definitions
  */
 #ifndef __F2FS_FS_H__
 #define __F2FS_FS_H__
@@ -108,6 +109,7 @@ static_assert(sizeof(struct f2fs_super_block) == 3072, "");
 extern struct f2fs_super_block f2fs_sb;
 
 extern void f2fs_read_super_block();
+extern void show_super_block();
 
 #define ERR_MSG(fmt, ...)                                                      \
     do {                                                                       \
