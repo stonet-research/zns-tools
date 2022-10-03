@@ -19,6 +19,9 @@ static void show_help() {
 int main(int argc, char *argv[]) {
     int c;
     uint8_t set_file = 0;
+    struct f2fs_nat_entry *nat_entry = NULL;
+    struct f2fs_node *node_block = NULL;
+    struct f2fs_inode *inode = NULL;
 
     while ((c = getopt(argc, argv, "cf:hl:s")) != -1) {
         switch (c) {
@@ -61,17 +64,31 @@ int main(int argc, char *argv[]) {
     }
 
     INFO(1, "File %s has inode number %lu\n", ctrl.filename, ctrl.stats->st_ino);
+    inode = (struct f2fs_inode *) calloc(sizeof(struct f2fs_inode), 1);
 
-    struct f2fs_nat_entry *nat_entry = f2fs_get_inode_nat_entry(ctrl.bdev.dev_path, ctrl.stats->st_ino);
+    do {
+        // we malloc in libf2fs so need to free if we are not using it
+        if (nat_entry) {
+            free(nat_entry);
+        }
+        if (node_block) {
+            free(node_block);
+        }
 
-    if (!nat_entry) {
-        ERR_MSG("finding NAT entry for %s with inode %lu\n", ctrl.filename, ctrl.stats->st_ino);
-    }
+        nat_entry = f2fs_get_inode_nat_entry(ctrl.bdev.dev_path, ctrl.stats->st_ino);
 
-    INFO(1, "Found NAT entry for inode %u\n", nat_entry->ino);
+        // nat_entry is NULL -> no block address found for the inode
+        if (!nat_entry) {
+            ERR_MSG("finding NAT entry for %s with inode %lu\n", ctrl.filename, ctrl.stats->st_ino);
+        }
 
-    // TODO: how do we know which device to it is on (will it always be ZNS? only metadata, sb, cp on conventional?)
-    struct f2fs_inode *inode = f2fs_get_inode_block(ctrl.znsdev.dev_path, nat_entry->block_addr);
+        INFO(1, "Found NAT entry for inode %u at blkadd %u\n", nat_entry->ino, nat_entry->block_addr);
+
+        // TODO: how do we know which device to it is on (will it always be ZNS? only metadata, sb, cp on conventional?)
+        node_block = f2fs_get_node_block(ctrl.znsdev.dev_path, nat_entry->block_addr);
+        memcpy(inode, &node_block->i, sizeof(struct f2fs_inode));
+
+    } while (!IS_INODE(node_block));
 
     MSG("================================================================"
         "=\n");

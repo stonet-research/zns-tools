@@ -4,6 +4,8 @@
 
 struct f2fs_super_block f2fs_sb;
 struct f2fs_checkpoint f2fs_cp;
+uint32_t nat_block_offset = 0; /* tracking the nat block traversal */
+uint32_t nat_entry_offset = 0; /* tracking offset to start at in nat_blocks */
 
 /*
  * Read a block of specified size from the device
@@ -206,27 +208,36 @@ struct f2fs_nat_entry * f2fs_get_inode_nat_entry(char *dev_path, uint32_t inode_
     }
 
     for (uint32_t i = 0; i < nat_blocks; i++) {
-        cur_nat_blkaddress = (f2fs_sb.nat_blkaddr << F2FS_BLKSIZE_BITS) + (i * BLOCK_SZ);
+        cur_nat_blkaddress = (f2fs_sb.nat_blkaddr << F2FS_BLKSIZE_BITS) + (nat_block_offset * BLOCK_SZ);
 
         if (!f2fs_read_block(fd, nat_block, cur_nat_blkaddress,
                     BLOCK_SZ)) {
             ERR_MSG("reading NAT Block %#" PRIx64" from %s\n", cur_nat_blkaddress, dev_path);
         }
 
-        for (uint32_t i = 0; i < NAT_ENTRY_PER_BLOCK; i++) {
+        for (uint32_t i = nat_entry_offset; i < NAT_ENTRY_PER_BLOCK; i++) {
             if (nat_block->entries[i].ino == inode_number) {
+                // Next time we check nat entries, we need to start at differnet locations
+                if (i == NAT_ENTRY_PER_BLOCK - 1) {
+                    /* If we are at the last entry in the nat block, start at the next block */
+                    nat_block_offset++;
+                    nat_entry_offset = 0;
+                } else {
+                    /* if we are in the nat block, start at the next nat entry in this block */
+                    nat_entry_offset = i + 1;
+                }
                 nat_entry->version = nat_block->entries[i].version;
                 nat_entry->ino = nat_block->entries[i].ino;
                 nat_entry->block_addr = nat_block->entries[i].block_addr;
 
-                // TODO: ISSUE iS HERE, nat could have multiple entries for same inode
-                // need to check which is the actual inode
                 close(fd);
                 free(nat_block);
 
                 return nat_entry;
             }
         }
+        nat_block_offset++;
+        nat_entry_offset = 0;
     } 
 
     close(fd);
@@ -237,12 +248,10 @@ struct f2fs_nat_entry * f2fs_get_inode_nat_entry(char *dev_path, uint32_t inode_
     return NULL;
 }
 
-struct f2fs_inode * f2fs_get_inode_block(char *dev_path, uint32_t block_addr) {
-    struct f2fs_inode *inode = NULL;
-    struct f2fs_node *node_block;
+struct f2fs_node * f2fs_get_node_block(char *dev_path, uint32_t block_addr) {
+    struct f2fs_node *node_block = NULL;
     int fd;
 
-    inode = (struct f2fs_inode *) calloc(sizeof(struct f2fs_inode), 1);
     node_block = (struct f2fs_node *) calloc(sizeof(struct f2fs_node), 1);
 
     fd = open(dev_path, O_RDONLY);
@@ -255,17 +264,9 @@ struct f2fs_inode * f2fs_get_inode_block(char *dev_path, uint32_t block_addr) {
         ERR_MSG("reading NAT Block %#" PRIx32" from %s\n", block_addr, dev_path);
     }
 
-    if (!IS_INODE(node_block)) {
-        ERR_MSG("TODO: fix this, it's not an inode\n");
-    }
-
-    memcpy(inode, &node_block->i, sizeof(struct f2fs_inode));
-
     close(fd);
 
-    free(node_block);
-
-    return inode;
+    return node_block;
 }
 
 void f2fs_show_inode_info(struct f2fs_inode *inode) {

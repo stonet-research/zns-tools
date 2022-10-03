@@ -290,7 +290,7 @@ extern void f2fs_show_super_block();
 extern void f2fs_read_checkpoint(char *);
 extern void f2fs_show_checkpoint();
 struct f2fs_nat_entry * f2fs_get_inode_nat_entry(char *, uint32_t);
-struct f2fs_inode * f2fs_get_inode_block(char *, uint32_t );
+struct f2fs_node * f2fs_get_node_block(char *, uint32_t );
 extern void f2fs_show_inode_info(struct f2fs_inode *);
 
 static inline int IS_INODE(struct f2fs_node *node)                               {                                                                               
