@@ -43,6 +43,7 @@
 #define MAX_DEV_NAME 15
 
 #define ZMAP_MAX_DEVS 2
+#define F2FS_SECS_PER_BLOCK 9
 
 struct bdev {
     char dev_name[MAX_DEV_NAME];  /* char * to device name (e.g., nvme0n2) */
@@ -89,6 +90,8 @@ struct control {
     uint64_t offset;        /* offset for the ZNS - only in multi_dev setup */
     uint64_t
         cur_segment; /* tracking which segment we are currently in for segmap */
+    uint8_t show_superblock; /* zns.inode flag to print superblock */
+    uint8_t show_checkpoint; /* zns.inode flag to print checkpoint */
 };
 
 struct extent {
@@ -147,5 +150,13 @@ extern void show_extent_flags(uint32_t);
 extern uint32_t get_file_counter(char *);
 extern void set_file_counters(struct extent_map *);
 extern void set_super_block_info(struct f2fs_super_block);
+extern void init_ctrl();
+
+#define INFO(n, fmt, ...)                                                      \
+    do {                                                                       \
+        if (ctrl.log_level >= n) {                                             \
+            printf("\033[1;33mInfo\033[0m: " fmt, ##__VA_ARGS__);              \
+        }                                                                      \
+    } while (0)
 
 #endif

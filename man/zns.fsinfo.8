@@ -1,0 +1,59 @@
+.TH zns.fiemap 8
+
+.SH NAME
+zns.fsinfo \- Show file system related information, including superblock, checkpoint, and inode contents for files.
+
+.SH SYNOPSIS
+.B zns.fsinfo
+.B \-f [File]
+.I path to the file to located inode for
+[
+.B \-h
+.I show help menu
+]
+[
+.B \-l
+.I set the logging level [0-2] (default 0)
+]
+[
+.B \-s
+.I show the superblock
+]
+[
+.B \-c 
+.I show the checkpoint
+]
+
+.SH DESCRIPTION
+is used for locating of inodes for a file on a ZNS device and showing the inode contents. It furthermore provides functionality for printing the fields in the superblock and checkpoint area.
+
+.SH OPTIONS
+.BI \-f " file to be located"
+Argument with the file path to locate its inode of.
+.TP
+.BI \-h " show help menu"
+Show the help menu and acronym information.
+.TP
+.BI \-l " logging level for output"
+Set the logging level for output messages. 0 by default. 1 for more verbose logging.
+.TP
+.BI \-s " show superblock"
+Show the superblock contents.
+.TP
+.BI \-c " show checkpoint"
+Show the checkpoint contents.
+
+.SH OUTPUT
+.B NOTE
+the output of superblock and checkpoint contents are in F2FS block size of 4KiB, irregardless of the sector size on the device.
+
+.SH AUTHORS
+The code was written by Nick Tehrany <nicktehrany1@gmail.com>.
+
+.SH AVAILABILITY
+.B zns.fsinfo
+is available from https://github.com/nicktehrany/zns-tools.git
+
+.SH SEE ALSO
+.BR zns.segmap(8)
+.BR zns.fiemap(8)
