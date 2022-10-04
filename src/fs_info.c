@@ -1,4 +1,4 @@
-#include "inode.h"
+#include "fs_info.h"
 
 /*
  *
@@ -10,8 +10,8 @@ static void show_help() {
     MSG("Possible flags are:\n");
     MSG("-f [file]\tInput file retrieve inode for [Required]\n");
     MSG("-l [Int, 0-2]\tLog Level to print (Default 0)\n");
-    MSG("-s \tShow the superblock\n");
-    MSG("-c \tShow the checkpoint\n");
+    MSG("-s \t\tShow the superblock\n");
+    MSG("-c \t\tShow the checkpoint\n");
 
     exit(0);
 }
@@ -58,6 +58,9 @@ int main(int argc, char *argv[]) {
         f2fs_show_super_block();
     }
 
+    INFO(1, "ZNS address space in F2FS starting at: %#10"PRIx64"\n", ctrl.offset);
+    INFO(1, "F2FS main area starting at: %#10"PRIx64"\n", (uint64_t)f2fs_sb.main_blkaddr << F2FS_BLKSIZE_BITS);
+
     if (ctrl.show_checkpoint) {
         f2fs_read_checkpoint(ctrl.bdev.dev_path);
         f2fs_show_checkpoint();
@@ -82,9 +85,6 @@ int main(int argc, char *argv[]) {
             ERR_MSG("finding NAT entry for %s with inode %lu\n", ctrl.filename, ctrl.stats->st_ino);
         }
 
-        INFO(1, "Found NAT entry for inode %u at block_address %u\n", nat_entry->ino, nat_entry->block_addr);
-
-        // TODO: how do we know which device to it is on (will it always be ZNS? only metadata, sb, cp on conventional?)
         node_block = f2fs_get_node_block(ctrl.znsdev.dev_path, nat_entry->block_addr);
         memcpy(inode, &node_block->i, sizeof(struct f2fs_inode));
 

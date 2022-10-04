@@ -62,9 +62,10 @@ void f2fs_show_super_block() {
 
     MSG("================================================================"
         "=\n");
-    MSG("\t\t\tSUPER BLOCK\n");
+    MSG("\t\t\tSUPERBLOCK\n");
     MSG("================================================================"
         "=\n");
+    MSG("Note: Sizes and Addresses are in 4KiB units (F2FS Block Size)\n");
     MSG("magic: \t\t\t%#10"PRIx32"\n", f2fs_sb.magic); 
     MSG("major_version: \t\t%hu\n", f2fs_sb.major_ver); 
     MSG("minor_version: \t\t%hu\n", f2fs_sb.minor_ver); 
@@ -83,7 +84,7 @@ void f2fs_show_super_block() {
     MSG("segment_count_nat: \t%u\n", f2fs_sb.segment_count_nat);
     MSG("segment_count_ssa: \t%u\n", f2fs_sb.segment_count_ssa);
     MSG("segment_count_main: \t%u\n", f2fs_sb.segment_count_main);
-    MSG("segment0_blkaddr: \t%u\n", f2fs_sb.segment0_blkaddr);
+    MSG("segment0_blkaddr: \t%#"PRIx32"\n", f2fs_sb.segment0_blkaddr);
     MSG("cp_blkaddr: \t\t%#"PRIx32"\n", f2fs_sb.cp_blkaddr);
     MSG("sit_blkaddr: \t\t%#"PRIx32"\n", f2fs_sb.sit_blkaddr);
     MSG("nat_blkaddr: \t\t%#"PRIx32"\n", f2fs_sb.nat_blkaddr);
@@ -122,6 +123,10 @@ void f2fs_show_super_block() {
     MSG("crc: \t\t\t%u\n", f2fs_sb.crc);
 }
 
+/* 
+ * Read the F2FS checkpoint into the global f2fs_cp variable
+ *
+ * */
 void f2fs_read_checkpoint(char *dev_path) {
     int fd;
 
@@ -138,6 +143,10 @@ void f2fs_read_checkpoint(char *dev_path) {
     close(fd);
 }
 
+/* 
+ * Print the fields of the F2FS checkpoint
+ *
+ * */
 void f2fs_show_checkpoint() {
     MSG("================================================================"
         "=\n");
@@ -186,6 +195,18 @@ void f2fs_show_checkpoint() {
     MSG("cur_data_blkoff[2]: \t\t%u\n", f2fs_cp.cur_data_blkoff[2]);
 }
 
+/*  
+ *  Get the NAT entry for an inode
+ *
+ *  @dev_path: device path where the NAT is on
+ *  @inode_number: inode number to locate
+ *
+ *  Note, this function tracks offsets to begin it, in the case where the returned NAT entry
+ *  is not an inode. Hence, it can be called again and will return the next NAT entry for this 
+ *  inode number.
+ *
+ * returns: f2fs_nat_entry * with the NAT entry
+ *  */
 struct f2fs_nat_entry * f2fs_get_inode_nat_entry(char *dev_path, uint32_t inode_number) {
     int fd;
     uint32_t nat_segments = 0;
@@ -248,6 +269,15 @@ struct f2fs_nat_entry * f2fs_get_inode_nat_entry(char *dev_path, uint32_t inode_
     return NULL;
 }
 
+/* 
+ * Get the f2fs_node at a specified block address
+ *
+ * @dev_path: device path where the node is located on
+ * @block_addr: block address of the node (in F2FS 4KiB units)
+ *
+ * Note, the f2fs_read_block function will convert the block_address to bytes and issue the read I/O
+ *
+ * */
 struct f2fs_node * f2fs_get_node_block(char *dev_path, uint32_t block_addr) {
     struct f2fs_node *node_block = NULL;
     int fd;
@@ -269,6 +299,12 @@ struct f2fs_node * f2fs_get_node_block(char *dev_path, uint32_t block_addr) {
     return node_block;
 }
 
+/* 
+ * Print the fields of an f2fs_inode
+ *
+ * @inode: * to the inode to print
+ *
+ * */
 void f2fs_show_inode_info(struct f2fs_inode *inode) {
     // TODO: show flags in text and see what else we need
     MSG("i_mode: \t\t%hu\n", inode->i_mode);

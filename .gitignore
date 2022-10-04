@@ -1,6 +1,6 @@
 src/zns.fiemap
 src/zns.segmap
-src/zns.inode
+src/zns.fsinfo
 
 Makefile
 configure
