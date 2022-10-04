@@ -196,7 +196,6 @@ static void show_help() {
     exit(0);
 }
 
-
 int main(int argc, char *argv[]) {
     int c;
     struct extent_map *extent_map;

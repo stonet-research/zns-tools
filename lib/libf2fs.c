@@ -54,7 +54,7 @@ void f2fs_read_super_block(char *dev_path) {
     close(fd);
 }
 
-/* 
+/*
  * Print all information in the superblock
  *
  * */
@@ -66,9 +66,9 @@ void f2fs_show_super_block() {
     MSG("================================================================"
         "=\n");
     MSG("Note: Sizes and Addresses are in 4KiB units (F2FS Block Size)\n");
-    MSG("magic: \t\t\t%#10"PRIx32"\n", f2fs_sb.magic); 
-    MSG("major_version: \t\t%hu\n", f2fs_sb.major_ver); 
-    MSG("minor_version: \t\t%hu\n", f2fs_sb.minor_ver); 
+    MSG("magic: \t\t\t%#10" PRIx32 "\n", f2fs_sb.magic);
+    MSG("major_version: \t\t%hu\n", f2fs_sb.major_ver);
+    MSG("minor_version: \t\t%hu\n", f2fs_sb.minor_ver);
     MSG("log_sectorsize: \t%u\n", f2fs_sb.log_sectorsize);
     MSG("log_sectors_per_block: \t%u\n", f2fs_sb.log_sectors_per_block);
     MSG("log_blocksize: \t\t%u\n", f2fs_sb.log_blocksize);
@@ -84,12 +84,12 @@ void f2fs_show_super_block() {
     MSG("segment_count_nat: \t%u\n", f2fs_sb.segment_count_nat);
     MSG("segment_count_ssa: \t%u\n", f2fs_sb.segment_count_ssa);
     MSG("segment_count_main: \t%u\n", f2fs_sb.segment_count_main);
-    MSG("segment0_blkaddr: \t%#"PRIx32"\n", f2fs_sb.segment0_blkaddr);
-    MSG("cp_blkaddr: \t\t%#"PRIx32"\n", f2fs_sb.cp_blkaddr);
-    MSG("sit_blkaddr: \t\t%#"PRIx32"\n", f2fs_sb.sit_blkaddr);
-    MSG("nat_blkaddr: \t\t%#"PRIx32"\n", f2fs_sb.nat_blkaddr);
-    MSG("ssa_blkaddr: \t\t%#"PRIx32"\n", f2fs_sb.ssa_blkaddr);
-    MSG("main_blkaddr: \t\t%#"PRIx32"\n", f2fs_sb.main_blkaddr);
+    MSG("segment0_blkaddr: \t%#" PRIx32 "\n", f2fs_sb.segment0_blkaddr);
+    MSG("cp_blkaddr: \t\t%#" PRIx32 "\n", f2fs_sb.cp_blkaddr);
+    MSG("sit_blkaddr: \t\t%#" PRIx32 "\n", f2fs_sb.sit_blkaddr);
+    MSG("nat_blkaddr: \t\t%#" PRIx32 "\n", f2fs_sb.nat_blkaddr);
+    MSG("ssa_blkaddr: \t\t%#" PRIx32 "\n", f2fs_sb.ssa_blkaddr);
+    MSG("main_blkaddr: \t\t%#" PRIx32 "\n", f2fs_sb.main_blkaddr);
     MSG("root_ino: \t\t%u\n", f2fs_sb.root_ino);
     MSG("node_ino: \t\t%u\n", f2fs_sb.node_ino);
     MSG("meta_ino: \t\t%u\n", f2fs_sb.meta_ino);
@@ -98,7 +98,7 @@ void f2fs_show_super_block() {
     MSG("Extensions: \t\t");
     for (uint8_t i = 0; i < F2FS_MAX_EXTENSION; i++) {
         MSG("%s ", f2fs_sb.extension_list[i]);
-    } 
+    }
     MSG("\n");
 
     MSG("cp_payload: \t\t%u\n", f2fs_sb.cp_payload);
@@ -115,7 +115,7 @@ void f2fs_show_super_block() {
             break;
         }
         MSG("%s ", f2fs_sb.devs[i].path);
-    } 
+    }
 
     MSG("hot_ext_count: \t\t%hhu\n", f2fs_sb.hot_ext_count);
     MSG("s_encoding: \t\t%hu\n", f2fs_sb.s_encoding);
@@ -123,7 +123,7 @@ void f2fs_show_super_block() {
     MSG("crc: \t\t\t%u\n", f2fs_sb.crc);
 }
 
-/* 
+/*
  * Read the F2FS checkpoint into the global f2fs_cp variable
  *
  * */
@@ -143,7 +143,7 @@ void f2fs_read_checkpoint(char *dev_path) {
     close(fd);
 }
 
-/* 
+/*
  * Print the fields of the F2FS checkpoint
  *
  * */
@@ -171,9 +171,12 @@ void f2fs_show_checkpoint() {
     MSG("nat_ver_bitmap_bytesize: \t%u\n", f2fs_cp.nat_ver_bitmap_bytesize);
     MSG("checksum_offset: \t\t%u\n", f2fs_cp.checksum_offset);
     MSG("elapsed_time: \t\t\t%llu\n", f2fs_cp.elapsed_time);
-    MSG("alloc_type[CURSEG_HOT_NODE]: \t%hhu\n", f2fs_cp.alloc_type[CURSEG_HOT_NODE]);
-    MSG("alloc_type[CURSEG_WARM_NODE]: \t%hhu\n", f2fs_cp.alloc_type[CURSEG_WARM_NODE]);
-    MSG("alloc_type[CURSEG_COLD_NODE]: \t%hhu\n", f2fs_cp.alloc_type[CURSEG_COLD_NODE]);
+    MSG("alloc_type[CURSEG_HOT_NODE]: \t%hhu\n",
+        f2fs_cp.alloc_type[CURSEG_HOT_NODE]);
+    MSG("alloc_type[CURSEG_WARM_NODE]: \t%hhu\n",
+        f2fs_cp.alloc_type[CURSEG_WARM_NODE]);
+    MSG("alloc_type[CURSEG_COLD_NODE]: \t%hhu\n",
+        f2fs_cp.alloc_type[CURSEG_COLD_NODE]);
     MSG("cur_node_segno[0]: \t\t%u\n", f2fs_cp.cur_node_segno[0]);
     MSG("cur_node_segno[1]: \t\t%u\n", f2fs_cp.cur_node_segno[1]);
     MSG("cur_node_segno[2]: \t\t%u\n", f2fs_cp.cur_node_segno[2]);
@@ -182,9 +185,12 @@ void f2fs_show_checkpoint() {
     MSG("cur_node_blkoff[1]: \t\t%u\n", f2fs_cp.cur_node_blkoff[1]);
     MSG("cur_node_blkoff[2]: \t\t%u\n", f2fs_cp.cur_node_blkoff[2]);
 
-    MSG("alloc_type[CURSEG_HOT_DATA]: \t%hhu\n", f2fs_cp.alloc_type[CURSEG_HOT_DATA]);
-    MSG("alloc_type[CURSEG_WARM_DATA]: \t%hhu\n", f2fs_cp.alloc_type[CURSEG_WARM_DATA]);
-    MSG("alloc_type[CURSEG_COLD_DATA]: \t%hhu\n", f2fs_cp.alloc_type[CURSEG_COLD_DATA]);
+    MSG("alloc_type[CURSEG_HOT_DATA]: \t%hhu\n",
+        f2fs_cp.alloc_type[CURSEG_HOT_DATA]);
+    MSG("alloc_type[CURSEG_WARM_DATA]: \t%hhu\n",
+        f2fs_cp.alloc_type[CURSEG_WARM_DATA]);
+    MSG("alloc_type[CURSEG_COLD_DATA]: \t%hhu\n",
+        f2fs_cp.alloc_type[CURSEG_COLD_DATA]);
 
     MSG("cur_data_segno[0]: \t\t%u\n", f2fs_cp.cur_data_segno[0]);
     MSG("cur_data_segno[1]: \t\t%u\n", f2fs_cp.cur_data_segno[1]);
@@ -195,19 +201,20 @@ void f2fs_show_checkpoint() {
     MSG("cur_data_blkoff[2]: \t\t%u\n", f2fs_cp.cur_data_blkoff[2]);
 }
 
-/*  
+/*
  *  Get the NAT entry for an inode
  *
  *  @dev_path: device path where the NAT is on
  *  @inode_number: inode number to locate
  *
- *  Note, this function tracks offsets to begin it, in the case where the returned NAT entry
- *  is not an inode. Hence, it can be called again and will return the next NAT entry for this 
- *  inode number.
+ *  Note, this function tracks offsets to begin it, in the case where the
+ * returned NAT entry is not an inode. Hence, it can be called again and will
+ * return the next NAT entry for this inode number.
  *
  * returns: f2fs_nat_entry * with the NAT entry
  *  */
-struct f2fs_nat_entry * f2fs_get_inode_nat_entry(char *dev_path, uint32_t inode_number) {
+struct f2fs_nat_entry *f2fs_get_inode_nat_entry(char *dev_path,
+                                                uint32_t inode_number) {
     int fd;
     uint32_t nat_segments = 0;
     uint32_t nat_blocks = 0;
@@ -220,8 +227,9 @@ struct f2fs_nat_entry * f2fs_get_inode_nat_entry(char *dev_path, uint32_t inode_
     nat_segments = f2fs_sb.segment_count_nat >> 1;
     nat_blocks = nat_segments << f2fs_sb.log_blocks_per_seg;
 
-    nat_block = (struct f2fs_nat_block *) calloc(BLOCK_SZ, 1);
-    nat_entry = (struct f2fs_nat_entry *) calloc(sizeof(struct f2fs_nat_entry), 1);
+    nat_block = (struct f2fs_nat_block *)calloc(BLOCK_SZ, 1);
+    nat_entry =
+        (struct f2fs_nat_entry *)calloc(sizeof(struct f2fs_nat_entry), 1);
 
     fd = open(dev_path, O_RDONLY);
     if (fd < 0) {
@@ -229,22 +237,26 @@ struct f2fs_nat_entry * f2fs_get_inode_nat_entry(char *dev_path, uint32_t inode_
     }
 
     for (uint32_t i = 0; i < nat_blocks; i++) {
-        cur_nat_blkaddress = (f2fs_sb.nat_blkaddr << F2FS_BLKSIZE_BITS) + (nat_block_offset * BLOCK_SZ);
+        cur_nat_blkaddress = (f2fs_sb.nat_blkaddr << F2FS_BLKSIZE_BITS) +
+                             (nat_block_offset * BLOCK_SZ);
 
-        if (!f2fs_read_block(fd, nat_block, cur_nat_blkaddress,
-                    BLOCK_SZ)) {
-            ERR_MSG("reading NAT Block %#" PRIx64" from %s\n", cur_nat_blkaddress, dev_path);
+        if (!f2fs_read_block(fd, nat_block, cur_nat_blkaddress, BLOCK_SZ)) {
+            ERR_MSG("reading NAT Block %#" PRIx64 " from %s\n",
+                    cur_nat_blkaddress, dev_path);
         }
 
         for (uint32_t i = nat_entry_offset; i < NAT_ENTRY_PER_BLOCK; i++) {
             if (nat_block->entries[i].ino == inode_number) {
-                // Next time we check nat entries, we need to start at differnet locations
+                // Next time we check nat entries, we need to start at differnet
+                // locations
                 if (i == NAT_ENTRY_PER_BLOCK - 1) {
-                    /* If we are at the last entry in the nat block, start at the next block */
+                    /* If we are at the last entry in the nat block, start at
+                     * the next block */
                     nat_block_offset++;
                     nat_entry_offset = 0;
                 } else {
-                    /* if we are in the nat block, start at the next nat entry in this block */
+                    /* if we are in the nat block, start at the next nat entry
+                     * in this block */
                     nat_entry_offset = i + 1;
                 }
                 nat_entry->version = nat_block->entries[i].version;
@@ -259,7 +271,7 @@ struct f2fs_nat_entry * f2fs_get_inode_nat_entry(char *dev_path, uint32_t inode_
         }
         nat_block_offset++;
         nat_entry_offset = 0;
-    } 
+    }
 
     close(fd);
     free(nat_block);
@@ -269,20 +281,21 @@ struct f2fs_nat_entry * f2fs_get_inode_nat_entry(char *dev_path, uint32_t inode_
     return NULL;
 }
 
-/* 
+/*
  * Get the f2fs_node at a specified block address
  *
  * @dev_path: device path where the node is located on
  * @block_addr: block address of the node (in F2FS 4KiB units)
  *
- * Note, the f2fs_read_block function will convert the block_address to bytes and issue the read I/O
+ * Note, the f2fs_read_block function will convert the block_address to bytes
+ * and issue the read I/O
  *
  * */
-struct f2fs_node * f2fs_get_node_block(char *dev_path, uint32_t block_addr) {
+struct f2fs_node *f2fs_get_node_block(char *dev_path, uint32_t block_addr) {
     struct f2fs_node *node_block = NULL;
     int fd;
 
-    node_block = (struct f2fs_node *) calloc(sizeof(struct f2fs_node), 1);
+    node_block = (struct f2fs_node *)calloc(sizeof(struct f2fs_node), 1);
 
     fd = open(dev_path, O_RDONLY);
     if (fd < 0) {
@@ -290,8 +303,9 @@ struct f2fs_node * f2fs_get_node_block(char *dev_path, uint32_t block_addr) {
     }
 
     if (!f2fs_read_block(fd, node_block, block_addr << F2FS_BLKSIZE_BITS,
-                sizeof(struct f2fs_node))) {
-        ERR_MSG("reading NAT Block %#" PRIx32" from %s\n", block_addr, dev_path);
+                         sizeof(struct f2fs_node))) {
+        ERR_MSG("reading NAT Block %#" PRIx32 " from %s\n", block_addr,
+                dev_path);
     }
 
     close(fd);
@@ -299,7 +313,7 @@ struct f2fs_node * f2fs_get_node_block(char *dev_path, uint32_t block_addr) {
     return node_block;
 }
 
-/* 
+/*
  * Print the fields of an f2fs_inode
  *
  * @inode: * to the inode to print
@@ -328,9 +342,9 @@ void f2fs_show_inode_info(struct f2fs_inode *inode) {
     MSG("i_namelen: \t\t%u\n", inode->i_namelen);
     MSG("i_name: \t\t%s\n", inode->i_name);
     MSG("i_dir_level: \t\t%u\n", inode->i_dir_level);
-    MSG("i_nid[0] (direct): \t%u\n", inode->i_nid[0]); /* direct */
-    MSG("i_nid[1] (direct): \t%u\n", inode->i_nid[1]); /* direct */
-    MSG("i_nid[2] (indirect): \t%u\n", inode->i_nid[2]); /* indirect */
-    MSG("i_nid[3] (indirect): \t%u\n", inode->i_nid[3]); /* indirect */
+    MSG("i_nid[0] (direct): \t%u\n", inode->i_nid[0]);    /* direct */
+    MSG("i_nid[1] (direct): \t%u\n", inode->i_nid[1]);    /* direct */
+    MSG("i_nid[2] (indirect): \t%u\n", inode->i_nid[2]);  /* indirect */
+    MSG("i_nid[3] (indirect): \t%u\n", inode->i_nid[3]);  /* indirect */
     MSG("i_nid[4] (2x indirect): %u\n", inode->i_nid[4]); /* double indirect */
 }
