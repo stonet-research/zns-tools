@@ -16,6 +16,10 @@ zns.segmap \- Map file extents to F2FS segments on ZNS devices. Running this too
 .I set the logging level [1-2] (default 0)
 ]
 [
+.B \-p
+.I resolve segment information from procfs (/proc/fs/f2fs/<device>/segment_info)
+]
+[
 .B \-w 
 .I show \fIFIEMAP\fP extent flags (Currently only during logging)
 ]
@@ -44,6 +48,9 @@ Show the help menu with flag and acronym information.
 .TP
 .BI \-l " set the logging level"
 Set the logging level to show information duriong \fIioctl()\fP calls.
+.TP
+.BI \-p " resolve segment information from procfs"
+Resolve segment information, including the segment type (hot/cold/warm data or node) and valid block count, from procfs (/proc/fs/f2fs/<device>/segment_info).
 .TP
 .BI \-w " show \fIFIEMAP\fP extent flags"
 Show the flags returned by the \fIioctl()\fP call (Currently only during logging).

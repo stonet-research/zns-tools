@@ -92,6 +92,7 @@ struct control {
         cur_segment; /* tracking which segment we are currently in for segmap */
     uint8_t show_superblock; /* zns.inode flag to print superblock */
     uint8_t show_checkpoint; /* zns.inode flag to print checkpoint */
+    uint8_t procfs; /* zns.segmap use procfs entry segment_info from F2FS */
 };
 
 struct extent {
