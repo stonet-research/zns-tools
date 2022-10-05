@@ -143,7 +143,7 @@ static void collect_extents(char *path) {
     closedir(directory);
 }
 
-/* 
+/*
  * Show the segment flags (type and valid blocks) for the specified segment
  *
  * @segment_id: segment to show flags of
@@ -165,7 +165,7 @@ static void show_segment_flags(uint32_t segment_id, uint8_t is_range) {
     } else if (segman.sm_info[segment_id].type == CURSEG_COLD_DATA) {
         MSG("CURSEG_COLD_DATA");
     }
-    
+
     MSG("  VALID BLOCKS: %3u", segman.sm_info[segment_id].valid_blocks);
     if (is_range) {
         MSG(" per segment\n");
@@ -262,7 +262,7 @@ static void show_consecutive_segments(uint64_t i, uint64_t segment_start) {
             segment_start, segment_end - 1, segment_start << ctrl.segment_shift,
             segment_end << ctrl.segment_shift,
             num_segments * F2FS_SEGMENT_SECTORS);
-        
+
         // Since segments are in the same zone, they must be of the same type
         // therefore, we can just print the flags of the first one, and since
         // they are contiguous ranges, they cannot have invalid blocks, for
@@ -404,13 +404,14 @@ static void show_segment_report() {
     }
 }
 
-/* 
+/*
  * Get the segment data from /proc/fs/f2fs/<device>/segment_bits
  * for more information about segments. Only get up to the highest
- * segment number we care about in our mappings, limit runtime and 
+ * segment number we care about in our mappings, limit runtime and
  * memory consumption. It sets the global sm_info struct
  *
- * @highest_segment: The largest segment to retrieve info up to (including this number segment)
+ * @highest_segment: The largest segment to retrieve info up to (including this
+ * number segment)
  *
  * */
 static void get_procfs_segment_bits(uint32_t highest_segment) {
@@ -421,9 +422,11 @@ static void get_procfs_segment_bits(uint32_t highest_segment) {
     uint32_t line_ctr = 0;
     ssize_t read;
 
-    // F2FS outputs in rows of 10, which we parse and initialize in the struct, and only stop
-    // if we are >= to the highest segment, which means we may have parsed at most 9 more entries
-    segman.sm_info = calloc(sizeof(struct segment_info) * highest_segment + 9, 1);
+    // F2FS outputs in rows of 10, which we parse and initialize in the struct,
+    // and only stop if we are >= to the highest segment, which means we may
+    // have parsed at most 9 more entries
+    segman.sm_info =
+        calloc(sizeof(struct segment_info) * highest_segment + 9, 1);
 
     dev_string = strdup(ctrl.bdev.dev_name);
     while ((device = strsep(&dev_string, "/")) != NULL) {
@@ -431,10 +434,12 @@ static void get_procfs_segment_bits(uint32_t highest_segment) {
     }
 
     sprintf(path, "/proc/fs/f2fs/%s/segment_info", dev);
-    
+
     fp = fopen(path, "r");
     if (!fp) {
-        WARN("Failed opening %s\nEnsure Kernel is running with F2FS Debugging enabled.\nFalling back to disabling procfs segment resolving.\n", path);
+        WARN("Failed opening %s\nEnsure Kernel is running with F2FS Debugging "
+             "enabled.\nFalling back to disabling procfs segment resolving.\n",
+             path);
         ctrl.procfs = 0;
         return;
     }
@@ -444,7 +449,7 @@ static void get_procfs_segment_bits(uint32_t highest_segment) {
         if (line_ctr < 2) {
             line_ctr++;
             continue;
-        } 
+        }
 
         char *contents;
         while ((contents = strsep(&line, " \t"))) {
@@ -455,12 +460,13 @@ static void get_procfs_segment_bits(uint32_t highest_segment) {
                 while ((split_string = strsep(&contents, "|"))) {
                     if (strcmp(split_string, "|") == 0) {
                         continue;
-                    } 
-                    else if (!set_first) {
-                        segman.sm_info[segman.nr_segments].type = atoi(split_string);
+                    } else if (!set_first) {
+                        segman.sm_info[segman.nr_segments].type =
+                            atoi(split_string);
                         set_first = 1;
                     } else {
-                        segman.sm_info[segman.nr_segments].valid_blocks = atoi(split_string);
+                        segman.sm_info[segman.nr_segments].valid_blocks =
+                            atoi(split_string);
                     }
                 }
 
@@ -477,7 +483,7 @@ static void get_procfs_segment_bits(uint32_t highest_segment) {
             return;
         }
     }
-    
+
     fclose(fp);
     free(dev_string);
 }
@@ -560,7 +566,11 @@ int main(int argc, char *argv[]) {
     collect_extents(segconf.dir);
     sort_extents(glob_extent_map);
 
-    highest_segment = ((glob_extent_map->extent[glob_extent_map->ext_ctr - 1].phy_blk + glob_extent_map->extent[glob_extent_map->ext_ctr - 1].len) & F2FS_SEGMENT_MASK) >> ctrl.segment_shift;
+    highest_segment =
+        ((glob_extent_map->extent[glob_extent_map->ext_ctr - 1].phy_blk +
+          glob_extent_map->extent[glob_extent_map->ext_ctr - 1].len) &
+         F2FS_SEGMENT_MASK) >>
+        ctrl.segment_shift;
     if (ctrl.procfs) {
         get_procfs_segment_bits(highest_segment);
     }
