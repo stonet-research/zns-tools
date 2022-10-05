@@ -188,7 +188,7 @@ static void show_segment_info(uint64_t segment_start) {
             "  SIZE: %#-10" PRIx64 "\n",
             segment_start, segment_start << ctrl.segment_shift,
             ((segment_start << ctrl.segment_shift) + ctrl.f2fs_segment_sectors),
-            (unsigned long)ctrl.f2fs_segment_sectors);
+            ctrl.f2fs_segment_sectors);
         if (ctrl.procfs) {
             show_segment_flags(segment_start, 0);
         }
@@ -330,8 +330,9 @@ static void show_segment_report() {
         "=\n");
 
     for (uint64_t i = 0; i < glob_extent_map->ext_ctr; i++) {
-        segment_id = (glob_extent_map->extent[i].phy_blk & ctrl.f2fs_segment_mask) >>
-                     ctrl.segment_shift;
+        segment_id =
+            (glob_extent_map->extent[i].phy_blk & ctrl.f2fs_segment_mask) >>
+            ctrl.segment_shift;
         if ((segment_id << ctrl.segment_shift) >= end_lba) {
             break;
         }

@@ -55,11 +55,13 @@ struct control {
     uint8_t show_flags; /* cmd_line flag to show extent flags */
     uint8_t info;       /* cmd_line flag to show info */
 
-    unsigned int sector_size; /* Size of sectors on the ZNS device */
+    unsigned int sector_size;  /* Size of sectors on the ZNS device */
     unsigned int sector_shift; /* bit shift for sector conversion */
 
-    uint64_t f2fs_segment_sectors; /* how many logical sectors a segment has, depending on device LBA size */
-    uint64_t f2fs_segment_mask; /* the mask to apply for LBA to segment LBAS conversion, depnding on device LBA size */ 
+    uint64_t f2fs_segment_sectors; /* how many logical sectors a segment has,
+                                      depending on device LBA size */
+    uint64_t f2fs_segment_mask;    /* the mask to apply for LBA to segment LBAS
+                                      conversion, depnding on device LBA size */
     /*
      * F2FS Segments contain a power of 2 number of Sectors. Based on the device
      * sector size we can use bit shifts to convert between blocks and segments.

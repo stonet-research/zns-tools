@@ -128,7 +128,7 @@ uint8_t init_znsdev() {
 
     // for F2FS both conventional and ZNS device must have same sector size
     // therefore, we can assign one independent of which
-    ctrl.sector_shift = ctrl.sector_size == 512 ? 9: 12;
+    ctrl.sector_shift = ctrl.sector_size == 512 ? 9 : 12;
     ctrl.f2fs_segment_sectors = F2FS_SEGMENT_BYTES >> ctrl.sector_shift;
     ctrl.f2fs_segment_mask = ~(ctrl.f2fs_segment_sectors - 1);
 
