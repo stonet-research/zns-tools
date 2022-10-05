@@ -48,6 +48,7 @@ Again, it requires to be run with root privileges. Possible flags are:
 -d [dir]:   Mounted dir to map [Required]
 -h:         Show this help
 -l [0-2]:   Set the logging level
+-p:         Resolve segment information from procfs
 -i:         Resolve inlined file data in inodes
 -w:         Show extent flags (Currently only for logging with -l 2)
 -s [uint]:  Set the starting zone to map. Default zone 1.
