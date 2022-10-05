@@ -193,29 +193,29 @@ struct f2fs_extent {
 /*
  * i_advise uses FADVISE_XXX_BIT. We can add additional hints later.
  */
-#define FADVISE_COLD_BIT	0x01
-#define FADVISE_LOST_PINO_BIT	0x02
-#define FADVISE_ENCRYPT_BIT	0x04
-#define FADVISE_ENC_NAME_BIT	0x08
-#define FADVISE_KEEP_SIZE_BIT	0x10
-#define FADVISE_HOT_BIT		0x20
-#define FADVISE_VERITY_BIT	0x40
-#define FADVISE_TRUNC_BIT	0x80
+#define FADVISE_COLD_BIT 0x01
+#define FADVISE_LOST_PINO_BIT 0x02
+#define FADVISE_ENCRYPT_BIT 0x04
+#define FADVISE_ENC_NAME_BIT 0x08
+#define FADVISE_KEEP_SIZE_BIT 0x10
+#define FADVISE_HOT_BIT 0x20
+#define FADVISE_VERITY_BIT 0x40
+#define FADVISE_TRUNC_BIT 0x80
 
 /*
  * On-disk inode flags (f2fs_inode::i_flags)
  */
-#define F2FS_COMPR_FL			0x00000004 /* Compress file */
-#define F2FS_SYNC_FL			0x00000008 /* Synchronous updates */
-#define F2FS_IMMUTABLE_FL		0x00000010 /* Immutable file */
-#define F2FS_APPEND_FL			0x00000020 /* writes to file may only append */
-#define F2FS_NODUMP_FL			0x00000040 /* do not dump file */
-#define F2FS_NOATIME_FL			0x00000080 /* do not update atime */
-#define F2FS_NOCOMP_FL			0x00000400 /* Don't compress */
-#define F2FS_INDEX_FL			0x00001000 /* hash-indexed directory */
-#define F2FS_DIRSYNC_FL			0x00010000 /* dirsync behaviour (directories only) */
-#define F2FS_PROJINHERIT_FL		0x20000000 /* Create with parents projid */
-#define F2FS_CASEFOLD_FL		0x40000000 /* Casefolded file */
+#define F2FS_COMPR_FL 0x00000004     /* Compress file */
+#define F2FS_SYNC_FL 0x00000008      /* Synchronous updates */
+#define F2FS_IMMUTABLE_FL 0x00000010 /* Immutable file */
+#define F2FS_APPEND_FL 0x00000020    /* writes to file may only append */
+#define F2FS_NODUMP_FL 0x00000040    /* do not dump file */
+#define F2FS_NOATIME_FL 0x00000080   /* do not update atime */
+#define F2FS_NOCOMP_FL 0x00000400    /* Don't compress */
+#define F2FS_INDEX_FL 0x00001000     /* hash-indexed directory */
+#define F2FS_DIRSYNC_FL 0x00010000   /* dirsync behaviour (directories only) */
+#define F2FS_PROJINHERIT_FL 0x20000000 /* Create with parents projid */
+#define F2FS_CASEFOLD_FL 0x40000000    /* Casefolded file */
 
 struct f2fs_inode {
     __le16 i_mode;       /* file mode */

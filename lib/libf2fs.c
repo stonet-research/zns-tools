@@ -345,7 +345,7 @@ static void show_inode_fadvise_flags(struct f2fs_inode *inode) {
 
 static void show_inode_flags(struct f2fs_inode *inode) {
     MSG("i_flags: \t\t");
-    
+
     if (inode->i_flags & F2FS_COMPR_FL) {
         MSG("F2FS_COMPR_FL ");
     }
@@ -390,7 +390,6 @@ static void show_inode_flags(struct f2fs_inode *inode) {
  *
  * */
 void f2fs_show_inode_info(struct f2fs_inode *inode) {
-    // TODO: show flags in text and see what else we need
     MSG("i_mode: \t\t%hu\n", inode->i_mode);
     show_inode_fadvise_flags(inode);
     MSG("i_inline: \t\t%hu\n", inode->i_inline);
