@@ -166,7 +166,7 @@ static void show_segment_flags(uint32_t segment_id, uint8_t is_range) {
         MSG("CURSEG_COLD_NODE");
     }
 
-    MSG("  VALID BLOCKS: %3u", segman.sm_info[segment_id].valid_blocks);
+    MSG("  VALID BLOCKS: %3u", segman.sm_info[segment_id].valid_blocks << F2FS_BLKSIZE_BITS >> SECTOR_SHIFT);
     if (is_range) {
         MSG(" per segment\n");
     } else {
@@ -266,7 +266,8 @@ static void show_consecutive_segments(uint64_t i, uint64_t segment_start) {
         // Since segments are in the same zone, they must be of the same type
         // therefore, we can just print the flags of the first one, and since
         // they are contiguous ranges, they cannot have invalid blocks, for
-        // which the function will print 512 (all blocks in a segment) anyways
+        // which the function will print 512 4KiB blocks (all 4KiB blocks in 
+        // a segment) anyways
         if (ctrl.procfs) {
             show_segment_flags(segment_start, 1);
         }
