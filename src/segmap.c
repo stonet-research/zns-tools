@@ -429,7 +429,7 @@ static void get_procfs_segment_bits(uint32_t highest_segment) {
     // and only stop if we are >= to the highest segment, which means we may
     // have parsed at most 9 more entries
     segman.sm_info =
-        calloc(sizeof(struct segment_info) * highest_segment + 9, 1);
+        calloc(sizeof(struct segment_info) * (highest_segment + 9), 1);
 
     dev_string = strdup(ctrl.bdev.dev_name);
     while ((device = strsep(&dev_string, "/")) != NULL) {
@@ -494,6 +494,7 @@ static void get_procfs_segment_bits(uint32_t highest_segment) {
 int main(int argc, char *argv[]) {
     int c;
     uint8_t set_zone = 0;
+    uint8_t set_dir = 0;
     uint8_t set_zone_end = 0;
     uint8_t set_zone_start = 0;
     uint32_t highest_segment = 1;
@@ -509,6 +510,7 @@ int main(int argc, char *argv[]) {
             break;
         case 'd':
             segconf.dir = optarg;
+            set_dir = 1;
             break;
         case 'l':
             ctrl.log_level = atoi(optarg);
@@ -539,6 +541,10 @@ int main(int argc, char *argv[]) {
             show_help();
             abort();
         }
+    }
+    
+    if (!set_dir) {
+        ERR_MSG("Missing directory -d flag.\n");
     }
 
     if (set_zone && (set_zone_start || set_zone_end)) {
@@ -587,7 +593,9 @@ int main(int argc, char *argv[]) {
     free(glob_extent_map);
     free(file_counter_map->file);
     free(file_counter_map);
-    free(segman.sm_info);
+    if (ctrl.procfs) {
+        free(segman.sm_info);
+    }
 
     return 0;
 }
