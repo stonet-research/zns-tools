@@ -542,7 +542,7 @@ int main(int argc, char *argv[]) {
             abort();
         }
     }
-    
+
     if (!set_dir) {
         ERR_MSG("Missing directory -d flag.\n");
     }
