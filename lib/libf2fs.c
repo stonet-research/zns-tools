@@ -313,6 +313,76 @@ struct f2fs_node *f2fs_get_node_block(char *dev_path, uint32_t block_addr) {
     return node_block;
 }
 
+static void show_inode_fadvise_flags(struct f2fs_inode *inode) {
+    MSG("i_advise: \t\t");
+    if (inode->i_advise & FADVISE_COLD_BIT) {
+        MSG("FADVISE_COLD_BIT ");
+    }
+    if (inode->i_advise & FADVISE_LOST_PINO_BIT) {
+        MSG("FADVISE_LOST_PINO_BIT ");
+    }
+    if (inode->i_advise & FADVISE_ENCRYPT_BIT) {
+        MSG("FADVISE_ENCRYPT_BIT ");
+    }
+    if (inode->i_advise & FADVISE_ENC_NAME_BIT) {
+        MSG("FADVISE_ENC_NAME_BIT ");
+    }
+    if (inode->i_advise & FADVISE_KEEP_SIZE_BIT) {
+        MSG("FADVISE_KEEP_SIZE_BIT ");
+    }
+    if (inode->i_advise & FADVISE_HOT_BIT) {
+        MSG("FADVISE_HOT_BIT ");
+    }
+    if (inode->i_advise & FADVISE_VERITY_BIT) {
+        MSG("FADVISE_VERITY_BIT ");
+    }
+    if (inode->i_advise & FADVISE_TRUNC_BIT) {
+        MSG("FADVISE_TRUNC_BIT ");
+    }
+
+    MSG("\n");
+}
+
+static void show_inode_flags(struct f2fs_inode *inode) {
+    MSG("i_flags: \t\t");
+    
+    if (inode->i_flags & F2FS_COMPR_FL) {
+        MSG("F2FS_COMPR_FL ");
+    }
+    if (inode->i_flags & F2FS_SYNC_FL) {
+        MSG("F2FS_SYNC_FL ");
+    }
+    if (inode->i_flags & F2FS_IMMUTABLE_FL) {
+        MSG("F2FS_IMMUTABLE_FL ");
+    }
+    if (inode->i_flags & F2FS_APPEND_FL) {
+        MSG("F2FS_APPEND_FL ");
+    }
+    if (inode->i_flags & F2FS_NODUMP_FL) {
+        MSG("F2FS_NODUMP_FL ");
+    }
+    if (inode->i_flags & F2FS_NOATIME_FL) {
+        MSG("F2FS_NOATIME_FL ");
+    }
+    if (inode->i_flags & F2FS_NOCOMP_FL) {
+        MSG("F2FS_NOCOMP_FL ");
+    }
+    if (inode->i_flags & F2FS_INDEX_FL) {
+        MSG("F2FS_INDEX_FL ");
+    }
+    if (inode->i_flags & F2FS_DIRSYNC_FL) {
+        MSG("F2FS_DIRSYNC_FL ");
+    }
+    if (inode->i_flags & F2FS_PROJINHERIT_FL) {
+        MSG("F2FS_PROJINHERIT_FL ");
+    }
+    if (inode->i_flags & F2FS_CASEFOLD_FL) {
+        MSG("F2FS_CASEFOLD_FL ");
+    }
+
+    MSG("\n");
+}
+
 /*
  * Print the fields of an f2fs_inode
  *
@@ -322,7 +392,7 @@ struct f2fs_node *f2fs_get_node_block(char *dev_path, uint32_t block_addr) {
 void f2fs_show_inode_info(struct f2fs_inode *inode) {
     // TODO: show flags in text and see what else we need
     MSG("i_mode: \t\t%hu\n", inode->i_mode);
-    MSG("i_advise: \t\t%hu\n", inode->i_advise);
+    show_inode_fadvise_flags(inode);
     MSG("i_inline: \t\t%hu\n", inode->i_inline);
     MSG("i_uid: \t\t\t%u\n", inode->i_uid);
     MSG("i_gid: \t\t\t%u\n", inode->i_gid);
@@ -337,6 +407,7 @@ void f2fs_show_inode_info(struct f2fs_inode *inode) {
     MSG("i_mtime_nsec: \t\t%u\n", inode->i_mtime_nsec);
     MSG("i_generation: \t\t%u\n", inode->i_generation);
     MSG("i_xattr_nid: \t\t%u\n", inode->i_xattr_nid);
+    show_inode_flags(inode);
     MSG("i_flags: \t\t%u\n", inode->i_flags);
     MSG("i_pino: \t\t%u\n", inode->i_pino);
     MSG("i_namelen: \t\t%u\n", inode->i_namelen);
