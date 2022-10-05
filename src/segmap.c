@@ -168,7 +168,7 @@ static void show_segment_flags(uint32_t segment_id, uint8_t is_range) {
 
     MSG("  VALID BLOCKS: %3u",
         segman.sm_info[segment_id].valid_blocks << F2FS_BLKSIZE_BITS >>
-            SECTOR_SHIFT);
+            ctrl.sector_shift);
     if (is_range) {
         MSG(" per segment\n");
     } else {
@@ -187,8 +187,8 @@ static void show_segment_info(uint64_t segment_start) {
         MSG("SEGMENT: %-4lu  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
             "  SIZE: %#-10" PRIx64 "\n",
             segment_start, segment_start << ctrl.segment_shift,
-            ((segment_start << ctrl.segment_shift) + F2FS_SEGMENT_SECTORS),
-            (unsigned long)F2FS_SEGMENT_SECTORS);
+            ((segment_start << ctrl.segment_shift) + ctrl.f2fs_segment_sectors),
+            ctrl.f2fs_segment_sectors);
         if (ctrl.procfs) {
             show_segment_flags(segment_start, 0);
         }
@@ -212,8 +212,8 @@ static void show_segment_info(uint64_t segment_start) {
  * */
 static void show_beginning_segment(uint64_t i) {
     uint64_t segment_start =
-        (glob_extent_map->extent[i].phy_blk & F2FS_SEGMENT_MASK);
-    uint64_t segment_end = segment_start + (F2FS_SEGMENT_SECTORS);
+        (glob_extent_map->extent[i].phy_blk & ctrl.f2fs_segment_mask);
+    uint64_t segment_end = segment_start + (ctrl.f2fs_segment_sectors);
 
     MSG("***** EXTENT:  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
         "  SIZE: %#-10" PRIx64 "  FILE: %50s  EXTID: %4d/%-4d\n",
@@ -235,7 +235,7 @@ static void show_beginning_segment(uint64_t i) {
 static void show_consecutive_segments(uint64_t i, uint64_t segment_start) {
     uint64_t segment_end =
         ((glob_extent_map->extent[i].phy_blk + glob_extent_map->extent[i].len) &
-         F2FS_SEGMENT_MASK) >>
+         ctrl.f2fs_segment_mask) >>
         ctrl.segment_shift;
     uint64_t num_segments = segment_end - segment_start;
 
@@ -248,7 +248,7 @@ static void show_consecutive_segments(uint64_t i, uint64_t segment_start) {
             "  SIZE: %#-10" PRIx64 "  FILE: %50s  EXTID: %4d/%-4d\n",
             glob_extent_map->extent[i].phy_blk,
             segment_end << ctrl.segment_shift,
-            (unsigned long)F2FS_SEGMENT_SECTORS,
+            (unsigned long)ctrl.f2fs_segment_sectors,
             glob_extent_map->extent[i].file,
             glob_extent_map->extent[i].ext_nr + 1,
             get_file_counter(glob_extent_map->extent[i].file));
@@ -263,7 +263,7 @@ static void show_consecutive_segments(uint64_t i, uint64_t segment_start) {
             "  PBAE: %#-10" PRIx64 "  SIZE: %#-10" PRIx64 "\n",
             segment_start, segment_end - 1, segment_start << ctrl.segment_shift,
             segment_end << ctrl.segment_shift,
-            num_segments * F2FS_SEGMENT_SECTORS);
+            num_segments * ctrl.f2fs_segment_sectors);
 
         // Since segments are in the same zone, they must be of the same type
         // therefore, we can just print the flags of the first one, and since
@@ -281,7 +281,7 @@ static void show_consecutive_segments(uint64_t i, uint64_t segment_start) {
             "  SIZE: %#-10" PRIx64 "  FILE: %50s  EXTID: %4d/%-4d\n",
             segment_start << ctrl.segment_shift,
             segment_end << ctrl.segment_shift,
-            num_segments * F2FS_SEGMENT_SECTORS,
+            num_segments * ctrl.f2fs_segment_sectors,
             glob_extent_map->extent[i].file,
             glob_extent_map->extent[i].ext_nr + 1,
             get_file_counter(glob_extent_map->extent[i].file));
@@ -296,7 +296,7 @@ static void show_consecutive_segments(uint64_t i, uint64_t segment_start) {
 static void show_remainder_segment(uint64_t i) {
     uint64_t segment_start =
         ((glob_extent_map->extent[i].phy_blk + glob_extent_map->extent[i].len) &
-         F2FS_SEGMENT_MASK) >>
+         ctrl.f2fs_segment_mask) >>
         ctrl.segment_shift;
     uint64_t remainder = glob_extent_map->extent[i].phy_blk +
                          glob_extent_map->extent[i].len -
@@ -330,8 +330,9 @@ static void show_segment_report() {
         "=\n");
 
     for (uint64_t i = 0; i < glob_extent_map->ext_ctr; i++) {
-        segment_id = (glob_extent_map->extent[i].phy_blk & F2FS_SEGMENT_MASK) >>
-                     ctrl.segment_shift;
+        segment_id =
+            (glob_extent_map->extent[i].phy_blk & ctrl.f2fs_segment_mask) >>
+            ctrl.segment_shift;
         if ((segment_id << ctrl.segment_shift) >= end_lba) {
             break;
         }
@@ -352,13 +353,13 @@ static void show_segment_report() {
         }
 
         uint64_t segment_start =
-            (glob_extent_map->extent[i].phy_blk & F2FS_SEGMENT_MASK);
+            (glob_extent_map->extent[i].phy_blk & ctrl.f2fs_segment_mask);
 
         // if the beginning of the extent and the ending of the extent are in
         // the same segment
         if (segment_start == ((glob_extent_map->extent[i].phy_blk +
                                glob_extent_map->extent[i].len) &
-                              F2FS_SEGMENT_MASK)) {
+                              ctrl.f2fs_segment_mask)) {
             if (segment_id != ctrl.cur_segment) {
                 show_segment_info(segment_id);
                 ctrl.cur_segment = segment_id;
@@ -381,7 +382,7 @@ static void show_segment_report() {
                 if (segment_id != ctrl.cur_segment) {
                     uint64_t segment_start =
                         (glob_extent_map->extent[i].phy_blk &
-                         F2FS_SEGMENT_MASK) >>
+                         ctrl.f2fs_segment_mask) >>
                         ctrl.segment_shift;
                     show_segment_info(segment_start);
                 }
@@ -398,7 +399,7 @@ static void show_segment_report() {
             // remaining fragment
             uint64_t segment_end = ((glob_extent_map->extent[i].phy_blk +
                                      glob_extent_map->extent[i].len) &
-                                    F2FS_SEGMENT_MASK);
+                                    ctrl.f2fs_segment_mask);
             if (segment_end != glob_extent_map->extent[i].phy_blk +
                                    glob_extent_map->extent[i].len) {
                 show_remainder_segment(i);
@@ -578,7 +579,7 @@ int main(int argc, char *argv[]) {
     highest_segment =
         ((glob_extent_map->extent[glob_extent_map->ext_ctr - 1].phy_blk +
           glob_extent_map->extent[glob_extent_map->ext_ctr - 1].len) &
-         F2FS_SEGMENT_MASK) >>
+         ctrl.f2fs_segment_mask) >>
         ctrl.segment_shift;
     if (ctrl.procfs) {
         get_procfs_segment_bits(highest_segment);

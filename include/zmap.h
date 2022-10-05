@@ -25,19 +25,7 @@
 
 #include <linux/blkzoned.h>
 
-/*
- * Shift byte valus to 512B sector values.
- *
- * */
-#define SECTOR_SHIFT 9
-
-#define F2FS_BLOCK_SHIFT 12
-#define F2FS_BLOCK_BYTES 4096
-#define F2FS_BLOCK_MASK ~((F2FS_BLOCK_BYTES >> SECTOR_SHIFT) - 1)
-
 #define F2FS_SEGMENT_BYTES 2097152
-#define F2FS_SEGMENT_SECTORS (F2FS_SEGMENT_BYTES >> SECTOR_SHIFT)
-#define F2FS_SEGMENT_MASK (~((F2FS_SEGMENT_SECTORS)-1))
 
 #define MAX_FILE_LENGTH 50
 #define MAX_DEV_NAME 15
@@ -67,8 +55,13 @@ struct control {
     uint8_t show_flags; /* cmd_line flag to show extent flags */
     uint8_t info;       /* cmd_line flag to show info */
 
-    unsigned int sector_size; /* Size of sectors on the ZNS device */
+    unsigned int sector_size;  /* Size of sectors on the ZNS device */
+    unsigned int sector_shift; /* bit shift for sector conversion */
 
+    uint64_t f2fs_segment_sectors; /* how many logical sectors a segment has,
+                                      depending on device LBA size */
+    uint64_t f2fs_segment_mask;    /* the mask to apply for LBA to segment LBAS
+                                      conversion, depnding on device LBA size */
     /*
      * F2FS Segments contain a power of 2 number of Sectors. Based on the device
      * sector size we can use bit shifts to convert between blocks and segments.

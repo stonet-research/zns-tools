@@ -125,6 +125,13 @@ uint8_t init_znsdev() {
     close(fd);
 
     ctrl.sector_size = get_sector_size(ctrl.znsdev.dev_path);
+
+    // for F2FS both conventional and ZNS device must have same sector size
+    // therefore, we can assign one independent of which
+    ctrl.sector_shift = ctrl.sector_size == 512 ? 9 : 12;
+    ctrl.f2fs_segment_sectors = F2FS_SEGMENT_BYTES >> ctrl.sector_shift;
+    ctrl.f2fs_segment_mask = ~(ctrl.f2fs_segment_sectors - 1);
+
     ctrl.segment_shift = ctrl.sector_size == 512 ? 12 : 9;
 
     return 1;
@@ -363,7 +370,7 @@ struct extent_map *get_extents() {
     fiemap->fm_flags = FIEMAP_FLAG_SYNC;
     fiemap->fm_start = 0;
     fiemap->fm_extent_count = 1; // get extents individually
-    fiemap->fm_length = (ctrl.stats->st_blocks << SECTOR_SHIFT);
+    fiemap->fm_length = (ctrl.stats->st_blocks << ctrl.sector_shift);
     extent_map->ext_ctr = 0;
 
     do {
@@ -390,11 +397,11 @@ struct extent_map *get_extents() {
                  "FILE %s\nExtent Reported on %s  PBAS: "
                  "0x%06llx  PBAE: 0x%06llx  SIZE: 0x%06llx\n",
                  ctrl.filename, ctrl.bdev.dev_name,
-                 fiemap->fm_extents[0].fe_physical >> SECTOR_SHIFT,
+                 fiemap->fm_extents[0].fe_physical >> ctrl.sector_shift,
                  (fiemap->fm_extents[0].fe_physical +
                   fiemap->fm_extents[0].fe_length) >>
-                     SECTOR_SHIFT,
-                 fiemap->fm_extents[0].fe_length >> SECTOR_SHIFT);
+                     ctrl.sector_shift,
+                 fiemap->fm_extents[0].fe_length >> ctrl.sector_shift);
 
             if (ctrl.log_level > 1 && ctrl.show_flags) {
                 show_extent_flags(fiemap->fm_extents[0].fe_flags);
@@ -404,11 +411,11 @@ struct extent_map *get_extents() {
                  "FILE %s\nExtent Reported on %s  PBAS: "
                  "0x%06llx  PBAE: 0x%06llx  SIZE: 0x%06llx\n",
                  ctrl.filename, ctrl.bdev.dev_name,
-                 fiemap->fm_extents[0].fe_physical >> SECTOR_SHIFT,
+                 fiemap->fm_extents[0].fe_physical >> ctrl.sector_shift,
                  (fiemap->fm_extents[0].fe_physical +
                   fiemap->fm_extents[0].fe_length) >>
-                     SECTOR_SHIFT,
-                 fiemap->fm_extents[0].fe_length >> SECTOR_SHIFT);
+                     ctrl.sector_shift,
+                 fiemap->fm_extents[0].fe_length >> ctrl.sector_shift);
 
             if (ctrl.log_level > 1) {
                 show_extent_flags(fiemap->fm_extents[0].fe_flags);
@@ -418,11 +425,11 @@ struct extent_map *get_extents() {
         } else {
             extent_map->extent[extent_map->ext_ctr].phy_blk =
                 (fiemap->fm_extents[0].fe_physical - ctrl.offset) >>
-                SECTOR_SHIFT;
+                ctrl.sector_shift;
             extent_map->extent[extent_map->ext_ctr].logical_blk =
-                fiemap->fm_extents[0].fe_logical >> SECTOR_SHIFT;
+                fiemap->fm_extents[0].fe_logical >> ctrl.sector_shift;
             extent_map->extent[extent_map->ext_ctr].len =
-                fiemap->fm_extents[0].fe_length >> SECTOR_SHIFT;
+                fiemap->fm_extents[0].fe_length >> ctrl.sector_shift;
             extent_map->extent[extent_map->ext_ctr].zone_size =
                 ctrl.znsdev.zone_size;
             extent_map->extent[extent_map->ext_ctr].ext_nr =
@@ -435,7 +442,7 @@ struct extent_map *get_extents() {
 
             extent_map->extent[extent_map->ext_ctr].zone = get_zone_number(
                 ((fiemap->fm_extents[0].fe_physical - ctrl.offset) >>
-                 SECTOR_SHIFT));
+                 ctrl.sector_shift));
             extent_map->extent[extent_map->ext_ctr].file =
                 calloc(1, sizeof(char) * MAX_FILE_LENGTH);
             memcpy(extent_map->extent[extent_map->ext_ctr].file, ctrl.filename,
