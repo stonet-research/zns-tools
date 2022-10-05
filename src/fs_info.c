@@ -102,7 +102,7 @@ int main(int argc, char *argv[]) {
     MSG("================================================================"
         "=\n");
 
-    uint64_t lba = nat_entry->block_addr << F2FS_BLKSIZE_BITS >> SECTOR_SHIFT;
+    uint64_t lba = nat_entry->block_addr << F2FS_BLKSIZE_BITS >> ctrl.sector_shift;
     uint32_t zone_number = get_zone_number(lba);
     MSG("\nFile %s with inode %u is located in zone %u\n", ctrl.filename,
         nat_entry->ino, zone_number);
