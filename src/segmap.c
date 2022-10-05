@@ -152,18 +152,18 @@ static void collect_extents(char *path) {
  * */
 static void show_segment_flags(uint32_t segment_id, uint8_t is_range) {
     MSG("+++++ TYPE: ");
-    if (segman.sm_info[segment_id].type == CURSEG_HOT_NODE) {
-        MSG("CURSEG_HOT_NODE");
-    } else if (segman.sm_info[segment_id].type == CURSEG_WARM_NODE) {
-        MSG("CURSEG_WARM_NODE");
-    } else if (segman.sm_info[segment_id].type == CURSEG_COLD_NODE) {
-        MSG("CURSEG_COLD_NODE");
-    } else if (segman.sm_info[segment_id].type == CURSEG_HOT_DATA) {
+    if (segman.sm_info[segment_id].type == CURSEG_HOT_DATA) {
         MSG("CURSEG_HOT_DATA");
     } else if (segman.sm_info[segment_id].type == CURSEG_WARM_DATA) {
         MSG("CURSEG_WARM_DATA");
     } else if (segman.sm_info[segment_id].type == CURSEG_COLD_DATA) {
         MSG("CURSEG_COLD_DATA");
+    } else if (segman.sm_info[segment_id].type == CURSEG_HOT_NODE) {
+        MSG("CURSEG_HOT_NODE");
+    } else if (segman.sm_info[segment_id].type == CURSEG_WARM_NODE) {
+        MSG("CURSEG_WARM_NODE");
+    } else if (segman.sm_info[segment_id].type == CURSEG_COLD_NODE) {
+        MSG("CURSEG_COLD_NODE");
     }
 
     MSG("  VALID BLOCKS: %3u", segman.sm_info[segment_id].valid_blocks);
