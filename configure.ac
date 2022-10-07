@@ -36,12 +36,7 @@ AC_CHECK_HEADERS(m4_flatten([
 	unistd.h
 ]))
 
-# Checks for header files.
-AC_CHECK_HEADER(linux/fiemap.h, [],
-            [AC_MSG_ERROR([Couldn't find linux/fiemap.h])])
-AC_CHECK_HEADER(linux/fs.h, [],
-		[AC_MSG_ERROR([Couldn't find linux/fs.h])])
-
+# Checks blkzoned is valid for ZNS with 5.12+ Kernel
 AC_CHECK_MEMBER([struct blk_zone.capacity],
 		[AC_DEFINE(HAVE_BLK_ZONE_REP_V2, [1],
 			   [includes zone capacity])],
