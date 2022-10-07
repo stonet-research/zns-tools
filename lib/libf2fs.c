@@ -6,6 +6,7 @@ struct f2fs_super_block f2fs_sb;
 struct f2fs_checkpoint f2fs_cp;
 uint32_t nat_block_offset = 0; /* tracking the nat block traversal */
 uint32_t nat_entry_offset = 0; /* tracking offset to start at in nat_blocks */
+struct segment_manager segman;
 
 /*
  * Read a block of specified size from the device
@@ -417,4 +418,91 @@ void f2fs_show_inode_info(struct f2fs_inode *inode) {
     MSG("i_nid[2] (indirect): \t%u\n", inode->i_nid[2]);  /* indirect */
     MSG("i_nid[3] (indirect): \t%u\n", inode->i_nid[3]);  /* indirect */
     MSG("i_nid[4] (2x indirect): %u\n", inode->i_nid[4]); /* double indirect */
+}
+
+/*
+ * Get the segment data from /proc/fs/f2fs/<device>/segment_bits
+ * for more information about segments. Only get up to the highest
+ * segment number we care about in our mappings, limit runtime and
+ * memory consumption. It sets the global sm_info struct
+ *
+ * @dev_name: * to device name F2FS is registered on
+ * @highest_segment: The largest segment to retrieve info up to (including this
+ * number segment)
+ *
+ * */
+int get_procfs_segment_bits(char *dev_name, uint32_t highest_segment) {
+    FILE *fp;
+    char path[50];
+    char *device, *dev_string, *dev, *line;
+    size_t len = 0;
+    uint32_t line_ctr = 0;
+    ssize_t read;
+
+    dev_string = strdup(dev_name);
+    while ((device = strsep(&dev_string, "/")) != NULL) {
+        dev = device;
+    }
+
+    sprintf(path, "/proc/fs/f2fs/%s/segment_info", dev);
+
+    fp = fopen(path, "r");
+    if (!fp) {
+        WARN("Failed opening %s\nEnsure Kernel is running with F2FS Debugging "
+             "enabled.\nFalling back to disabling procfs segment resolving.\n",
+             path);
+        free(dev_string);
+        return 0;
+    }
+
+    // F2FS outputs in rows of 10, which we parse and initialize in the struct,
+    // and only stop if we are >= to the highest segment, which means we may
+    // have parsed at most 9 more entries
+    segman.sm_info =
+        calloc(sizeof(struct segment_info) * (highest_segment + 9), 1);
+
+    while ((read = getline(&line, &len, fp)) != -1) {
+        // Skip first 2 lines that show file format
+        if (line_ctr < 2) {
+            line_ctr++;
+            continue;
+        }
+
+        char *contents;
+        while ((contents = strsep(&line, " \t"))) {
+            if (strchr(contents, '|')) {
+                char *split_string;
+                uint8_t set_first = 0;
+                // sscanf had issues, resort to manual work
+                while ((split_string = strsep(&contents, "|"))) {
+                    if (strcmp(split_string, "|") == 0) {
+                        continue;
+                    } else if (!set_first) {
+                        segman.sm_info[segman.nr_segments].type =
+                            atoi(split_string);
+                        set_first = 1;
+                    } else {
+                        segman.sm_info[segman.nr_segments].valid_blocks =
+                            atoi(split_string);
+                    }
+                }
+
+                free(split_string);
+                segman.nr_segments++;
+            }
+        }
+
+        free(contents);
+
+        if (segman.nr_segments >= highest_segment) {
+            fclose(fp);
+            free(dev_string);
+            return 1;
+        }
+    }
+
+    fclose(fp);
+    free(dev_string);
+
+    return 1;
 }
