@@ -426,7 +426,7 @@ void f2fs_show_inode_info(struct f2fs_inode *inode) {
  * segment number we care about in our mappings, limit runtime and
  * memory consumption. It sets the global sm_info struct
  *
- * @dev_name: * to device name F2FS is registered on 
+ * @dev_name: * to device name F2FS is registered on
  * @highest_segment: The largest segment to retrieve info up to (including this
  * number segment)
  *
