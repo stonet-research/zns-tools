@@ -2,7 +2,6 @@
 
 struct segment_config segconf;
 struct extent_map *glob_extent_map;
-struct segment_manager segman;
 
 /*
  * Show the acronym info
@@ -216,7 +215,7 @@ static void show_beginning_segment(uint64_t i) {
     uint64_t segment_end = segment_start + (ctrl.f2fs_segment_sectors);
 
     MSG("***** EXTENT:  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
-        "  SIZE: %#-10" PRIx64 "  FILE: %50s  EXTID: %d/%-5d\n",
+        "  SIZE: %#-10" PRIx64 "  FILE: %50s  EXTID:  %d/%-5d\n",
         glob_extent_map->extent[i].phy_blk, segment_end,
         segment_end - glob_extent_map->extent[i].phy_blk,
         glob_extent_map->extent[i].file, glob_extent_map->extent[i].ext_nr + 1,
@@ -245,7 +244,7 @@ static void show_consecutive_segments(uint64_t i, uint64_t segment_start) {
         // segment will be printed in the function after this)
         show_segment_info(segment_start);
         MSG("***** EXTENT:  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
-            "  SIZE: %#-10" PRIx64 "  FILE: %50s  EXTID: %d/%-5d\n",
+            "  SIZE: %#-10" PRIx64 "  FILE: %50s  EXTID:  %d/%-5d\n",
             glob_extent_map->extent[i].phy_blk,
             segment_end << ctrl.segment_shift,
             (unsigned long)ctrl.f2fs_segment_sectors,
@@ -278,7 +277,7 @@ static void show_consecutive_segments(uint64_t i, uint64_t segment_start) {
             "------------------------------------------------------------------"
             "--------\n");
         MSG("***** EXTENT:  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
-            "  SIZE: %#-10" PRIx64 "  FILE: %50s  EXTID: %d/%-5d\n",
+            "  SIZE: %#-10" PRIx64 "  FILE: %50s  EXTID:  %d/%-5d\n",
             segment_start << ctrl.segment_shift,
             segment_end << ctrl.segment_shift,
             num_segments * ctrl.f2fs_segment_sectors,
@@ -304,7 +303,7 @@ static void show_remainder_segment(uint64_t i) {
 
     show_segment_info(segment_start);
     MSG("***** EXTENT:  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
-        "  SIZE: %#-10" PRIx64 "  FILE: %50s  EXTID: %d/%-5d\n",
+        "  SIZE: %#-10" PRIx64 "  FILE: %50s  EXTID:  %d/%-5d\n",
         segment_start << ctrl.segment_shift,
         (segment_start << ctrl.segment_shift) + remainder, remainder,
         glob_extent_map->extent[i].file, glob_extent_map->extent[i].ext_nr + 1,
@@ -366,7 +365,7 @@ static void show_segment_report() {
             }
 
             MSG("***** EXTENT:  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
-                "  SIZE: %#-10" PRIx64 "  FILE: %50s  EXTID: %d/%-5d\n",
+                "  SIZE: %#-10" PRIx64 "  FILE: %50s  EXTID:  %d/%-5d\n",
                 glob_extent_map->extent[i].phy_blk,
                 glob_extent_map->extent[i].phy_blk +
                     glob_extent_map->extent[i].len,
@@ -406,91 +405,6 @@ static void show_segment_report() {
             }
         }
     }
-}
-
-/*
- * Get the segment data from /proc/fs/f2fs/<device>/segment_bits
- * for more information about segments. Only get up to the highest
- * segment number we care about in our mappings, limit runtime and
- * memory consumption. It sets the global sm_info struct
- *
- * @highest_segment: The largest segment to retrieve info up to (including this
- * number segment)
- *
- * */
-static void get_procfs_segment_bits(uint32_t highest_segment) {
-    FILE *fp;
-    char path[50];
-    char *device, *dev_string, *dev, *line;
-    size_t len = 0;
-    uint32_t line_ctr = 0;
-    ssize_t read;
-
-    dev_string = strdup(ctrl.bdev.dev_name);
-    while ((device = strsep(&dev_string, "/")) != NULL) {
-        dev = device;
-    }
-
-    sprintf(path, "/proc/fs/f2fs/%s/segment_info", dev);
-
-    fp = fopen(path, "r");
-    if (!fp) {
-        WARN("Failed opening %s\nEnsure Kernel is running with F2FS Debugging "
-             "enabled.\nFalling back to disabling procfs segment resolving.\n",
-             path);
-        ctrl.procfs = 0;
-        free(dev_string);
-        return;
-    }
-
-    // F2FS outputs in rows of 10, which we parse and initialize in the struct,
-    // and only stop if we are >= to the highest segment, which means we may
-    // have parsed at most 9 more entries
-    segman.sm_info =
-        calloc(sizeof(struct segment_info) * (highest_segment + 9), 1);
-
-    while ((read = getline(&line, &len, fp)) != -1) {
-        // Skip first 2 lines that show file format
-        if (line_ctr < 2) {
-            line_ctr++;
-            continue;
-        }
-
-        char *contents;
-        while ((contents = strsep(&line, " \t"))) {
-            if (strchr(contents, '|')) {
-                char *split_string;
-                uint8_t set_first = 0;
-                // sscanf had issues, resort to manual work
-                while ((split_string = strsep(&contents, "|"))) {
-                    if (strcmp(split_string, "|") == 0) {
-                        continue;
-                    } else if (!set_first) {
-                        segman.sm_info[segman.nr_segments].type =
-                            atoi(split_string);
-                        set_first = 1;
-                    } else {
-                        segman.sm_info[segman.nr_segments].valid_blocks =
-                            atoi(split_string);
-                    }
-                }
-
-                free(split_string);
-                segman.nr_segments++;
-            }
-        }
-
-        free(contents);
-
-        if (segman.nr_segments >= highest_segment) {
-            fclose(fp);
-            free(dev_string);
-            return;
-        }
-    }
-
-    fclose(fp);
-    free(dev_string);
 }
 
 int main(int argc, char *argv[]) {
@@ -583,7 +497,10 @@ int main(int argc, char *argv[]) {
          ctrl.f2fs_segment_mask) >>
         ctrl.segment_shift;
     if (ctrl.procfs) {
-        get_procfs_segment_bits(highest_segment);
+        if (!get_procfs_segment_bits(ctrl.bdev.dev_name, highest_segment)) {
+            // Something failed, fallling back
+            ctrl.procfs = 0;
+        }
     }
 
     set_file_counters(glob_extent_map);

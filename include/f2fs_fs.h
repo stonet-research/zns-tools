@@ -1,20 +1,14 @@
 /**
  * f2fs_fs.h
  *
- * Copyright (c) 2012 Samsung Electronics Co., Ltd.
- *             http://www.samsung.com/
- * Copyright (c) 2019 Google Inc.
- *             http://www.google.com/
- * Copyright (c) 2020 Google Inc.
- *   Robin Hsu <robinhsu@google.com>
- *  : add sload compression support
+ * Several parts are retrievied from jaegeuk/f2fs-tools:
+ *  - F2FS related struct definitions
+ *  - F2FS related Macro definitions
  *
- * Dual licensed under the GPL or LGPL version 2 licenses.
+ * At times additional parts were also taken from torvalds/Linux:
+ *  - Further struct fields in addition to jaegeuk/f2fs-tools
+ *  - Further Macro definitions
  *
- * Contents were modified to fit our needs:
- *     - Remove not needed parts
- *     - Adapt includes
- *     - Add our function/variable definitions
  */
 #ifndef __F2FS_FS_H__
 #define __F2FS_FS_H__
@@ -45,9 +39,7 @@
 #define F2FS_SUPER_OFFSET 1024 /* byte-size offset */
 #define F2FS_BLKSIZE_BITS 12
 #define BLOCK_SZ 4096
-/*
- * For superblock
- */
+
 struct f2fs_device {
     __u8 path[MAX_PATH_LEN];
     __le32 total_segments;
@@ -310,8 +302,21 @@ struct f2fs_node {
 
 static_assert(sizeof(struct f2fs_node) == 4096, "");
 
+struct segment_info {
+    unsigned int id;
+    unsigned int type;
+    uint32_t valid_blocks;
+    /* uint8_t bitmap[]; */ /* TODO: we can get this info from segment_bits */
+};
+
+struct segment_manager {
+    struct segment_info *sm_info;
+    uint32_t nr_segments;
+};
+
 extern struct f2fs_super_block f2fs_sb;
 extern struct f2fs_checkpoint f2fs_cp;
+extern struct segment_manager segman;
 
 extern void f2fs_read_super_block(char *);
 extern void f2fs_show_super_block();
@@ -320,6 +325,7 @@ extern void f2fs_show_checkpoint();
 struct f2fs_nat_entry *f2fs_get_inode_nat_entry(char *, uint32_t);
 struct f2fs_node *f2fs_get_node_block(char *, uint32_t);
 extern void f2fs_show_inode_info(struct f2fs_inode *);
+extern int get_procfs_segment_bits(char *, uint32_t);
 
 static inline int IS_INODE(struct f2fs_node *node) {
     return ((node)->footer.nid == (node)->footer.ino);
