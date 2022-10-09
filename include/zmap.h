@@ -1,7 +1,7 @@
 #ifndef __ZMAP_H__
 #define __ZMAP_H__
 
-#include "f2fs_fs.h"
+#include "f2fs.h"
 
 #include <fcntl.h>
 #include <libgen.h>

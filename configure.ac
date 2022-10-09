@@ -48,6 +48,7 @@ AC_CONFIG_FILES([
     man/Makefile
     lib/Makefile
     src/Makefile
+    fpbench/Makefile
 ])
 
 AC_OUTPUT

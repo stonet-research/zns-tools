@@ -1,5 +1,4 @@
 /**
- * f2fs_fs.h
  *
  * Several parts are retrievied from jaegeuk/f2fs-tools:
  *  - F2FS related struct definitions
@@ -10,8 +9,8 @@
  *  - Further Macro definitions
  *
  */
-#ifndef __F2FS_FS_H__
-#define __F2FS_FS_H__
+#ifndef __F2FS_H__
+#define __F2FS_H__
 
 #include <fcntl.h>
 #include <stdio.h>
