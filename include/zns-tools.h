@@ -1,5 +1,5 @@
-#ifndef __ZMAP_H__
-#define __ZMAP_H__
+#ifndef __ZNS_TOOLS_H__
+#define __ZNS_TOOLS_H__
 
 #include "f2fs.h"
 
@@ -30,7 +30,7 @@
 #define MAX_FILE_LENGTH 50
 #define MAX_DEV_NAME 15
 
-#define ZMAP_MAX_DEVS 2
+#define ZNS_TOOLS_MAX_DEVS 2
 #define F2FS_SECS_PER_BLOCK 9
 
 struct bdev {

@@ -1,6 +1,6 @@
 #ifndef _FPBENCH_H_
 #define _FPBENCH_H_
 
-#include "zmap.h"
+#include "zns-tools.h"
 
 #endif
