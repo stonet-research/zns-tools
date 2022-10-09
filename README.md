@@ -84,7 +84,7 @@ Possible flags are:
 
 ## F2FS File Placement Benchmark
 
-The `fpbench/` directory contains the benchmarking framework to generate workloads to write files on F2FS with particular file hints on the file lifetime (set with `fcntl()`), and identify where files are being placed. This helps us understand to what extent (when, under what conditions) F2FS decides to ignore file hints and allocate files differently across segments.
+The `fpbench/` directory contains the benchmarking framework to generate workloads to write files on F2FS with particular file hints on the file lifetime (set with `fcntl()`), and identify where files are being placed. This helps us understand to what extent, when and under what conditions, F2FS decides to ignore file hints and allocate files differently across segments.
 
 ### zns.fpbench
 

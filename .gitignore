@@ -1,6 +1,7 @@
 src/zns.fiemap
 src/zns.segmap
 src/zns.fsinfo
+fpbench/zns.fpbench
 
 Makefile
 configure
@@ -20,6 +21,10 @@ stamp-h1
 src/.libs
 src/.deps
 src/Makefile
+
+fpbench/.libs
+fpbench/.deps
+fpbench/Makefile
 
 m4/*
 !m4/.gitkeep
