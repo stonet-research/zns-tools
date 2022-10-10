@@ -36,6 +36,8 @@ static void write_file(struct workload workload) {
     int out, r, w, ret;
     char buf[workload.bsize];
     
+    MSG("Starting job for file %s\n", workload.filename);
+
     r = read(wl_man.data_fd, &buf, workload.bsize);
     INFO(3, "Read %dB from /dev/urandom\n", r);
 
@@ -147,42 +149,31 @@ static void print_report(struct workload workload, struct extent_map *extents) {
         }
     }
 
-
-    FORMATTER
-    MSG("%-50s | Number of Extents | Number of Occupied Segments | Number of Occupied Zones | Cold Segments | Warm Segments | Hot Segments\n", "Filename");
-    FORMATTER
     MSG("%-50s | %-17u | %-27u | %-24u | %-13u | %-13u | %-13u\n", workload.filename, extents->ext_ctr, wl_man.segment_ctr, extents->zone_ctr, wl_man.cold_ctr, wl_man.warm_ctr, wl_man.hot_ctr);
 }
 
 static void run_workloads() {
-    struct extent_map *extents;
-
     wl_man.data_fd = open("/dev/urandom", O_RDONLY);
     if (!wl_man.data_fd) {
         ERR_MSG("Failed opening /dev/urandom for data generation\n");
     }
 
-    for (uint16_t i = 0; i < wl_man.nr_wls; i++) {
-        write_file(wl_man.wl[i]);
-        ctrl.filename = wl_man.wl[i].filename;
-        ctrl.fd = open(ctrl.filename, O_RDONLY);
-        ctrl.stats = calloc(sizeof(struct stat), sizeof(char *));
-
-        if (fstat(ctrl.fd, ctrl.stats) < 0) {
-            ERR_MSG("Failed stat on file %s\n", ctrl.filename);
+    // If there are more than 1 numjobs fork, else parent runs everything
+    if (wl_man.nr_wls > 1) {
+        for (uint16_t i = 0; i < wl_man.nr_wls; i++) {
+            if (fork() == 0) {
+                write_file(wl_man.wl[i]);
+                exit(0);
+            }
         }
 
-        extents = (struct extent_map *) get_extents();
-        close(ctrl.fd);
-
-        sort_extents(extents);
-
-        print_report(wl_man.wl[i], extents);
-
-        free(extents);
+        wait(NULL);
+    } else {
+        write_file(wl_man.wl[0]);
     }
 
     close(wl_man.data_fd);
+
 }
 
 static uint64_t get_integer_value(char *optarg) {
@@ -201,6 +192,60 @@ static uint64_t get_integer_value(char *optarg) {
     }
 
     return atoi(optarg) * multiplier;
+}
+
+static void update_workloads() {
+    char file_ext[MAX_FILE_LENGTH];
+    char base_name[MAX_FILE_LENGTH];
+    wl_man.wl = realloc(wl_man.wl, sizeof(struct workload) * wl_man.nr_jobs);
+    strcat(wl_man.wl[0].filename, "-job_");
+    strncpy(base_name, wl_man.wl[0].filename, MAX_FILE_LENGTH);
+
+    for (uint16_t i = 0; i < wl_man.nr_jobs; i++) {
+        sprintf(file_ext, "%d", i);
+        if (i > 0) {
+            wl_man.wl[i].rw_hint = wl_man.wl[0].rw_hint;
+            wl_man.wl[i].bsize = wl_man.wl[0].bsize;
+            wl_man.wl[i].fsize = wl_man.wl[0].fsize;
+            wl_man.nr_wls++;
+            wl_man.wl[i].filename = malloc(sizeof(char *) * MAX_FILE_LENGTH);
+            strncpy(wl_man.wl[i].filename, base_name, MAX_FILE_LENGTH);
+        }
+        strcat(wl_man.wl[i].filename, file_ext);
+    }
+}
+
+static void prepare_report() {
+    struct extent_map *extents;
+
+    FORMATTER
+        MSG("%-50s | Number of Extents | Number of Occupied Segments | Number of Occupied Zones | Cold Segments | Warm Segments | Hot Segments\n", "Filename");
+    FORMATTER
+
+    for (uint16_t i = 0; i < wl_man.nr_wls; i++) {
+        ctrl.filename = wl_man.wl[i].filename;
+        ctrl.fd = open(ctrl.filename, O_RDONLY);
+        ctrl.stats = calloc(sizeof(struct stat), sizeof(char *));
+
+        if (fstat(ctrl.fd, ctrl.stats) < 0) {
+            ERR_MSG("Failed stat on file %s\n", ctrl.filename);
+        }
+
+        extents = (struct extent_map *) get_extents();
+        close(ctrl.fd);
+
+        sort_extents(extents);
+
+        print_report(wl_man.wl[i], extents);
+
+        free(extents);
+        close(ctrl.fd);
+
+        wl_man.segment_ctr = 0;
+        wl_man.cold_ctr = 0;
+        wl_man.warm_ctr = 0;
+        wl_man.hot_ctr = 0;
+    }
 }
 
 int main(int argc, char *argv[]) {
@@ -241,12 +286,10 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    if (wl_man.nr_jobs == 0) {
-        check_options();
-        char *root = strrchr(wl_man.wl[0].filename, '/');
-        root_dir = malloc(root - wl_man.wl[0].filename);
-        strncpy(root_dir, wl_man.wl[0].filename, root - wl_man.wl[0].filename);
-    }
+    check_options();
+    char *root = strrchr(wl_man.wl[0].filename, '/');
+    root_dir = malloc(root - wl_man.wl[0].filename);
+    strncpy(root_dir, wl_man.wl[0].filename, root - wl_man.wl[0].filename);
 
     struct stat stats;
 
@@ -268,11 +311,17 @@ int main(int argc, char *argv[]) {
     ctrl.znsdev.zone_size = get_zone_size();
     ctrl.znsdev.nr_zones = get_nr_zones();
 
+    if (wl_man.nr_jobs > 1) {
+        update_workloads();
+    }
+
     run_workloads();
+    prepare_report();
 
     cleanup_ctrl();
 
     free(wl_man.wl);
+    free(root_dir);
 
     return 0;
 }

@@ -3,6 +3,7 @@
 
 #include "zns-tools.h"
 #include <fcntl.h>
+#include<sys/wait.h>
 
 #define F_LINUX_SPECIFIC_BASE 1024
 
