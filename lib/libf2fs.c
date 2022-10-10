@@ -314,6 +314,10 @@ struct f2fs_node *f2fs_get_node_block(char *dev_path, uint32_t block_addr) {
     return node_block;
 }
 
+/*
+ * show detailed info about the inode fadvise flags 
+ *
+ * */
 static void show_inode_fadvise_flags(struct f2fs_inode *inode) {
     MSG("i_advise: \t\t");
     if (inode->i_advise & FADVISE_COLD_BIT) {
@@ -344,6 +348,10 @@ static void show_inode_fadvise_flags(struct f2fs_inode *inode) {
     MSG("\n");
 }
 
+/* 
+ * show detailed flag names for inode flags
+ *
+ * */
 static void show_inode_flags(struct f2fs_inode *inode) {
     MSG("i_flags: \t\t");
 
@@ -508,15 +516,13 @@ int get_procfs_segment_bits(char *dev_name, uint32_t highest_segment) {
 }
 
 /*
- * TODO: update text
  * Get the segment data from /proc/fs/f2fs/<device>/segment_bits
- * for more information about segments. Only get up to the highest
- * segment number we care about in our mappings, limit runtime and
- * memory consumption. It sets the global sm_info struct
+ * for more information about a segment. Only for a single segment, 
+ * as opposed to get_procfs_segment_bits. 
+ * It sets the global sm_info struct
  *
  * @dev_name: * to device name F2FS is registered on
- * @highest_segment: The largest segment to retrieve info up to (including this
- * number segment)
+ * @segment_id: segment number to retrieve info for
  *
  * */
 int get_procfs_single_segment_bits(char *dev_name, uint32_t segment_id) {

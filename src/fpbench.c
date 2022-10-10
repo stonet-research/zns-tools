@@ -24,6 +24,10 @@ static void show_help() {
     exit(0);
 }
 
+/*
+ * verify the provided options are valid to run
+ *
+ * */
 static void check_options() {
 
     if (wl_man.nr_wls < 1) {
@@ -34,11 +38,21 @@ static void check_options() {
     }
 }
 
+/* 
+ * Core of the benchmark - writing the file with options specified in
+ * the workload
+ *
+ * @workload: workload specifying what to run
+ *
+ * Note function can run concurrently, however does not require
+ * concurrency management, as there are no shared resources
+ *
+ * */
 static void write_file(struct workload workload) {
     int out, r, w, ret;
     char buf[workload.bsize];
 
-    MSG("Starting job for file %s\n", workload.filename);
+    MSG("Starting job for file %s with pid %d\n", workload.filename, getpid());
 
     r = read(wl_man.data_fd, &buf, workload.bsize);
     INFO(3, "Read %dB from /dev/urandom\n", r);
@@ -77,6 +91,16 @@ static void write_file(struct workload workload) {
     close(out);
 }
 
+/*
+ * Track information for the workload, counting the types of segments the
+ * file is split up into. This function retrieves the segment type of the provided
+ * segment id and increases counters.
+ *
+ * @segment_id: id of the segment to retrieve the type for
+ * @num_segments: the number of segments to increase the counters by. Typically 1,
+ *          but for segment ranges this options allows different values.
+ *
+ * */
 static void set_segment_counters(uint32_t segment_id, uint32_t num_segments) {
     wl_man.segment_ctr += num_segments;
     get_procfs_single_segment_bits(ctrl.bdev.dev_name, segment_id);
@@ -97,6 +121,12 @@ static void set_segment_counters(uint32_t segment_id, uint32_t num_segments) {
     free(segman.sm_info);
 }
 
+/*
+ * Print the benchmark report - code is similar to segmap.c, as segment coordination
+ * logic is identical here to collect segment type counters respective for each possible
+ * segment.
+ *
+ * */
 static void print_report(struct workload workload, struct extent_map *extents) {
     uint32_t segment_id;
     uint32_t current_zone = 0;
@@ -164,6 +194,10 @@ static void print_report(struct workload workload, struct extent_map *extents) {
         extents->zone_ctr, wl_man.cold_ctr, wl_man.warm_ctr, wl_man.hot_ctr);
 }
 
+/*
+ * Managing function to run the workload with possible concurrent numjobs
+ *
+ * */
 static void run_workloads() {
     wl_man.data_fd = open("/dev/urandom", O_RDONLY);
     if (!wl_man.data_fd) {
@@ -187,6 +221,14 @@ static void run_workloads() {
     close(wl_man.data_fd);
 }
 
+/*
+ * parse arguments that are given with units (K, M, G) for sizes
+ *
+ * @optart: the char* to the optarg
+ *
+ * returns: uint64_t converted optarg to Bytes
+ *
+ * */
 static uint64_t get_integer_value(char *optarg) {
     uint32_t multiplier = 1;
 
@@ -205,12 +247,17 @@ static uint64_t get_integer_value(char *optarg) {
     return atoi(optarg) * multiplier;
 }
 
+/*
+ * If there are multiple jobs, copy the workload into the workoad manager
+ * for each of the jobs, with different file names.
+ *
+ * */
 static void update_workloads() {
     char file_ext[MAX_FILE_LENGTH];
     char base_name[MAX_FILE_LENGTH];
     wl_man.wl = realloc(wl_man.wl, sizeof(struct workload) * wl_man.nr_jobs);
     strcat(wl_man.wl[0].filename, "-job_");
-    strncpy(base_name, wl_man.wl[0].filename, MAX_FILE_LENGTH);
+    strncpy(base_name, wl_man.wl[0].filename, MAX_FILE_LENGTH - 1);
 
     for (uint16_t i = 0; i < wl_man.nr_jobs; i++) {
         sprintf(file_ext, "%d", i);
@@ -226,6 +273,12 @@ static void update_workloads() {
     }
 }
 
+/*
+ * Organize the report printing for each of the workloads.
+ * Iterates over the workloads, retrieves extents, maps these to segments,
+ * and collect metrics for final report printing.
+ *
+ * */
 static void prepare_report() {
     struct extent_map *extents;
 
