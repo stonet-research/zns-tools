@@ -25,9 +25,12 @@ struct workload {
 
 struct workload_manager {
     struct workload *wl; /* each of the workloads */
-    uint16_t nr_wls; /* total number of workloadsin *wls */
-    uint8_t workload_file; /* indicate if using a workload file, not cmd-line */
+    uint16_t nr_wls; /* total number of workloads in wls */
+    uint16_t nr_jobs; /* number of concurrent jobs to run */
+    int data_fd; /* fd to /dev/urandom to read data from */
 };
+
+#define FORMATTER MSG("==============================================================================================================================================================================\n");
 
 extern struct workload_manager wl_man;
 

@@ -506,3 +506,92 @@ int get_procfs_segment_bits(char *dev_name, uint32_t highest_segment) {
 
     return 1;
 }
+
+/*
+ * TODO: update text
+ * Get the segment data from /proc/fs/f2fs/<device>/segment_bits
+ * for more information about segments. Only get up to the highest
+ * segment number we care about in our mappings, limit runtime and
+ * memory consumption. It sets the global sm_info struct
+ *
+ * @dev_name: * to device name F2FS is registered on
+ * @highest_segment: The largest segment to retrieve info up to (including this
+ * number segment)
+ *
+ * */
+int get_procfs_single_segment_bits(char *dev_name, uint32_t segment_id) {
+    FILE *fp;
+    char path[50];
+    char *device, *dev_string, *dev, *line;
+    size_t len = 0;
+    uint32_t line_ctr = 0, row = 0, remainder = 0;
+    ssize_t read;
+
+    dev_string = strdup(dev_name);
+    while ((device = strsep(&dev_string, "/")) != NULL) {
+        dev = device;
+    }
+
+    sprintf(path, "/proc/fs/f2fs/%s/segment_info", dev);
+
+    fp = fopen(path, "r");
+    if (!fp) {
+        WARN("Failed opening %s\nEnsure Kernel is running with F2FS Debugging "
+             "enabled.\nFalling back to disabling procfs segment resolving.\n",
+             path);
+        free(dev_string);
+        return 0;
+    }
+
+    segman.sm_info = calloc(sizeof(struct segment_info), 1);
+
+    row = segment_id / 10;
+    remainder = segment_id % 10;
+
+    while ((read = getline(&line, &len, fp)) != -1) {
+        // Skip first 2 lines that show file format then go to row
+        if (line_ctr != row) {
+            line_ctr++;
+            continue;
+        }
+
+        char *contents;
+        uint8_t ctr = 0;
+        while ((contents = strsep(&line, " \t"))) {
+            if (ctr != remainder) {
+                ctr++;
+                continue;
+            } 
+
+            if (strchr(contents, '|')) {
+                char *split_string;
+                uint8_t set_first = 0;
+                // sscanf had issues, resort to manual work
+                while ((split_string = strsep(&contents, "|"))) {
+                    if (strcmp(split_string, "|") == 0) {
+                        continue;
+                    } else if (!set_first) {
+                        segman.sm_info[0].type =
+                            atoi(split_string);
+                        set_first = 1;
+                    } else {
+                        segman.sm_info[0].valid_blocks =
+                            atoi(split_string);
+                    }
+                }
+
+                free(split_string);
+                segman.nr_segments++;
+                free(contents);
+                fclose(fp);
+                free(dev_string);
+                return 1;
+            }
+        }
+    }
+
+    fclose(fp);
+    free(dev_string);
+
+    return 1;
+}

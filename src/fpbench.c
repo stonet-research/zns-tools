@@ -15,6 +15,8 @@ static void show_help() {
     MSG("-s \t\tFile size (Default 4096B)\n");
     MSG("-b \t\tBlock size in which to submit I/Os (Default 4096B)\n");
     MSG("-w \t\tRead/Write Hint (Default 0)\n\t\tRWH_WRITE_LIFE_NOT_SET = 0\n\t\tRWH_WRITE_LIFE_NONE = 1\n\t\tRWH_WRITE_LIFE_SHORT = 2\n\t\tRWH_WRITE_LIFE_MEDIUM = 3\n\t\tRWH_WRITE_LIFE_LONG = 4\n\t\tRWH_WRITE_LIFE_EXTREME = 5\n");
+    MSG("-h \t\tShow this help\n");
+    MSG("-n \t\tNumber of jobs to concurrently execute the benchmark\n");
 
     exit(0);
 }
@@ -31,17 +33,15 @@ static void check_options() {
 
 
 static void write_file(struct workload workload) {
-    int in, out, r, w;
+    int out, r, w;
     char buf[workload.bsize];
     
-    in = open("/dev/urandom", O_RDONLY);
-    if (!in) {
-        ERR_MSG("Failed opening /dev/urandom for data generation\n");
-    }
-
-    r = read(in, &buf, workload.bsize);
+    r = read(wl_man.data_fd, &buf, workload.bsize);
     INFO(2, "Read %dB from /dev/urandom\n", r);
-    close(in);
+
+    if (remove(workload.filename)) {
+        INFO(1, "Found existing file %s. Deleting it.\n", workload.filename);
+    }
 
     out = open(workload.filename, O_WRONLY | O_CREAT, 0664);
 
@@ -65,8 +65,51 @@ static void write_file(struct workload workload) {
     close(out);
 }
 
+static void print_report(struct workload workload, struct extent_map *extents) {
+    uint32_t segment_ctr = 0, cold_ctr = 0, warm_ctr = 0, hot_ctr = 0;
+    uint64_t segment_start = 0, cur_segment = 0;
+
+    INFO(1, "File %s broken into %u extents\n", workload.filename, extents->ext_ctr);
+
+    for (uint32_t i = 0; i < extents->ext_ctr; i++) {
+        segment_start = (extents->extent[i].phy_blk & ctrl.f2fs_segment_mask);
+
+        // TODO: handle segment ranges
+        if (cur_segment != segment_start) {
+            cur_segment = segment_start;
+            segment_ctr++;
+            get_procfs_single_segment_bits(ctrl.bdev.dev_name, segment_start >> ctrl.segment_shift); 
+
+            switch(segman.sm_info[0].type) {
+                case CURSEG_COLD_DATA:
+                    cold_ctr++;
+                    break;
+                case CURSEG_WARM_DATA:
+                    warm_ctr++;
+                    break;
+                case CURSEG_HOT_DATA:
+                    hot_ctr++;
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
+
+    FORMATTER
+    MSG("%-50s | Number of Extents | Number of Occupied Segments | Number of Occupied Zones | Cold Segments | Warm Segments | Hot Segments\n", "Filename");
+    FORMATTER
+    MSG("%-50s | %-17u | %-27u | %-24u | %-13u | %-13u | %-13u\n", workload.filename, extents->ext_ctr, segment_ctr, extents->zone_ctr, cold_ctr, warm_ctr, hot_ctr);
+}
+
 static void run_workloads() {
     struct extent_map *extents;
+
+    wl_man.data_fd = open("/dev/urandom", O_RDONLY);
+    if (!wl_man.data_fd) {
+        ERR_MSG("Failed opening /dev/urandom for data generation\n");
+    }
+
     for (uint16_t i = 0; i < wl_man.nr_wls; i++) {
         write_file(wl_man.wl[i]);
         ctrl.filename = wl_man.wl[i].filename;
@@ -82,10 +125,30 @@ static void run_workloads() {
 
         sort_extents(extents);
 
-        // TODO analyze, get heat classification, etc.
+        print_report(wl_man.wl[i], extents);
 
         free(extents);
     }
+
+    close(wl_man.data_fd);
+}
+
+static int get_integer_value(char *optarg) {
+    uint32_t multiplier = 0;
+
+    if (optarg[strlen(optarg) - 1] == 'B') {
+        multiplier = 1;
+    } else if (optarg[strlen(optarg) - 1] == 'K') {
+        multiplier = 1024;
+    } else if (optarg[strlen(optarg) - 1] == 'M') {
+        multiplier = 1024 * 1024;
+    } else if (optarg[strlen(optarg) - 1] == 'G') {
+        multiplier = 1024 * 1024 * 1024;
+    } else {
+        return atoi(optarg);
+    }
+
+    return atoi(optarg) * multiplier;
 }
 
 int main(int argc, char *argv[]) {
@@ -96,7 +159,7 @@ int main(int argc, char *argv[]) {
     wl_man.wl[0].bsize = BLOCK_SZ;
     wl_man.wl[0].fsize = BLOCK_SZ;
 
-    while ((c = getopt(argc, argv, "b:f:l:hs:w:")) != -1) {
+    while ((c = getopt(argc, argv, "b:f:l:hn:s:w:")) != -1) {
         switch (c) {
         case 'h':
             show_help();
@@ -106,10 +169,13 @@ int main(int argc, char *argv[]) {
             wl_man.nr_wls = 1;
             break;
         case 's':
-            wl_man.wl[0].fsize = atoi(optarg);
+            wl_man.wl[0].fsize = get_integer_value(optarg);
             break;
         case 'b':
-            wl_man.wl[0].bsize = atoi(optarg);
+            wl_man.wl[0].bsize = get_integer_value(optarg);
+            break;
+        case 'n':
+            wl_man.nr_jobs = atoi(optarg);
             break;
         case 'w':
             wl_man.wl[0].rw_hint = atoi(optarg);
@@ -123,7 +189,7 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    if (!wl_man.workload_file) {
+    if (wl_man.nr_jobs == 0) {
         check_options();
         char *root = strrchr(wl_man.wl[0].filename, '/');
         root_dir = malloc(root - wl_man.wl[0].filename);
