@@ -354,6 +354,11 @@ void show_extent_flags(uint32_t flags) {
  * Get the file extents with FIEMAP ioctl for the open
  * file descriptor set at ctrl.fd
  *
+ * NOTE: Requires several variables to be set:
+ *      ctrl.stats
+ *      ctrl.fd (open fd)
+ *      dev information in ctrl
+ *
  * returns: struct extent_map * to the extent maps.
  *          NULL returned on Failure
  *

@@ -10,6 +10,21 @@ AC_CONFIG_AUX_DIR([build-aux])
 AM_INIT_AUTOMAKE([-Wall foreign subdir-objects])
 AM_SILENT_RULES([yes])
 
+AC_CANONICAL_HOST
+
+build_linux=no
+
+case "${host_os}" in
+    linux*)
+        build_linux=yes
+        ;;
+    *)
+        AC_MSG_ERROR(["OS $host_os is not supported"])
+        ;;
+esac
+
+AM_CONDITIONAL([LINUX], [test "$build_linux" = "yes"])
+
 AC_USE_SYSTEM_EXTENSIONS
 
 m4_ifdef([AM_PROG_AR], [AM_PROG_AR])

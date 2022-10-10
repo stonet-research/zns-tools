@@ -1,6 +1,6 @@
 # zns-tools
 
-This repository contains several tools for evaluating file system usage of ZNS devices. 
+This repository contains several tools for evaluating file system usage of ZNS devices. We provide an example for each of the tools in the `examples/` directory, showing how to run each tool and what information will be available in the output.
 
 ## Compiling and Running
 
@@ -21,7 +21,7 @@ The `src/` directory contains several tools for identifying and mapping out F2FS
 
 ### zns.fiemap
 
-`zns.fiemap` is a tool that uses the `ioctl()` call to extract mappings for a file, and map these to the zones on a ZNS device. Since current ZNS support in file systems relies on LFS, with F2FS, this tools aims at showcasing the data placement of files and their fragmentation. With `fiemap`, a single contiguous extent, which physically has consecutive addresses, is returned. We use this to find all extents of a file, and show their location. Extents can, especially over time as they are updated and the file system runs GC, end up spread across multiple zones, be in random order in zones, and be split it up into a large number of smaller extents. We provide an example output for a small run to locate data on a ZNS, located in the `examples/zns.fiemap.md`. For more details see the manual in `zns.fiemap.8`
+`zns.fiemap` is a tool that uses the `ioctl()` call to extract mappings for a file, and map these to the zones on a ZNS device. Since current ZNS support in file systems relies on LFS, with F2FS, this tools aims at showcasing the data placement of files and their fragmentation. With `FIEMAP`, a single contiguous extent, which physically has consecutive addresses, is returned. We use this to find all extents of a file, and show their location. Extents can, especially over time as they are updated and the file system runs GC, end up spread across multiple zones, be in random order in zones, and be split it up into a large number of smaller extents. We provide an example output for a small run to locate data on a ZNS, located in the `examples/zns.fiemap.md`. For more details see the manual in `zns.fiemap.8`
 
 ```bash
 # Run: zns.fiemap -f [file path to locate]
