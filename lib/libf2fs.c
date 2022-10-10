@@ -562,7 +562,7 @@ int get_procfs_single_segment_bits(char *dev_name, uint32_t segment_id) {
                 if (ctr != remainder) {
                     ctr++;
                     continue;
-                } 
+                }
 
                 char *split_string;
                 uint8_t set_first = 0;
@@ -571,13 +571,11 @@ int get_procfs_single_segment_bits(char *dev_name, uint32_t segment_id) {
                     if (strcmp(split_string, "|") == 0) {
                         continue;
                     } else if (!set_first) {
-                        segman.sm_info[0].type =
-                            atoi(split_string);
+                        segman.sm_info[0].type = atoi(split_string);
                         set_first = 1;
                     } else {
                         segman.sm_info[0].id = segment_id;
-                        segman.sm_info[0].valid_blocks =
-                            atoi(split_string);
+                        segman.sm_info[0].valid_blocks = atoi(split_string);
                     }
                 }
 

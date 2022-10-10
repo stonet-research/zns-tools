@@ -14,7 +14,10 @@ static void show_help() {
     MSG("-l [Int, 0-3]\tLog Level to print (Default 0)\n");
     MSG("-s \t\tFile size (Default 4096B)\n");
     MSG("-b \t\tBlock size in which to submit I/Os (Default 4096B)\n");
-    MSG("-w \t\tRead/Write Hint (Default 0)\n\t\tRWH_WRITE_LIFE_NOT_SET = 0\n\t\tRWH_WRITE_LIFE_NONE = 1\n\t\tRWH_WRITE_LIFE_SHORT = 2\n\t\tRWH_WRITE_LIFE_MEDIUM = 3\n\t\tRWH_WRITE_LIFE_LONG = 4\n\t\tRWH_WRITE_LIFE_EXTREME = 5\n");
+    MSG("-w \t\tRead/Write Hint (Default 0)\n\t\tRWH_WRITE_LIFE_NOT_SET = "
+        "0\n\t\tRWH_WRITE_LIFE_NONE = 1\n\t\tRWH_WRITE_LIFE_SHORT = "
+        "2\n\t\tRWH_WRITE_LIFE_MEDIUM = 3\n\t\tRWH_WRITE_LIFE_LONG = "
+        "4\n\t\tRWH_WRITE_LIFE_EXTREME = 5\n");
     MSG("-h \t\tShow this help\n");
     MSG("-n \t\tNumber of jobs to concurrently execute the benchmark\n");
 
@@ -31,11 +34,10 @@ static void check_options() {
     }
 }
 
-
 static void write_file(struct workload workload) {
     int out, r, w, ret;
     char buf[workload.bsize];
-    
+
     MSG("Starting job for file %s\n", workload.filename);
 
     r = read(wl_man.data_fd, &buf, workload.bsize);
@@ -44,9 +46,11 @@ static void write_file(struct workload workload) {
     if (access(workload.filename, F_OK) == 0) {
         ret = remove(workload.filename);
         if (ret == 0) {
-            INFO(1, "Found existing file %s. Deleting it.\n", workload.filename);
+            INFO(1, "Found existing file %s. Deleting it.\n",
+                 workload.filename);
         } else {
-            ERR_MSG("Failed deleting existing file %s CODE %d\n", workload.filename, ret);
+            ERR_MSG("Failed deleting existing file %s CODE %d\n",
+                    workload.filename, ret);
         }
     }
 
@@ -60,7 +64,8 @@ static void write_file(struct workload workload) {
         ERR_MSG("Failed setting write hint: %d\n", workload.rw_hint);
     }
 
-    INFO(1, "Set file %s with write hint: %d\n", workload.filename, workload.rw_hint);
+    INFO(1, "Set file %s with write hint: %d\n", workload.filename,
+         workload.rw_hint);
 
     for (uint64_t i = 0; i < workload.fsize; i += workload.bsize) {
         lseek(out, i, SEEK_SET);
@@ -74,20 +79,20 @@ static void write_file(struct workload workload) {
 
 static void set_segment_counters(uint32_t segment_id, uint32_t num_segments) {
     wl_man.segment_ctr += num_segments;
-    get_procfs_single_segment_bits(ctrl.bdev.dev_name, segment_id); 
+    get_procfs_single_segment_bits(ctrl.bdev.dev_name, segment_id);
 
-    switch(segman.sm_info[0].type) {
-        case CURSEG_COLD_DATA:
-            wl_man.cold_ctr += num_segments;
-            break;
-        case CURSEG_WARM_DATA:
-            wl_man.warm_ctr += num_segments;
-            break;
-        case CURSEG_HOT_DATA:
-            wl_man.hot_ctr += num_segments;
-            break;
-        default:
-            break;
+    switch (segman.sm_info[0].type) {
+    case CURSEG_COLD_DATA:
+        wl_man.cold_ctr += num_segments;
+        break;
+    case CURSEG_WARM_DATA:
+        wl_man.warm_ctr += num_segments;
+        break;
+    case CURSEG_HOT_DATA:
+        wl_man.hot_ctr += num_segments;
+        break;
+    default:
+        break;
     }
     free(segman.sm_info);
 }
@@ -98,12 +103,12 @@ static void print_report(struct workload workload, struct extent_map *extents) {
     uint32_t num_segments;
     uint64_t segment_start, segment_end;
 
-    INFO(1, "File %s broken into %u extents\n", workload.filename, extents->ext_ctr);
+    INFO(1, "File %s broken into %u extents\n", workload.filename,
+         extents->ext_ctr);
 
     for (uint64_t i = 0; i < extents->ext_ctr; i++) {
-        segment_id =
-            (extents->extent[i].phy_blk & ctrl.f2fs_segment_mask) >>
-            ctrl.segment_shift;
+        segment_id = (extents->extent[i].phy_blk & ctrl.f2fs_segment_mask) >>
+                     ctrl.segment_shift;
 
         if (current_zone != extents->extent[i].zone) {
             current_zone = extents->extent[i].zone;
@@ -114,9 +119,9 @@ static void print_report(struct workload workload, struct extent_map *extents) {
 
         // if the beginning of the extent and the ending of the extent are in
         // the same segment
-        if (segment_start == ((extents->extent[i].phy_blk +
-                               extents->extent[i].len) &
-                              ctrl.f2fs_segment_mask)) {
+        if (segment_start ==
+            ((extents->extent[i].phy_blk + extents->extent[i].len) &
+             ctrl.f2fs_segment_mask)) {
             if (segment_id != ctrl.cur_segment) {
                 ctrl.cur_segment = segment_id;
             }
@@ -134,22 +139,29 @@ static void print_report(struct workload workload, struct extent_map *extents) {
 
             // part 2: all in between segments after the 1st segment and the
             // last (in case the last is only partially used by the segment)
-            segment_end = (extents->extent[i].phy_blk + extents->extent[i].len) &
-                 ctrl.f2fs_segment_mask;
+            segment_end =
+                (extents->extent[i].phy_blk + extents->extent[i].len) &
+                ctrl.f2fs_segment_mask;
             num_segments = (segment_end - segment_start) >> ctrl.segment_shift;
-            set_segment_counters(segment_start >> ctrl.segment_shift, num_segments);
+            set_segment_counters(segment_start >> ctrl.segment_shift,
+                                 num_segments);
 
             // part 3: any remaining parts of the last segment, which do not
             // fill the entire last segment only if the segment actually has a
             // remaining fragment
-            segment_end = ((extents->extent[i].phy_blk + extents->extent[i].len) & ctrl.f2fs_segment_mask);
-            if (segment_end != extents->extent[i].phy_blk + extents->extent[i].len) {
+            segment_end =
+                ((extents->extent[i].phy_blk + extents->extent[i].len) &
+                 ctrl.f2fs_segment_mask);
+            if (segment_end !=
+                extents->extent[i].phy_blk + extents->extent[i].len) {
                 set_segment_counters(segment_end >> ctrl.segment_shift, 1);
             }
         }
     }
 
-    MSG("%-50s | %-17u | %-27u | %-24u | %-13u | %-13u | %-13u\n", workload.filename, extents->ext_ctr, wl_man.segment_ctr, extents->zone_ctr, wl_man.cold_ctr, wl_man.warm_ctr, wl_man.hot_ctr);
+    MSG("%-50s | %-17u | %-27u | %-24u | %-13u | %-13u | %-13u\n",
+        workload.filename, extents->ext_ctr, wl_man.segment_ctr,
+        extents->zone_ctr, wl_man.cold_ctr, wl_man.warm_ctr, wl_man.hot_ctr);
 }
 
 static void run_workloads() {
@@ -173,7 +185,6 @@ static void run_workloads() {
     }
 
     close(wl_man.data_fd);
-
 }
 
 static uint64_t get_integer_value(char *optarg) {
@@ -219,7 +230,9 @@ static void prepare_report() {
     struct extent_map *extents;
 
     FORMATTER
-        MSG("%-50s | Number of Extents | Number of Occupied Segments | Number of Occupied Zones | Cold Segments | Warm Segments | Hot Segments\n", "Filename");
+    MSG("%-50s | Number of Extents | Number of Occupied Segments | Number of "
+        "Occupied Zones | Cold Segments | Warm Segments | Hot Segments\n",
+        "Filename");
     FORMATTER
 
     for (uint16_t i = 0; i < wl_man.nr_wls; i++) {
@@ -231,7 +244,7 @@ static void prepare_report() {
             ERR_MSG("Failed stat on file %s\n", ctrl.filename);
         }
 
-        extents = (struct extent_map *) get_extents();
+        extents = (struct extent_map *)get_extents();
         close(ctrl.fd);
 
         sort_extents(extents);
