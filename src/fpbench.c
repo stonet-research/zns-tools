@@ -11,7 +11,7 @@ struct workload_manager wl_man;
 static void show_help() {
     MSG("Possible flags are:\n");
     MSG("-f [file]\tFilename for the benchmark [Required]\n");
-    MSG("-l [Int, 0-2]\tLog Level to print (Default 0)\n");
+    MSG("-l [Int, 0-3]\tLog Level to print (Default 0)\n");
     MSG("-s \t\tFile size (Default 4096B)\n");
     MSG("-b \t\tBlock size in which to submit I/Os (Default 4096B)\n");
     MSG("-w \t\tRead/Write Hint (Default 0)\n\t\tRWH_WRITE_LIFE_NOT_SET = 0\n\t\tRWH_WRITE_LIFE_NONE = 1\n\t\tRWH_WRITE_LIFE_SHORT = 2\n\t\tRWH_WRITE_LIFE_MEDIUM = 3\n\t\tRWH_WRITE_LIFE_LONG = 4\n\t\tRWH_WRITE_LIFE_EXTREME = 5\n");
@@ -33,14 +33,19 @@ static void check_options() {
 
 
 static void write_file(struct workload workload) {
-    int out, r, w;
+    int out, r, w, ret;
     char buf[workload.bsize];
     
     r = read(wl_man.data_fd, &buf, workload.bsize);
-    INFO(2, "Read %dB from /dev/urandom\n", r);
+    INFO(3, "Read %dB from /dev/urandom\n", r);
 
-    if (remove(workload.filename)) {
-        INFO(1, "Found existing file %s. Deleting it.\n", workload.filename);
+    if (access(workload.filename, F_OK) == 0) {
+        ret = remove(workload.filename);
+        if (ret == 0) {
+            INFO(1, "Found existing file %s. Deleting it.\n", workload.filename);
+        } else {
+            ERR_MSG("Failed deleting existing file %s CODE %d\n", workload.filename, ret);
+        }
     }
 
     out = open(workload.filename, O_WRONLY | O_CREAT, 0664);
@@ -55,51 +60,98 @@ static void write_file(struct workload workload) {
 
     INFO(1, "Set file %s with write hint: %d\n", workload.filename, workload.rw_hint);
 
-    for (uint32_t i = 0; i < workload.fsize; i += workload.bsize) {
+    for (uint64_t i = 0; i < workload.fsize; i += workload.bsize) {
         lseek(out, i, SEEK_SET);
         w = write(out, &buf, workload.bsize);
-        INFO(2, "Wrote %dB to %s at offset %u\n", w, workload.filename, i);
+        INFO(3, "Wrote %dB to %s at offset %lu\n", w, workload.filename, i);
     }
 
     fsync(out);
     close(out);
 }
 
+static void set_segment_counters(uint32_t segment_id, uint32_t num_segments) {
+    wl_man.segment_ctr += num_segments;
+    get_procfs_single_segment_bits(ctrl.bdev.dev_name, segment_id); 
+
+    switch(segman.sm_info[0].type) {
+        case CURSEG_COLD_DATA:
+            wl_man.cold_ctr += num_segments;
+            break;
+        case CURSEG_WARM_DATA:
+            wl_man.warm_ctr += num_segments;
+            break;
+        case CURSEG_HOT_DATA:
+            wl_man.hot_ctr += num_segments;
+            break;
+        default:
+            break;
+    }
+    free(segman.sm_info);
+}
+
 static void print_report(struct workload workload, struct extent_map *extents) {
-    uint32_t segment_ctr = 0, cold_ctr = 0, warm_ctr = 0, hot_ctr = 0;
-    uint64_t segment_start = 0, cur_segment = 0;
+    uint32_t segment_id;
+    uint32_t current_zone = 0;
+    uint32_t num_segments;
+    uint64_t segment_start, segment_end;
 
     INFO(1, "File %s broken into %u extents\n", workload.filename, extents->ext_ctr);
 
-    for (uint32_t i = 0; i < extents->ext_ctr; i++) {
+    for (uint64_t i = 0; i < extents->ext_ctr; i++) {
+        segment_id =
+            (extents->extent[i].phy_blk & ctrl.f2fs_segment_mask) >>
+            ctrl.segment_shift;
+
+        if (current_zone != extents->extent[i].zone) {
+            current_zone = extents->extent[i].zone;
+            extents->zone_ctr++;
+        }
+
         segment_start = (extents->extent[i].phy_blk & ctrl.f2fs_segment_mask);
 
-        // TODO: handle segment ranges
-        if (cur_segment != segment_start) {
-            cur_segment = segment_start;
-            segment_ctr++;
-            get_procfs_single_segment_bits(ctrl.bdev.dev_name, segment_start >> ctrl.segment_shift); 
+        // if the beginning of the extent and the ending of the extent are in
+        // the same segment
+        if (segment_start == ((extents->extent[i].phy_blk +
+                               extents->extent[i].len) &
+                              ctrl.f2fs_segment_mask)) {
+            if (segment_id != ctrl.cur_segment) {
+                ctrl.cur_segment = segment_id;
+            }
 
-            switch(segman.sm_info[0].type) {
-                case CURSEG_COLD_DATA:
-                    cold_ctr++;
-                    break;
-                case CURSEG_WARM_DATA:
-                    warm_ctr++;
-                    break;
-                case CURSEG_HOT_DATA:
-                    hot_ctr++;
-                    break;
-                default:
-                    break;
+            set_segment_counters(segment_start >> ctrl.segment_shift, 1);
+        } else {
+            // Else the extent spans across multiple segments, so we need to
+            // break it up
+
+            // part 1: the beginning of extent to end of that single segment
+            if (extents->extent[i].phy_blk != segment_start) {
+                set_segment_counters(segment_start >> ctrl.segment_shift, 1);
+                segment_id++;
+            }
+
+            // part 2: all in between segments after the 1st segment and the
+            // last (in case the last is only partially used by the segment)
+            segment_end = (extents->extent[i].phy_blk + extents->extent[i].len) &
+                 ctrl.f2fs_segment_mask;
+            num_segments = (segment_end - segment_start) >> ctrl.segment_shift;
+            set_segment_counters(segment_start >> ctrl.segment_shift, num_segments);
+
+            // part 3: any remaining parts of the last segment, which do not
+            // fill the entire last segment only if the segment actually has a
+            // remaining fragment
+            segment_end = ((extents->extent[i].phy_blk + extents->extent[i].len) & ctrl.f2fs_segment_mask);
+            if (segment_end != extents->extent[i].phy_blk + extents->extent[i].len) {
+                set_segment_counters(segment_end >> ctrl.segment_shift, 1);
             }
         }
     }
 
+
     FORMATTER
     MSG("%-50s | Number of Extents | Number of Occupied Segments | Number of Occupied Zones | Cold Segments | Warm Segments | Hot Segments\n", "Filename");
     FORMATTER
-    MSG("%-50s | %-17u | %-27u | %-24u | %-13u | %-13u | %-13u\n", workload.filename, extents->ext_ctr, segment_ctr, extents->zone_ctr, cold_ctr, warm_ctr, hot_ctr);
+    MSG("%-50s | %-17u | %-27u | %-24u | %-13u | %-13u | %-13u\n", workload.filename, extents->ext_ctr, wl_man.segment_ctr, extents->zone_ctr, wl_man.cold_ctr, wl_man.warm_ctr, wl_man.hot_ctr);
 }
 
 static void run_workloads() {
@@ -133,8 +185,8 @@ static void run_workloads() {
     close(wl_man.data_fd);
 }
 
-static int get_integer_value(char *optarg) {
-    uint32_t multiplier = 0;
+static uint64_t get_integer_value(char *optarg) {
+    uint32_t multiplier = 1;
 
     if (optarg[strlen(optarg) - 1] == 'B') {
         multiplier = 1;

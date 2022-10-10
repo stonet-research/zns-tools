@@ -550,7 +550,7 @@ int get_procfs_single_segment_bits(char *dev_name, uint32_t segment_id) {
 
     while ((read = getline(&line, &len, fp)) != -1) {
         // Skip first 2 lines that show file format then go to row
-        if (line_ctr != row) {
+        if (line_ctr != row + 2) {
             line_ctr++;
             continue;
         }
@@ -558,12 +558,12 @@ int get_procfs_single_segment_bits(char *dev_name, uint32_t segment_id) {
         char *contents;
         uint8_t ctr = 0;
         while ((contents = strsep(&line, " \t"))) {
-            if (ctr != remainder) {
-                ctr++;
-                continue;
-            } 
-
             if (strchr(contents, '|')) {
+                if (ctr != remainder) {
+                    ctr++;
+                    continue;
+                } 
+
                 char *split_string;
                 uint8_t set_first = 0;
                 // sscanf had issues, resort to manual work
@@ -575,6 +575,7 @@ int get_procfs_single_segment_bits(char *dev_name, uint32_t segment_id) {
                             atoi(split_string);
                         set_first = 1;
                     } else {
+                        segman.sm_info[0].id = segment_id;
                         segman.sm_info[0].valid_blocks =
                             atoi(split_string);
                     }

@@ -18,9 +18,9 @@
 
 struct workload {
     char *filename; /* file name to write */
-    uint32_t fsize; /* file size to write */
     uint8_t rw_hint; /* read/write hint for the file in this workload */
-    uint32_t bsize; /* block size for writes to be submitted as */
+    uint64_t bsize; /* block size for writes to be submitted as */
+    uint64_t fsize; /* file size to write */
 };
 
 struct workload_manager {
@@ -28,6 +28,10 @@ struct workload_manager {
     uint16_t nr_wls; /* total number of workloads in wls */
     uint16_t nr_jobs; /* number of concurrent jobs to run */
     int data_fd; /* fd to /dev/urandom to read data from */
+    uint32_t segment_ctr;
+    uint32_t cold_ctr;
+    uint32_t warm_ctr;
+    uint32_t hot_ctr;
 };
 
 #define FORMATTER MSG("==============================================================================================================================================================================\n");
