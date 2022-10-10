@@ -1,7 +1,7 @@
 #ifndef _SEGMAP_H_
 #define _SEGMAP_H_
 
-#include "zmap.h"
+#include "zns-tools.h"
 
 #include <dirent.h>
 

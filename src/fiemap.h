@@ -1,7 +1,7 @@
 #ifndef _FIEMAP_H_
 #define _FIEMAP_H_
 
-#include "zmap.h"
+#include "zns-tools.h"
 
 #define HOLE_FORMATTER                                                         \
     MSG("-----------------------------------------"                            \

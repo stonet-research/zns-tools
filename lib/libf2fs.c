@@ -1,4 +1,4 @@
-#include "f2fs_fs.h"
+#include "f2fs.h"
 #include <stdint.h>
 #include <string.h>
 
@@ -314,6 +314,10 @@ struct f2fs_node *f2fs_get_node_block(char *dev_path, uint32_t block_addr) {
     return node_block;
 }
 
+/*
+ * show detailed info about the inode fadvise flags
+ *
+ * */
 static void show_inode_fadvise_flags(struct f2fs_inode *inode) {
     MSG("i_advise: \t\t");
     if (inode->i_advise & FADVISE_COLD_BIT) {
@@ -344,6 +348,10 @@ static void show_inode_fadvise_flags(struct f2fs_inode *inode) {
     MSG("\n");
 }
 
+/*
+ * show detailed flag names for inode flags
+ *
+ * */
 static void show_inode_flags(struct f2fs_inode *inode) {
     MSG("i_flags: \t\t");
 
@@ -498,6 +506,92 @@ int get_procfs_segment_bits(char *dev_name, uint32_t highest_segment) {
             fclose(fp);
             free(dev_string);
             return 1;
+        }
+    }
+
+    fclose(fp);
+    free(dev_string);
+
+    return 1;
+}
+
+/*
+ * Get the segment data from /proc/fs/f2fs/<device>/segment_bits
+ * for more information about a segment. Only for a single segment,
+ * as opposed to get_procfs_segment_bits.
+ * It sets the global sm_info struct
+ *
+ * @dev_name: * to device name F2FS is registered on
+ * @segment_id: segment number to retrieve info for
+ *
+ * */
+int get_procfs_single_segment_bits(char *dev_name, uint32_t segment_id) {
+    FILE *fp;
+    char path[50];
+    char *device, *dev_string, *dev, *line;
+    size_t len = 0;
+    uint32_t line_ctr = 0, row = 0, remainder = 0;
+    ssize_t read;
+
+    dev_string = strdup(dev_name);
+    while ((device = strsep(&dev_string, "/")) != NULL) {
+        dev = device;
+    }
+
+    sprintf(path, "/proc/fs/f2fs/%s/segment_info", dev);
+
+    fp = fopen(path, "r");
+    if (!fp) {
+        WARN("Failed opening %s\nEnsure Kernel is running with F2FS Debugging "
+             "enabled.\nFalling back to disabling procfs segment resolving.\n",
+             path);
+        free(dev_string);
+        return 0;
+    }
+
+    segman.sm_info = calloc(sizeof(struct segment_info), 1);
+
+    row = segment_id / 10;
+    remainder = segment_id % 10;
+
+    while ((read = getline(&line, &len, fp)) != -1) {
+        // Skip first 2 lines that show file format then go to row
+        if (line_ctr != row + 2) {
+            line_ctr++;
+            continue;
+        }
+
+        char *contents;
+        uint8_t ctr = 0;
+        while ((contents = strsep(&line, " \t"))) {
+            if (strchr(contents, '|')) {
+                if (ctr != remainder) {
+                    ctr++;
+                    continue;
+                }
+
+                char *split_string;
+                uint8_t set_first = 0;
+                // sscanf had issues, resort to manual work
+                while ((split_string = strsep(&contents, "|"))) {
+                    if (strcmp(split_string, "|") == 0) {
+                        continue;
+                    } else if (!set_first) {
+                        segman.sm_info[0].type = atoi(split_string);
+                        set_first = 1;
+                    } else {
+                        segman.sm_info[0].id = segment_id;
+                        segman.sm_info[0].valid_blocks = atoi(split_string);
+                    }
+                }
+
+                free(split_string);
+                segman.nr_segments++;
+                free(contents);
+                fclose(fp);
+                free(dev_string);
+                return 1;
+            }
         }
     }
 

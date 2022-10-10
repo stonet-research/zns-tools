@@ -1,4 +1,4 @@
-#include "zmap.h"
+#include "zns-tools.h"
 
 struct control ctrl;
 struct file_counter_map *file_counter_map;
@@ -354,6 +354,11 @@ void show_extent_flags(uint32_t flags) {
  * Get the file extents with FIEMAP ioctl for the open
  * file descriptor set at ctrl.fd
  *
+ * NOTE: Requires several variables to be set:
+ *      ctrl.stats
+ *      ctrl.fd (open fd)
+ *      dev information in ctrl
+ *
  * returns: struct extent_map * to the extent maps.
  *          NULL returned on Failure
  *
@@ -589,8 +594,8 @@ void sort_extents(struct extent_map *extent_map) {
 
 void set_super_block_info(struct f2fs_super_block f2fs_sb) {
     // We currently assume a 2 device setup (conventional followed by ZNS)
-    for (uint8_t i = 0; i < ZMAP_MAX_DEVS; i++) {
-        if (f2fs_sb.devs[ZMAP_MAX_DEVS].total_segments > 0) {
+    for (uint8_t i = 0; i < ZNS_TOOLS_MAX_DEVS; i++) {
+        if (f2fs_sb.devs[ZNS_TOOLS_MAX_DEVS].total_segments > 0) {
             WARN("Found more than 2 devices in F2FS superblock. Tools can "
                  "currently only use the first 2 devices.");
             break;
