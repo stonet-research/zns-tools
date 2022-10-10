@@ -38,7 +38,7 @@ static void check_options() {
     }
 }
 
-/* 
+/*
  * Core of the benchmark - writing the file with options specified in
  * the workload
  *
@@ -93,12 +93,12 @@ static void write_file(struct workload workload) {
 
 /*
  * Track information for the workload, counting the types of segments the
- * file is split up into. This function retrieves the segment type of the provided
- * segment id and increases counters.
+ * file is split up into. This function retrieves the segment type of the
+ * provided segment id and increases counters.
  *
  * @segment_id: id of the segment to retrieve the type for
- * @num_segments: the number of segments to increase the counters by. Typically 1,
- *          but for segment ranges this options allows different values.
+ * @num_segments: the number of segments to increase the counters by. Typically
+ * 1, but for segment ranges this options allows different values.
  *
  * */
 static void set_segment_counters(uint32_t segment_id, uint32_t num_segments) {
@@ -122,9 +122,9 @@ static void set_segment_counters(uint32_t segment_id, uint32_t num_segments) {
 }
 
 /*
- * Print the benchmark report - code is similar to segmap.c, as segment coordination
- * logic is identical here to collect segment type counters respective for each possible
- * segment.
+ * Print the benchmark report - code is similar to segmap.c, as segment
+ * coordination logic is identical here to collect segment type counters
+ * respective for each possible segment.
  *
  * */
 static void print_report(struct workload workload, struct extent_map *extents) {
