@@ -20,4 +20,4 @@ Filename                                           | Number of Extents | Number 
 /mnt/f2fs/write-job_4                              | 1                 | 66                          | 1                        | 66            | 0             | 0
 ```
 
-The example shows that all of the data placement aligned with the write hint, `RWH_WRITE_LIFE_EXTREME = 5`, which would imply that lifetime is extremely long, hence making it could data.
+The example shows that all of the data placement aligned with the write hint, `RWH_WRITE_LIFE_EXTREME = 5`, which would imply that lifetime is extremely long, hence making it cold data.
