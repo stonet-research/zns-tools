@@ -51,40 +51,58 @@ static void check_options() {
 static void write_file(struct workload workload) {
     int out, r, w, ret;
     char buf[workload.bsize];
+    uint64_t hint = 99;
 
     MSG("Starting job for file %s with pid %d\n", workload.filename, getpid());
 
     r = read(wl_man.data_fd, &buf, workload.bsize);
-    INFO(3, "Read %dB from /dev/urandom\n", r);
+    INFO(3, "Job %d: Read %dB from /dev/urandom\n", workload.id, r);
 
     if (access(workload.filename, F_OK) == 0) {
         ret = remove(workload.filename);
         if (ret == 0) {
-            INFO(1, "Found existing file %s. Deleting it.\n",
-                 workload.filename);
+            INFO(1, "Job %d: Found existing file. Deleting it.\n", 
+                 workload.id);
         } else {
-            ERR_MSG("Failed deleting existing file %s CODE %d\n",
-                    workload.filename, ret);
+            ERR_MSG("Job %d: Failed deleting existing file CODE %d\n", 
+                    workload.id, ret);
         }
     }
 
     out = open(workload.filename, O_WRONLY | O_CREAT, 0664);
 
     if (!out) {
-        ERR_MSG("Failed opening file for writing: %s\n", workload.filename);
+        ERR_MSG("Job %d: Failed opening file for writing\n", workload.id);
     }
 
-    if (!fcntl(out, F_SET_FILE_RW_HINT, workload.rw_hint)) {
-        ERR_MSG("Failed setting write hint: %d\n", workload.rw_hint);
+    if (fcntl(out, F_SET_RW_HINT, &workload.rw_hint) < 0) {
+        if (errno == EINVAL) {
+            ERR_MSG("Job %d: F_SET_RW_HINT not supported\n", workload.id);
+        }
+
+        ERR_MSG("Job %d: Failed setting write hint: %d\n", workload.id, workload.rw_hint);
     }
 
-    INFO(1, "Set file %s with write hint: %d\n", workload.filename,
-         workload.rw_hint);
+    INFO(1, "Job %d: Set file with write hint: %d\n", workload.id,
+            workload.rw_hint);
+
+    if (fcntl(out, F_GET_RW_HINT, &hint) < 0) {
+        if (errno == EINVAL) {
+            ERR_MSG("Job %d: F_GET_RW_HINT not supported\n", workload.id);
+        }
+        ERR_MSG("Job %d: Failed getting write hint\n", workload.id);
+    }
+
+    if (hint != workload.rw_hint) {
+        ERR_MSG("Job %d: Failed setting hint for file\n", workload.id);
+    }
+
+    INFO(1, "Job %d: Verifying write hint %lu for file\n", workload.id, hint);
 
     for (uint64_t i = 0; i < workload.fsize; i += workload.bsize) {
         lseek(out, i, SEEK_SET);
         w = write(out, &buf, workload.bsize);
-        INFO(3, "Wrote %dB to %s at offset %lu\n", w, workload.filename, i);
+        INFO(3, "Job %d: Wrote %dB at offset %lu\n", workload.id, w, i);
     }
 
     fsync(out);
@@ -132,9 +150,6 @@ static void print_report(struct workload workload, struct extent_map *extents) {
     uint32_t current_zone = 0;
     uint32_t num_segments;
     uint64_t segment_start, segment_end;
-
-    INFO(1, "File %s broken into %u extents\n", workload.filename,
-         extents->ext_ctr);
 
     for (uint64_t i = 0; i < extents->ext_ctr; i++) {
         segment_id = (extents->extent[i].phy_blk & ctrl.f2fs_segment_mask) >>
@@ -199,7 +214,10 @@ static void print_report(struct workload workload, struct extent_map *extents) {
  *
  * */
 static void run_workloads() {
+    int status = 0;
+
     wl_man.data_fd = open("/dev/urandom", O_RDONLY);
+
     if (!wl_man.data_fd) {
         ERR_MSG("Failed opening /dev/urandom for data generation\n");
     }
@@ -213,7 +231,11 @@ static void run_workloads() {
             }
         }
 
-        wait(NULL);
+        while (wait(&status) > 0);
+
+        if (status != 0) {
+            ERR_MSG("Errors in sub-jobs\n");
+        }
     } else {
         write_file(wl_man.wl[0]);
     }
@@ -265,6 +287,7 @@ static void update_workloads() {
             wl_man.wl[i].rw_hint = wl_man.wl[0].rw_hint;
             wl_man.wl[i].bsize = wl_man.wl[0].bsize;
             wl_man.wl[i].fsize = wl_man.wl[0].fsize;
+            wl_man.wl[i].id = i;
             wl_man.nr_wls++;
             wl_man.wl[i].filename = malloc(sizeof(char *) * MAX_FILE_LENGTH);
             strncpy(wl_man.wl[i].filename, base_name, MAX_FILE_LENGTH);

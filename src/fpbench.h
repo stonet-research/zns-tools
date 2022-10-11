@@ -4,6 +4,7 @@
 #include "zns-tools.h"
 #include <fcntl.h>
 #include <sys/wait.h>
+#include <errno.h>
 
 #define F_LINUX_SPECIFIC_BASE 1024
 
@@ -17,11 +18,21 @@
 #define F_SET_FILE_RW_HINT (F_LINUX_SPECIFIC_BASE + 14)
 #endif
 
+#if __linux__ && !defined(RWF_WRITE_LIFE_NOT_SET)
+#define RWF_WRITE_LIFE_NOT_SET 0
+#define RWH_WRITE_LIFE_NONE 1
+#define RWH_WRITE_LIFE_SHORT 2
+#define RWH_WRITE_LIFE_MEDIUM 3
+#define RWH_WRITE_LIFE_LONG 4
+#define RWH_WRITE_LIFE_EXTREME 5
+#endif
+
 struct workload {
     char *filename;  /* file name to write */
     uint8_t rw_hint; /* read/write hint for the file in this workload */
     uint64_t bsize;  /* block size for writes to be submitted as */
     uint64_t fsize;  /* file size to write */
+    uint16_t id; /* per job id */
 };
 
 struct workload_manager {
