@@ -255,13 +255,13 @@ static void run_workloads() {
 static uint64_t get_integer_value(char *optarg) {
     uint32_t multiplier = 1;
 
-    if (optarg[strlen(optarg) - 1] == 'B') {
+    if (optarg[strlen(optarg) - 1] == 'B' || optarg[strlen(optarg) - 1] == 'b') {
         multiplier = 1;
-    } else if (optarg[strlen(optarg) - 1] == 'K') {
+    } else if (optarg[strlen(optarg) - 1] == 'K' || optarg[strlen(optarg) - 1] == 'k') {
         multiplier = 1024;
-    } else if (optarg[strlen(optarg) - 1] == 'M') {
+    } else if (optarg[strlen(optarg) - 1] == 'M' || optarg[strlen(optarg) - 1] == 'm') {
         multiplier = 1024 * 1024;
-    } else if (optarg[strlen(optarg) - 1] == 'G') {
+    } else if (optarg[strlen(optarg) - 1] == 'G' || optarg[strlen(optarg) - 1] == 'G') {
         multiplier = 1024 * 1024 * 1024;
     } else {
         return atoi(optarg);
@@ -341,6 +341,7 @@ static void prepare_report() {
 int main(int argc, char *argv[]) {
     int c;
     char *root_dir;
+    uint64_t size = 0;
 
     wl_man.wl = calloc(sizeof(struct workload), 1);
     wl_man.wl[0].bsize = BLOCK_SZ;
@@ -356,7 +357,12 @@ int main(int argc, char *argv[]) {
             wl_man.nr_wls = 1;
             break;
         case 's':
-            wl_man.wl[0].fsize = get_integer_value(optarg);
+            size = get_integer_value(optarg);
+            if (size > 4096) {
+                wl_man.wl[0].fsize = size;
+            } else {
+                ERR_MSG("Minimum size of 4K required. Otherwise F2FS inlines data in the inode.\n");
+            }
             break;
         case 'b':
             wl_man.wl[0].bsize = get_integer_value(optarg);
