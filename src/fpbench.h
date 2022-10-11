@@ -2,9 +2,9 @@
 #define _FPBENCH_H_
 
 #include "zns-tools.h"
+#include <errno.h>
 #include <fcntl.h>
 #include <sys/wait.h>
-#include <errno.h>
 
 #define F_LINUX_SPECIFIC_BASE 1024
 
@@ -32,7 +32,7 @@ struct workload {
     uint8_t rw_hint; /* read/write hint for the file in this workload */
     uint64_t bsize;  /* block size for writes to be submitted as */
     uint64_t fsize;  /* file size to write */
-    uint16_t id; /* per job id */
+    uint16_t id;     /* per job id */
 };
 
 struct workload_manager {

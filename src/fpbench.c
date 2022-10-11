@@ -61,10 +61,9 @@ static void write_file(struct workload workload) {
     if (access(workload.filename, F_OK) == 0) {
         ret = remove(workload.filename);
         if (ret == 0) {
-            INFO(1, "Job %d: Found existing file. Deleting it.\n", 
-                 workload.id);
+            INFO(1, "Job %d: Found existing file. Deleting it.\n", workload.id);
         } else {
-            ERR_MSG("Job %d: Failed deleting existing file CODE %d\n", 
+            ERR_MSG("Job %d: Failed deleting existing file CODE %d\n",
                     workload.id, ret);
         }
     }
@@ -80,11 +79,12 @@ static void write_file(struct workload workload) {
             ERR_MSG("Job %d: F_SET_RW_HINT not supported\n", workload.id);
         }
 
-        ERR_MSG("Job %d: Failed setting write hint: %d\n", workload.id, workload.rw_hint);
+        ERR_MSG("Job %d: Failed setting write hint: %d\n", workload.id,
+                workload.rw_hint);
     }
 
     INFO(1, "Job %d: Set file with write hint: %d\n", workload.id,
-            workload.rw_hint);
+         workload.rw_hint);
 
     if (fcntl(out, F_GET_RW_HINT, &hint) < 0) {
         if (errno == EINVAL) {
@@ -231,7 +231,8 @@ static void run_workloads() {
             }
         }
 
-        while (wait(&status) > 0);
+        while (wait(&status) > 0)
+            ;
 
         if (status != 0) {
             ERR_MSG("Errors in sub-jobs\n");
