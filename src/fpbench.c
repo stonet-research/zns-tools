@@ -49,14 +49,10 @@ static void check_options() {
  *
  * */
 static void write_file(struct workload workload) {
-    int out, r, w, ret;
-    char buf[workload.bsize];
+    int out, w, ret;
     uint64_t hint = 99;
 
     MSG("Starting job for file %s with pid %d\n", workload.filename, getpid());
-
-    r = read(wl_man.data_fd, &buf, workload.bsize);
-    INFO(3, "Job %d: Read %dB from /dev/urandom\n", workload.id, r);
 
     if (access(workload.filename, F_OK) == 0) {
         ret = remove(workload.filename);
@@ -101,7 +97,7 @@ static void write_file(struct workload workload) {
 
     for (uint64_t i = 0; i < workload.fsize; i += workload.bsize) {
         lseek(out, i, SEEK_SET);
-        w = write(out, &buf, workload.bsize);
+        w = write(out, wl_man.buf, workload.bsize);
         INFO(3, "Job %d: Wrote %dB at offset %lu\n", workload.id, w, i);
     }
 
@@ -214,13 +210,20 @@ static void print_report(struct workload workload, struct extent_map *extents) {
  *
  * */
 static void run_workloads() {
-    int status = 0;
+    int status = 0, r;
 
     wl_man.data_fd = open("/dev/urandom", O_RDONLY);
 
     if (!wl_man.data_fd) {
         ERR_MSG("Failed opening /dev/urandom for data generation\n");
     }
+
+    wl_man.buf = malloc(sizeof(char *) * wl_man.wl[0].bsize);
+
+    r = read(wl_man.data_fd, wl_man.buf, wl_man.wl[0].bsize);
+    INFO(3, "Read %dB from /dev/urandom\n", r);
+
+    close(wl_man.data_fd);
 
     // If there are more than 1 numjobs fork, else parent runs everything
     if (wl_man.nr_wls > 1) {
@@ -241,7 +244,7 @@ static void run_workloads() {
         write_file(wl_man.wl[0]);
     }
 
-    close(wl_man.data_fd);
+    free(wl_man.buf);
 }
 
 /*
@@ -254,6 +257,7 @@ static void run_workloads() {
  * */
 static uint64_t get_integer_value(char *optarg) {
     uint32_t multiplier = 1;
+    char *ptr = NULL;
 
     if (optarg[strlen(optarg) - 1] == 'B' ||
         optarg[strlen(optarg) - 1] == 'b') {
@@ -268,10 +272,10 @@ static uint64_t get_integer_value(char *optarg) {
                optarg[strlen(optarg) - 1] == 'G') {
         multiplier = 1024 * 1024 * 1024;
     } else {
-        return atoi(optarg);
+        return strtoul(optarg, &ptr, 10);
     }
 
-    return atoi(optarg) * multiplier;
+    return strtoul(optarg, &ptr, 10) * multiplier;
 }
 
 /*
