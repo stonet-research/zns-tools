@@ -40,10 +40,11 @@ struct workload_manager {
     uint16_t nr_wls;     /* total number of workloads in wls */
     uint16_t nr_jobs;    /* number of concurrent jobs to run */
     int data_fd;         /* fd to /dev/urandom to read data from */
-    uint32_t segment_ctr;
-    uint32_t cold_ctr;
-    uint32_t warm_ctr;
-    uint32_t hot_ctr;
+    uint32_t segment_ctr; /* count number of segments occupied by file */
+    uint32_t cold_ctr; /* segment type counter: cold */
+    uint32_t warm_ctr; /* segment type counter: warm */
+    uint32_t hot_ctr; /* segment type counter: hot */
+    char *buf; /* source buffer with random data to write from */
 };
 
 #define FORMATTER                                                              \
