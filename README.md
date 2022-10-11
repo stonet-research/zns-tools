@@ -87,7 +87,7 @@ Possible flags are:
 `zns.fpbench` is a benchmarking framework that is used for identifying the F2FS placement decisions based on the provided write hint from the benchmark. It writes the file with the specified size, in units of the specified block size, and sets the write hint with \fIfcntl()\fP. Concurrently repeating the workload is possible to run the same exact workload on different file names, hence allowing lockless concurrent writing. After writing, all files have extents located, the extents mapped to segments, and segment information retrieved, focusing on the heat classification that the segment was assigned.
 
 ```bash
-sudo ./src/zns.fpbench -f /mnt/f2fs/new -s 2M -b 4K -w 5 -n 3
+sudo ./src/zns.fpbench -f /mnt/f2fs/bench_file -s 2M -b 4K -w 5 -n 3
 ```
 
 Possible flags are:
