@@ -255,13 +255,17 @@ static void run_workloads() {
 static uint64_t get_integer_value(char *optarg) {
     uint32_t multiplier = 1;
 
-    if (optarg[strlen(optarg) - 1] == 'B' || optarg[strlen(optarg) - 1] == 'b') {
+    if (optarg[strlen(optarg) - 1] == 'B' ||
+        optarg[strlen(optarg) - 1] == 'b') {
         multiplier = 1;
-    } else if (optarg[strlen(optarg) - 1] == 'K' || optarg[strlen(optarg) - 1] == 'k') {
+    } else if (optarg[strlen(optarg) - 1] == 'K' ||
+               optarg[strlen(optarg) - 1] == 'k') {
         multiplier = 1024;
-    } else if (optarg[strlen(optarg) - 1] == 'M' || optarg[strlen(optarg) - 1] == 'm') {
+    } else if (optarg[strlen(optarg) - 1] == 'M' ||
+               optarg[strlen(optarg) - 1] == 'm') {
         multiplier = 1024 * 1024;
-    } else if (optarg[strlen(optarg) - 1] == 'G' || optarg[strlen(optarg) - 1] == 'G') {
+    } else if (optarg[strlen(optarg) - 1] == 'G' ||
+               optarg[strlen(optarg) - 1] == 'G') {
         multiplier = 1024 * 1024 * 1024;
     } else {
         return atoi(optarg);
@@ -361,7 +365,8 @@ int main(int argc, char *argv[]) {
             if (size > 4096) {
                 wl_man.wl[0].fsize = size;
             } else {
-                ERR_MSG("Minimum size of 4K required. Otherwise F2FS inlines data in the inode.\n");
+                ERR_MSG("Minimum size of 4K required. Otherwise F2FS inlines "
+                        "data in the inode.\n");
             }
             break;
         case 'b':
