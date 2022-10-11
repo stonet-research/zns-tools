@@ -198,6 +198,7 @@ static void show_help() {
 
 int main(int argc, char *argv[]) {
     int c;
+    uint8_t set_file = 0;
     struct extent_map *extent_map;
 
     memset(&ctrl, 0, sizeof(struct control));
@@ -209,6 +210,7 @@ int main(int argc, char *argv[]) {
             break;
         case 'f':
             ctrl.filename = optarg;
+            set_file = 1;
             break;
         case 'w':
             ctrl.show_flags = 1;
@@ -223,6 +225,11 @@ int main(int argc, char *argv[]) {
             show_help();
             abort();
         }
+    }
+
+    if (!set_file) {
+        MSG("Missing file option\n");
+        show_help();
     }
 
     init_ctrl();

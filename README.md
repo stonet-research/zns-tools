@@ -30,7 +30,7 @@ sudo ./zns.fiemap -f /mnt/f2fs/file_to_locate
 
 We need to run with `sudo` since the program is required to open file descriptors on devices (which can only be done with privileges). The possible flags for `zns.fiemap` are
 
-```cpp
+```bash
 sudo ./zns.fiemap [flags]
 -f [file_name]: The file to be mapped (Required)
 -h:             Show the help menu
@@ -51,7 +51,7 @@ sudo ./zns.fiemap -d /mnt/f2fs/
 
 Again, it requires to be run with root privileges. Possible flags are:
 
-```cpp
+```bash
 -d [dir]:   Mounted dir to map [Required]
 -h:         Show this help
 -l [0-2]:   Set the logging level
@@ -75,7 +75,7 @@ sudo ./src/zns.fsinfo -f /mnt/f2fs/LOG -l 1
 
 Possible flags are:
 
-```cpp
+```bash
 -f [file]:       Input file retrieve inode for [Required]
 -l [Int, 0-1]:   Log Level to print (Default 0)
 -s:              Show the superblock
@@ -92,7 +92,7 @@ sudo ./src/zns.fpbench -f /mnt/f2fs/new -s 2M -b 4K -w 5 -n 3
 
 Possible flags are:
 
-```cpp
+```bash
 -f [file]:       Filename for the benchmark [Required]
 -l [Int, 0-3]:   Log Level to print (Default 0)
 -s:              File size (Default 4096B)

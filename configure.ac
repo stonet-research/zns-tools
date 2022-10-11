@@ -38,10 +38,15 @@ AM_PROG_CC_C_O
 # Checks for header files.
 AC_CHECK_HEADERS(m4_flatten([
 	fcntl.h
+    libgen.h
+    stdint.h
+    stdio.h
 	linux/blkzoned.h
 	linux/fiemap.h
 	linux/fs.h
 	linux/types.h
+    sys/types.h
+    inttypes.h
 	stdlib.h
 	string.h
 	sys/ioctl.h
@@ -49,6 +54,8 @@ AC_CHECK_HEADERS(m4_flatten([
 	sys/syscall.h
 	sys/sysmacros.h
 	unistd.h
+    errno.h
+    sys/wait.h
 ]))
 
 # Checks blkzoned is valid for ZNS with 5.12+ Kernel
