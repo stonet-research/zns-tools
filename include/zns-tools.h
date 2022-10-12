@@ -87,7 +87,9 @@ struct control {
     uint8_t show_checkpoint; /* zns.inode flag to print checkpoint */
     uint8_t procfs; /* zns.segmap use procfs entry segment_info from F2FS */
     uint8_t
-        show_class_stats; /* zns.segmap show stats of heat classifications */
+        show_class_stats;    /* zns.segmap show stats of heat classifications */
+    uint8_t show_only_stats; /* zns.segmap only show class stats not segment
+                                mappints */
 };
 
 struct extent {
@@ -155,9 +157,16 @@ extern void init_ctrl();
         }                                                                      \
     } while (0)
 
+#define REP(n, fmt, ...)                                                       \
+    do {                                                                       \
+        if (n == 0) {                                                          \
+            printf(fmt, ##__VA_ARGS__);                                        \
+        }                                                                      \
+    } while (0)
+
 #define FORMATTER                                                              \
     MSG("--------------------------------------------------------------------" \
         "--------------------------------------------------------------------" \
-        "--------------------------------------\n");
+        "----------------------------------------\n");
 
 #endif

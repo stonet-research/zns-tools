@@ -48,6 +48,7 @@ static void show_help() {
     MSG("-z [uint]\tOnly show this single zone\n");
     MSG("-e [uint]\tSet the ending zone to map. Default last zone.\n");
     MSG("-s\t\tShow segment statistics (requires -p to be enabled).\n");
+    MSG("-o\t\tShow only segment statistics (automatically enables -s).\n");
 
     show_info();
     exit(0);
@@ -154,40 +155,43 @@ static void collect_extents(char *path) {
  *
  * */
 static void show_segment_flags(uint32_t segment_id, uint8_t is_range) {
-    MSG("+++++ TYPE: ");
+    REP(ctrl.show_only_stats, "+++++ TYPE: ");
     if (segman.sm_info[segment_id].type == CURSEG_HOT_DATA) {
-        MSG("CURSEG_HOT_DATA");
+        REP(ctrl.show_only_stats, "CURSEG_HOT_DATA");
     } else if (segman.sm_info[segment_id].type == CURSEG_WARM_DATA) {
-        MSG("CURSEG_WARM_DATA");
+        REP(ctrl.show_only_stats, "CURSEG_WARM_DATA");
     } else if (segman.sm_info[segment_id].type == CURSEG_COLD_DATA) {
-        MSG("CURSEG_COLD_DATA");
+        REP(ctrl.show_only_stats, "CURSEG_COLD_DATA");
     } else if (segman.sm_info[segment_id].type == CURSEG_HOT_NODE) {
-        MSG("CURSEG_HOT_NODE");
+        REP(ctrl.show_only_stats, "CURSEG_HOT_NODE");
     } else if (segman.sm_info[segment_id].type == CURSEG_WARM_NODE) {
-        MSG("CURSEG_WARM_NODE");
+        REP(ctrl.show_only_stats, "CURSEG_WARM_NODE");
     } else if (segman.sm_info[segment_id].type == CURSEG_COLD_NODE) {
-        MSG("CURSEG_COLD_NODE");
+        REP(ctrl.show_only_stats, "CURSEG_COLD_NODE");
     }
 
-    MSG("  VALID BLOCKS: %3u",
+    REP(ctrl.show_only_stats, "  VALID BLOCKS: %3u",
         segman.sm_info[segment_id].valid_blocks << F2FS_BLKSIZE_BITS >>
             ctrl.sector_shift);
     if (is_range) {
-        MSG(" per segment\n");
+        REP(ctrl.show_only_stats, " per segment\n");
     } else {
-        MSG("\n");
+        REP(ctrl.show_only_stats, "\n");
     }
 }
 
 static void show_segment_info(uint64_t segment_start) {
     if (ctrl.cur_segment != segment_start) {
-        MSG("\n________________________________________________________________"
+        REP(ctrl.show_only_stats,
+            "\n________________________________________________________________"
             "__________________________________________________________________"
             "__________\n");
-        MSG("------------------------------------------------------------------"
+        REP(ctrl.show_only_stats,
+            "------------------------------------------------------------------"
             "------------------------------------------------------------------"
             "--------\n");
-        MSG("SEGMENT: %-4lu  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
+        REP(ctrl.show_only_stats,
+            "SEGMENT: %-4lu  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
             "  SIZE: %#-10" PRIx64 "\n",
             segment_start, segment_start << ctrl.segment_shift,
             ((segment_start << ctrl.segment_shift) + ctrl.f2fs_segment_sectors),
@@ -195,7 +199,8 @@ static void show_segment_info(uint64_t segment_start) {
         if (ctrl.procfs) {
             show_segment_flags(segment_start, 0);
         }
-        MSG("------------------------------------------------------------------"
+        REP(ctrl.show_only_stats,
+            "------------------------------------------------------------------"
             "------------------------------------------------------------------"
             "--------\n");
         ctrl.cur_segment = segment_start;
@@ -218,12 +223,30 @@ static void show_beginning_segment(uint64_t i) {
         (glob_extent_map->extent[i].phy_blk & ctrl.f2fs_segment_mask);
     uint64_t segment_end = segment_start + (ctrl.f2fs_segment_sectors);
 
-    MSG("***** EXTENT:  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
+    REP(ctrl.show_only_stats,
+        "***** EXTENT:  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
         "  SIZE: %#-10" PRIx64 "  FILE: %50s  EXTID:  %d/%-5d\n",
         glob_extent_map->extent[i].phy_blk, segment_end,
         segment_end - glob_extent_map->extent[i].phy_blk,
         glob_extent_map->extent[i].file, glob_extent_map->extent[i].ext_nr + 1,
         get_file_counter(glob_extent_map->extent[i].file));
+}
+
+static unsigned int get_file_stats_index(char *filename) {
+    uint32_t i = 0;
+
+    for (i = 0; i < segmap_man.ctr; i++) {
+        if (strncmp(segmap_man.fs[i].filename, filename, MAX_FILE_LENGTH) ==
+            0) {
+            return i;
+        }
+    }
+
+    segmap_man.fs[i].filename = calloc(MAX_FILE_LENGTH, 1);
+    memcpy(segmap_man.fs[i].filename, filename, MAX_FILE_LENGTH);
+    segmap_man.ctr++;
+
+    return i;
 }
 
 /*
@@ -236,18 +259,39 @@ static void show_beginning_segment(uint64_t i) {
  * 1, but for segment ranges this options allows different values.
  *
  * */
-static void set_segment_counters(uint32_t segment_id, uint32_t num_segments) {
+static void set_segment_counters(uint32_t segment_id, uint32_t num_segments,
+                                 struct extent extent) {
+    uint32_t fs_stats_index = 0;
+
     segmap_man.segment_ctr += num_segments;
+
+    if (ctrl.show_class_stats && ctrl.nr_files > 1) {
+        fs_stats_index = get_file_stats_index(extent.file);
+        segmap_man.fs[fs_stats_index].segment_ctr += num_segments;
+        if (segmap_man.fs[fs_stats_index].last_zone != extent.zone) {
+            segmap_man.fs[fs_stats_index].last_zone = extent.zone;
+            segmap_man.fs[fs_stats_index].zone_ctr++;
+        }
+    }
 
     switch (segman.sm_info[segment_id].type) {
     case CURSEG_COLD_DATA:
         segmap_man.cold_ctr += num_segments;
+        if (ctrl.show_class_stats && ctrl.nr_files > 1) {
+            segmap_man.fs[fs_stats_index].cold_ctr += num_segments;
+        }
         break;
     case CURSEG_WARM_DATA:
         segmap_man.warm_ctr += num_segments;
+        if (ctrl.show_class_stats && ctrl.nr_files > 1) {
+            segmap_man.fs[fs_stats_index].warm_ctr += num_segments;
+        }
         break;
     case CURSEG_HOT_DATA:
         segmap_man.hot_ctr += num_segments;
+        if (ctrl.show_class_stats && ctrl.nr_files > 1) {
+            segmap_man.fs[fs_stats_index].hot_ctr += num_segments;
+        }
         break;
     default:
         break;
@@ -271,7 +315,8 @@ static void show_consecutive_segments(uint64_t i, uint64_t segment_start) {
     uint64_t num_segments = segment_end - segment_start;
 
     if (ctrl.show_class_stats && ctrl.procfs) {
-        set_segment_counters(segment_start, num_segments);
+        set_segment_counters(segment_start, num_segments,
+                             glob_extent_map->extent[i]);
     }
 
     if (num_segments == 1) {
@@ -279,7 +324,8 @@ static void show_consecutive_segments(uint64_t i, uint64_t segment_start) {
         // in the next segment then we just want to show the 1st segment (2nd
         // segment will be printed in the function after this)
         show_segment_info(segment_start);
-        MSG("***** EXTENT:  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
+        REP(ctrl.show_only_stats,
+            "***** EXTENT:  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
             "  SIZE: %#-10" PRIx64 "  FILE: %50s  EXTID:  %d/%-5d\n",
             glob_extent_map->extent[i].phy_blk,
             segment_end << ctrl.segment_shift,
@@ -288,13 +334,16 @@ static void show_consecutive_segments(uint64_t i, uint64_t segment_start) {
             glob_extent_map->extent[i].ext_nr + 1,
             get_file_counter(glob_extent_map->extent[i].file));
     } else {
-        MSG("\n________________________________________________________________"
+        REP(ctrl.show_only_stats,
+            "\n________________________________________________________________"
             "__________________________________________________________________"
             "__________\n");
-        MSG("------------------------------------------------------------------"
+        REP(ctrl.show_only_stats,
+            "------------------------------------------------------------------"
             "------------------------------------------------------------------"
             "--------\n");
-        MSG(">>>>> SEGMENT RANGE: %-4lu-%-4lu   PBAS: %#-10" PRIx64
+        REP(ctrl.show_only_stats,
+            ">>>>> SEGMENT RANGE: %-4lu-%-4lu   PBAS: %#-10" PRIx64
             "  PBAE: %#-10" PRIx64 "  SIZE: %#-10" PRIx64 "\n",
             segment_start, segment_end - 1, segment_start << ctrl.segment_shift,
             segment_end << ctrl.segment_shift,
@@ -309,10 +358,12 @@ static void show_consecutive_segments(uint64_t i, uint64_t segment_start) {
             show_segment_flags(segment_start, 1);
         }
 
-        MSG("------------------------------------------------------------------"
+        REP(ctrl.show_only_stats,
+            "------------------------------------------------------------------"
             "------------------------------------------------------------------"
             "--------\n");
-        MSG("***** EXTENT:  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
+        REP(ctrl.show_only_stats,
+            "***** EXTENT:  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
             "  SIZE: %#-10" PRIx64 "  FILE: %50s  EXTID:  %d/%-5d\n",
             segment_start << ctrl.segment_shift,
             segment_end << ctrl.segment_shift,
@@ -338,7 +389,8 @@ static void show_remainder_segment(uint64_t i) {
                          (segment_start << ctrl.segment_shift);
 
     show_segment_info(segment_start);
-    MSG("***** EXTENT:  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
+    REP(ctrl.show_only_stats,
+        "***** EXTENT:  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
         "  SIZE: %#-10" PRIx64 "  FILE: %50s  EXTID:  %d/%-5d\n",
         segment_start << ctrl.segment_shift,
         (segment_start << ctrl.segment_shift) + remainder, remainder,
@@ -358,10 +410,16 @@ static void show_segment_report() {
     uint64_t end_lba =
         (ctrl.end_zone + 1) * ctrl.znsdev.zone_size - ctrl.znsdev.zone_size;
 
-    MSG("================================================================="
+    if (ctrl.show_class_stats) {
+        segmap_man.fs = calloc(sizeof(struct file_stats) * ctrl.nr_files, 1);
+    }
+
+    REP(ctrl.show_only_stats,
+        "================================================================="
         "===\n");
-    MSG("\t\t\tSEGMENT MAPPINGS\n");
-    MSG("==================================================================="
+    REP(ctrl.show_only_stats, "\t\t\tSEGMENT MAPPINGS\n");
+    REP(ctrl.show_only_stats,
+        "==================================================================="
         "=\n");
 
     for (uint64_t i = 0; i < glob_extent_map->ext_ctr; i++) {
@@ -378,13 +436,16 @@ static void show_segment_report() {
 
         if (current_zone != glob_extent_map->extent[i].zone) {
             if (current_zone != 0) {
-                MSG("----------------------------------------------------------"
+                REP(ctrl.show_only_stats,
+                    "----------------------------------------------------------"
                     "----------------------------------------------------------"
                     "------------------------\n");
             }
             current_zone = glob_extent_map->extent[i].zone;
             glob_extent_map->zone_ctr++;
-            print_zone_info(current_zone);
+            if (!ctrl.show_only_stats) {
+                print_zone_info(current_zone);
+            }
         }
 
         uint64_t segment_start =
@@ -401,12 +462,13 @@ static void show_segment_report() {
                 show_segment_info(segment_id);
                 ctrl.cur_segment = segment_id;
                 if (ctrl.show_class_stats && ctrl.procfs) {
-                    set_segment_counters(segment_start >> ctrl.segment_shift,
-                                         1);
+                    set_segment_counters(segment_start >> ctrl.segment_shift, 1,
+                                         glob_extent_map->extent[i]);
                 }
             }
 
-            MSG("***** EXTENT:  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
+            REP(ctrl.show_only_stats,
+                "***** EXTENT:  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
                 "  SIZE: %#-10" PRIx64 "  FILE: %50s  EXTID:  %d/%-5d\n",
                 glob_extent_map->extent[i].phy_blk,
                 glob_extent_map->extent[i].phy_blk +
@@ -429,8 +491,8 @@ static void show_segment_report() {
                 }
                 show_beginning_segment(i);
                 if (ctrl.show_class_stats && ctrl.procfs) {
-                    set_segment_counters(segment_start >> ctrl.segment_shift,
-                                         1);
+                    set_segment_counters(segment_start >> ctrl.segment_shift, 1,
+                                         glob_extent_map->extent[i]);
                 }
                 segment_id++;
             }
@@ -449,14 +511,16 @@ static void show_segment_report() {
                                    glob_extent_map->extent[i].len) {
                 show_remainder_segment(i);
                 if (ctrl.show_class_stats && ctrl.procfs) {
-                    set_segment_counters(segment_end >> ctrl.segment_shift, 1);
+                    set_segment_counters(segment_end >> ctrl.segment_shift, 1,
+                                         glob_extent_map->extent[i]);
                 }
             }
         }
     }
 
     if (ctrl.show_class_stats) {
-        MSG("\n\n=============================================================="
+        REP(ctrl.show_only_stats, "\n\n");
+        MSG("=============================================================="
             "==="
             "===\n");
         MSG("\t\t\tSEGMENT STATS\n");
@@ -464,17 +528,37 @@ static void show_segment_report() {
             "="
             "=\n");
 
+        if (!(ctrl.exclude_flags & FIEMAP_EXTENT_DATA_INLINE)) {
+            WARN("Segment Heat Classification statistics exclude inode inlined "
+                 "file data, and is only for segments of type DATA, not "
+                 "NODE.\n");
+        }
+
         FORMATTER
-        MSG("%-50s | Number of Extents | Number of Occupied Segments | Number "
+        MSG("%-50s | Number of Extents | Number of Occupying Segments | Number "
             "of "
-            "Occupied Zones | Cold Segments | Warm Segments | Hot Segments\n",
+            "Occupying Zones | Cold Segments | Warm Segments | Hot Segments\n",
             "Dir/File Name");
         FORMATTER
 
-        MSG("%-50s | %-17u | %-27u | %-24u | %-13u | %-13u | %-13u\n",
+        MSG("%-50s | %-17u | %-28u | %-25u | %-13u | %-13u | %-13u\n",
             segmap_man.dir, glob_extent_map->ext_ctr, segmap_man.segment_ctr,
             glob_extent_map->zone_ctr, segmap_man.cold_ctr, segmap_man.warm_ctr,
             segmap_man.hot_ctr);
+
+        // Show the per file statistics of directory if has more than 1 file
+        if (segmap_man.isdir && ctrl.nr_files > 1) {
+            UNDERSCORE_FORMATTER
+            FORMATTER
+            for (uint32_t i = 0; i < segmap_man.ctr; i++) {
+                MSG("%-50s | %-17u | %-28u | %-25u | %-13u | %-13u | %-13u\n",
+                    segmap_man.fs[i].filename,
+                    get_file_counter(segmap_man.fs[i].filename),
+                    segmap_man.fs[i].segment_ctr, segmap_man.fs[i].zone_ctr,
+                    segmap_man.fs[i].cold_ctr, segmap_man.fs[i].warm_ctr,
+                    segmap_man.fs[i].hot_ctr);
+            }
+        }
     }
 }
 
@@ -490,7 +574,7 @@ int main(int argc, char *argv[]) {
     memset(&segmap_man, 0, sizeof(struct segmap_manager));
     ctrl.exclude_flags = FIEMAP_EXTENT_DATA_INLINE;
 
-    while ((c = getopt(argc, argv, "d:hil:ws:e:pz:c")) != -1) {
+    while ((c = getopt(argc, argv, "d:hil:ws:e:pz:co")) != -1) {
         switch (c) {
         case 'h':
             show_help();
@@ -525,6 +609,10 @@ int main(int argc, char *argv[]) {
             ctrl.procfs = 1;
             break;
         case 'c':
+            ctrl.show_class_stats = 1;
+            break;
+        case 'o':
+            ctrl.show_only_stats = 1;
             ctrl.show_class_stats = 1;
             break;
         default:
@@ -605,6 +693,12 @@ int main(int argc, char *argv[]) {
     free(glob_extent_map);
     free(file_counter_map->file);
     free(file_counter_map);
+    if (ctrl.show_class_stats) {
+        free(segmap_man.fs);
+        for (uint32_t i = 0; i < segmap_man.ctr; i++) {
+            free(segmap_man.fs[i].filename);
+        }
+    }
     if (ctrl.procfs) {
         free(segman.sm_info);
     }
