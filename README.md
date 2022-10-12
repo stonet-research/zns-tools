@@ -61,6 +61,7 @@ Again, it requires to be run with root privileges. Possible flags are:
 -s [uint]:  Set the starting zone to map. Default zone 1.
 -z [uint]:  Only show this single zone
 -e [uint]:  Set the ending zone to map. Default last zone.
+-s:         Show segment statistics (requires -p to be enabled)
 ```
 
 The `-i` flag is meant for very small files that have their data inlined into the inode. If this flag is enabled, extents will show up with a `SIZE: 0`, indicating the data is inlined in the inode.

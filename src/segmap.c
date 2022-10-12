@@ -1,6 +1,6 @@
 #include "segmap.h"
 
-struct segment_config segconf;
+struct segmap_manager segmap_man;
 struct extent_map *glob_extent_map;
 
 /*
@@ -40,13 +40,14 @@ static void show_help() {
     MSG("Possible flags are:\n");
     MSG("-d [dir]\tMounted dir to map [Required]\n");
     MSG("-h\t\tShow this help\n");
-    MSG("-l [Int]\tLog Level to print\n");
+    MSG("-l [uint, 0-2]\tLog Level to print\n");
     MSG("-i\t\tResolve inlined file data in inodes\n");
     MSG("-p\t\tResolve segment information from procfs\n");
     MSG("-w\t\tShow extent flags\n");
     MSG("-s [uint]\tSet the starting zone to map. Default zone 1.\n");
     MSG("-z [uint]\tOnly show this single zone\n");
     MSG("-e [uint]\tSet the ending zone to map. Default last zone.\n");
+    MSG("-s\t\tShow segment statistics (requires -p to be enabled).\n");
 
     show_info();
     exit(0);
@@ -62,12 +63,15 @@ static void show_help() {
 static void check_dir() {
     struct stat stats;
 
-    if (stat(segconf.dir, &stats) < 0) {
-        ERR_MSG("Failed stat on dir %s\n", segconf.dir);
+    if (stat(segmap_man.dir, &stats) < 0) {
+        ERR_MSG("Failed stat on dir %s\n", segmap_man.dir);
     }
 
-    if (!S_ISDIR(stats.st_mode)) {
-        ERR_MSG("%s is not a directory\n", segconf.dir);
+    if (S_ISDIR(stats.st_mode)) {
+        segmap_man.isdir = 1;
+        INFO(1, "%s is a directory\n", segmap_man.dir);
+    } else {
+        INFO(1, "%s is a file\n", segmap_man.dir);
     }
 
     init_dev(&stats);
@@ -223,6 +227,34 @@ static void show_beginning_segment(uint64_t i) {
 }
 
 /*
+ * Track information for the workload, counting the types of segments the
+ * file is split up into. This function retrieves the segment type of the
+ * provided segment id and increases counters.
+ *
+ * @segment_id: id of the segment to retrieve the type for
+ * @num_segments: the number of segments to increase the counters by. Typically
+ * 1, but for segment ranges this options allows different values.
+ *
+ * */
+static void set_segment_counters(uint32_t segment_id, uint32_t num_segments) {
+    segmap_man.segment_ctr += num_segments;
+
+    switch (segman.sm_info[segment_id].type) {
+    case CURSEG_COLD_DATA:
+        segmap_man.cold_ctr += num_segments;
+        break;
+    case CURSEG_WARM_DATA:
+        segmap_man.warm_ctr += num_segments;
+        break;
+    case CURSEG_HOT_DATA:
+        segmap_man.hot_ctr += num_segments;
+        break;
+    default:
+        break;
+    }
+}
+
+/*
  *
  * Show consecutive segment ranges that the extent occupies.
  * This only shows fully utilized segments, which contain only that extent.
@@ -237,6 +269,10 @@ static void show_consecutive_segments(uint64_t i, uint64_t segment_start) {
          ctrl.f2fs_segment_mask) >>
         ctrl.segment_shift;
     uint64_t num_segments = segment_end - segment_start;
+
+    if (ctrl.show_class_stats && ctrl.procfs) {
+        set_segment_counters(segment_start, num_segments);
+    }
 
     if (num_segments == 1) {
         // The extent starts exactly at the segment beginning and ends somewhere
@@ -353,15 +389,21 @@ static void show_segment_report() {
 
         uint64_t segment_start =
             (glob_extent_map->extent[i].phy_blk & ctrl.f2fs_segment_mask);
+        uint64_t extent_end =
+            glob_extent_map->extent[i].phy_blk + glob_extent_map->extent[i].len;
 
         // if the beginning of the extent and the ending of the extent are in
         // the same segment
-        if (segment_start == ((glob_extent_map->extent[i].phy_blk +
-                               glob_extent_map->extent[i].len) &
-                              ctrl.f2fs_segment_mask)) {
+        if (segment_start == (extent_end & ctrl.f2fs_segment_mask) ||
+            extent_end ==
+                (segment_start + (F2FS_SEGMENT_BYTES >> ctrl.sector_shift))) {
             if (segment_id != ctrl.cur_segment) {
                 show_segment_info(segment_id);
                 ctrl.cur_segment = segment_id;
+                if (ctrl.show_class_stats && ctrl.procfs) {
+                    set_segment_counters(segment_start >> ctrl.segment_shift,
+                                         1);
+                }
             }
 
             MSG("***** EXTENT:  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
@@ -386,6 +428,10 @@ static void show_segment_report() {
                     show_segment_info(segment_start);
                 }
                 show_beginning_segment(i);
+                if (ctrl.show_class_stats && ctrl.procfs) {
+                    set_segment_counters(segment_start >> ctrl.segment_shift,
+                                         1);
+                }
                 segment_id++;
             }
 
@@ -402,8 +448,33 @@ static void show_segment_report() {
             if (segment_end != glob_extent_map->extent[i].phy_blk +
                                    glob_extent_map->extent[i].len) {
                 show_remainder_segment(i);
+                if (ctrl.show_class_stats && ctrl.procfs) {
+                    set_segment_counters(segment_end >> ctrl.segment_shift, 1);
+                }
             }
         }
+    }
+
+    if (ctrl.show_class_stats) {
+        MSG("\n\n=============================================================="
+            "==="
+            "===\n");
+        MSG("\t\t\tSEGMENT STATS\n");
+        MSG("=================================================================="
+            "="
+            "=\n");
+
+        FORMATTER
+        MSG("%-50s | Number of Extents | Number of Occupied Segments | Number "
+            "of "
+            "Occupied Zones | Cold Segments | Warm Segments | Hot Segments\n",
+            "Dir/File Name");
+        FORMATTER
+
+        MSG("%-50s | %-17u | %-27u | %-24u | %-13u | %-13u | %-13u\n",
+            segmap_man.dir, glob_extent_map->ext_ctr, segmap_man.segment_ctr,
+            glob_extent_map->zone_ctr, segmap_man.cold_ctr, segmap_man.warm_ctr,
+            segmap_man.hot_ctr);
     }
 }
 
@@ -416,16 +487,16 @@ int main(int argc, char *argv[]) {
     uint32_t highest_segment = 1;
 
     memset(&ctrl, 0, sizeof(struct control));
-    memset(&segconf, 0, sizeof(struct segment_config));
+    memset(&segmap_man, 0, sizeof(struct segmap_manager));
     ctrl.exclude_flags = FIEMAP_EXTENT_DATA_INLINE;
 
-    while ((c = getopt(argc, argv, "d:hil:ws:e:pz:")) != -1) {
+    while ((c = getopt(argc, argv, "d:hil:ws:e:pz:c")) != -1) {
         switch (c) {
         case 'h':
             show_help();
             break;
         case 'd':
-            segconf.dir = optarg;
+            segmap_man.dir = optarg;
             set_dir = 1;
             break;
         case 'l':
@@ -453,6 +524,9 @@ int main(int argc, char *argv[]) {
         case 'p':
             ctrl.procfs = 1;
             break;
+        case 'c':
+            ctrl.show_class_stats = 1;
+            break;
         default:
             show_help();
             abort();
@@ -465,6 +539,11 @@ int main(int argc, char *argv[]) {
 
     if (set_zone && (set_zone_start || set_zone_end)) {
         ERR_MSG("Flag -z cannot be used with -s or -e\n");
+    }
+
+    if (ctrl.show_class_stats && !ctrl.procfs) {
+        WARN("-c requires -p flag to be enabled. Disabling it.\n");
+        ctrl.show_class_stats = 0;
     }
 
     check_dir();
@@ -488,7 +567,21 @@ int main(int argc, char *argv[]) {
     ctrl.stats = calloc(sizeof(struct stat), sizeof(char *));
     glob_extent_map = calloc(sizeof(struct extent_map), sizeof(char *));
 
-    collect_extents(segconf.dir);
+    if (segmap_man.isdir) {
+        collect_extents(segmap_man.dir);
+    } else {
+        ctrl.filename = segmap_man.dir;
+        ctrl.fd = open(ctrl.filename, O_RDONLY);
+        ctrl.stats = calloc(sizeof(struct stat), sizeof(char *));
+
+        if (fstat(ctrl.fd, ctrl.stats) < 0) {
+            ERR_MSG("Failed stat on file %s\n", ctrl.filename);
+        }
+
+        glob_extent_map = (struct extent_map *)get_extents();
+        close(ctrl.fd);
+    }
+
     sort_extents(glob_extent_map);
 
     highest_segment =

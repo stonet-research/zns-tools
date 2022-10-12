@@ -465,9 +465,9 @@ int get_procfs_segment_bits(char *dev_name, uint32_t highest_segment) {
 
     // F2FS outputs in rows of 10, which we parse and initialize in the struct,
     // and only stop if we are >= to the highest segment, which means we may
-    // have parsed at most 9 more entries
+    // have parsed at most 10 more entries
     segman.sm_info =
-        calloc(sizeof(struct segment_info) * (highest_segment + 9), 1);
+        calloc(sizeof(struct segment_info) * (highest_segment + 10), 1);
 
     while ((read = getline(&line, &len, fp)) != -1) {
         // Skip first 2 lines that show file format
@@ -496,13 +496,14 @@ int get_procfs_segment_bits(char *dev_name, uint32_t highest_segment) {
                 }
 
                 free(split_string);
+                segman.sm_info[segman.nr_segments].id = segman.nr_segments;
                 segman.nr_segments++;
             }
         }
 
         free(contents);
 
-        if (segman.nr_segments >= highest_segment) {
+        if (segman.nr_segments > highest_segment) {
             fclose(fp);
             free(dev_string);
             return 1;
