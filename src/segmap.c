@@ -48,6 +48,7 @@ static void show_help() {
     MSG("-z [uint]\tOnly show this single zone\n");
     MSG("-e [uint]\tSet the ending zone to map. Default last zone.\n");
     MSG("-s\t\tShow segment statistics (requires -p to be enabled).\n");
+    MSG("-o\t\tShow only segment statistics (automatically enables -s).\n");
 
     show_info();
     exit(0);
@@ -154,40 +155,43 @@ static void collect_extents(char *path) {
  *
  * */
 static void show_segment_flags(uint32_t segment_id, uint8_t is_range) {
-    MSG("+++++ TYPE: ");
+    REP(ctrl.show_only_stats, "+++++ TYPE: ");
     if (segman.sm_info[segment_id].type == CURSEG_HOT_DATA) {
-        MSG("CURSEG_HOT_DATA");
+        REP(ctrl.show_only_stats, "CURSEG_HOT_DATA");
     } else if (segman.sm_info[segment_id].type == CURSEG_WARM_DATA) {
-        MSG("CURSEG_WARM_DATA");
+        REP(ctrl.show_only_stats, "CURSEG_WARM_DATA");
     } else if (segman.sm_info[segment_id].type == CURSEG_COLD_DATA) {
-        MSG("CURSEG_COLD_DATA");
+        REP(ctrl.show_only_stats, "CURSEG_COLD_DATA");
     } else if (segman.sm_info[segment_id].type == CURSEG_HOT_NODE) {
-        MSG("CURSEG_HOT_NODE");
+        REP(ctrl.show_only_stats, "CURSEG_HOT_NODE");
     } else if (segman.sm_info[segment_id].type == CURSEG_WARM_NODE) {
-        MSG("CURSEG_WARM_NODE");
+        REP(ctrl.show_only_stats, "CURSEG_WARM_NODE");
     } else if (segman.sm_info[segment_id].type == CURSEG_COLD_NODE) {
-        MSG("CURSEG_COLD_NODE");
+        REP(ctrl.show_only_stats, "CURSEG_COLD_NODE");
     }
 
-    MSG("  VALID BLOCKS: %3u",
+    REP(ctrl.show_only_stats, "  VALID BLOCKS: %3u",
         segman.sm_info[segment_id].valid_blocks << F2FS_BLKSIZE_BITS >>
             ctrl.sector_shift);
     if (is_range) {
-        MSG(" per segment\n");
+        REP(ctrl.show_only_stats, " per segment\n");
     } else {
-        MSG("\n");
+        REP(ctrl.show_only_stats, "\n");
     }
 }
 
 static void show_segment_info(uint64_t segment_start) {
     if (ctrl.cur_segment != segment_start) {
-        MSG("\n________________________________________________________________"
+        REP(ctrl.show_only_stats,
+            "\n________________________________________________________________"
             "__________________________________________________________________"
             "__________\n");
-        MSG("------------------------------------------------------------------"
+        REP(ctrl.show_only_stats,
+            "------------------------------------------------------------------"
             "------------------------------------------------------------------"
             "--------\n");
-        MSG("SEGMENT: %-4lu  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
+        REP(ctrl.show_only_stats,
+            "SEGMENT: %-4lu  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
             "  SIZE: %#-10" PRIx64 "\n",
             segment_start, segment_start << ctrl.segment_shift,
             ((segment_start << ctrl.segment_shift) + ctrl.f2fs_segment_sectors),
@@ -195,7 +199,8 @@ static void show_segment_info(uint64_t segment_start) {
         if (ctrl.procfs) {
             show_segment_flags(segment_start, 0);
         }
-        MSG("------------------------------------------------------------------"
+        REP(ctrl.show_only_stats,
+            "------------------------------------------------------------------"
             "------------------------------------------------------------------"
             "--------\n");
         ctrl.cur_segment = segment_start;
@@ -218,7 +223,8 @@ static void show_beginning_segment(uint64_t i) {
         (glob_extent_map->extent[i].phy_blk & ctrl.f2fs_segment_mask);
     uint64_t segment_end = segment_start + (ctrl.f2fs_segment_sectors);
 
-    MSG("***** EXTENT:  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
+    REP(ctrl.show_only_stats,
+        "***** EXTENT:  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
         "  SIZE: %#-10" PRIx64 "  FILE: %50s  EXTID:  %d/%-5d\n",
         glob_extent_map->extent[i].phy_blk, segment_end,
         segment_end - glob_extent_map->extent[i].phy_blk,
@@ -318,7 +324,8 @@ static void show_consecutive_segments(uint64_t i, uint64_t segment_start) {
         // in the next segment then we just want to show the 1st segment (2nd
         // segment will be printed in the function after this)
         show_segment_info(segment_start);
-        MSG("***** EXTENT:  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
+        REP(ctrl.show_only_stats,
+            "***** EXTENT:  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
             "  SIZE: %#-10" PRIx64 "  FILE: %50s  EXTID:  %d/%-5d\n",
             glob_extent_map->extent[i].phy_blk,
             segment_end << ctrl.segment_shift,
@@ -327,13 +334,16 @@ static void show_consecutive_segments(uint64_t i, uint64_t segment_start) {
             glob_extent_map->extent[i].ext_nr + 1,
             get_file_counter(glob_extent_map->extent[i].file));
     } else {
-        MSG("\n________________________________________________________________"
+        REP(ctrl.show_only_stats,
+            "\n________________________________________________________________"
             "__________________________________________________________________"
             "__________\n");
-        MSG("------------------------------------------------------------------"
+        REP(ctrl.show_only_stats,
+            "------------------------------------------------------------------"
             "------------------------------------------------------------------"
             "--------\n");
-        MSG(">>>>> SEGMENT RANGE: %-4lu-%-4lu   PBAS: %#-10" PRIx64
+        REP(ctrl.show_only_stats,
+            ">>>>> SEGMENT RANGE: %-4lu-%-4lu   PBAS: %#-10" PRIx64
             "  PBAE: %#-10" PRIx64 "  SIZE: %#-10" PRIx64 "\n",
             segment_start, segment_end - 1, segment_start << ctrl.segment_shift,
             segment_end << ctrl.segment_shift,
@@ -348,10 +358,12 @@ static void show_consecutive_segments(uint64_t i, uint64_t segment_start) {
             show_segment_flags(segment_start, 1);
         }
 
-        MSG("------------------------------------------------------------------"
+        REP(ctrl.show_only_stats,
+            "------------------------------------------------------------------"
             "------------------------------------------------------------------"
             "--------\n");
-        MSG("***** EXTENT:  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
+        REP(ctrl.show_only_stats,
+            "***** EXTENT:  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
             "  SIZE: %#-10" PRIx64 "  FILE: %50s  EXTID:  %d/%-5d\n",
             segment_start << ctrl.segment_shift,
             segment_end << ctrl.segment_shift,
@@ -377,7 +389,8 @@ static void show_remainder_segment(uint64_t i) {
                          (segment_start << ctrl.segment_shift);
 
     show_segment_info(segment_start);
-    MSG("***** EXTENT:  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
+    REP(ctrl.show_only_stats,
+        "***** EXTENT:  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
         "  SIZE: %#-10" PRIx64 "  FILE: %50s  EXTID:  %d/%-5d\n",
         segment_start << ctrl.segment_shift,
         (segment_start << ctrl.segment_shift) + remainder, remainder,
@@ -401,10 +414,12 @@ static void show_segment_report() {
         segmap_man.fs = calloc(sizeof(struct file_stats) * ctrl.nr_files, 1);
     }
 
-    MSG("================================================================="
+    REP(ctrl.show_only_stats,
+        "================================================================="
         "===\n");
-    MSG("\t\t\tSEGMENT MAPPINGS\n");
-    MSG("==================================================================="
+    REP(ctrl.show_only_stats, "\t\t\tSEGMENT MAPPINGS\n");
+    REP(ctrl.show_only_stats,
+        "==================================================================="
         "=\n");
 
     for (uint64_t i = 0; i < glob_extent_map->ext_ctr; i++) {
@@ -421,13 +436,16 @@ static void show_segment_report() {
 
         if (current_zone != glob_extent_map->extent[i].zone) {
             if (current_zone != 0) {
-                MSG("----------------------------------------------------------"
+                REP(ctrl.show_only_stats,
+                    "----------------------------------------------------------"
                     "----------------------------------------------------------"
                     "------------------------\n");
             }
             current_zone = glob_extent_map->extent[i].zone;
             glob_extent_map->zone_ctr++;
-            print_zone_info(current_zone);
+            if (!ctrl.show_only_stats) {
+                print_zone_info(current_zone);
+            }
         }
 
         uint64_t segment_start =
@@ -449,7 +467,8 @@ static void show_segment_report() {
                 }
             }
 
-            MSG("***** EXTENT:  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
+            REP(ctrl.show_only_stats,
+                "***** EXTENT:  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
                 "  SIZE: %#-10" PRIx64 "  FILE: %50s  EXTID:  %d/%-5d\n",
                 glob_extent_map->extent[i].phy_blk,
                 glob_extent_map->extent[i].phy_blk +
@@ -500,7 +519,8 @@ static void show_segment_report() {
     }
 
     if (ctrl.show_class_stats) {
-        MSG("\n\n=============================================================="
+        REP(ctrl.show_only_stats, "\n\n");
+        MSG("=============================================================="
             "==="
             "===\n");
         MSG("\t\t\tSEGMENT STATS\n");
@@ -554,7 +574,7 @@ int main(int argc, char *argv[]) {
     memset(&segmap_man, 0, sizeof(struct segmap_manager));
     ctrl.exclude_flags = FIEMAP_EXTENT_DATA_INLINE;
 
-    while ((c = getopt(argc, argv, "d:hil:ws:e:pz:c")) != -1) {
+    while ((c = getopt(argc, argv, "d:hil:ws:e:pz:co")) != -1) {
         switch (c) {
         case 'h':
             show_help();
@@ -589,6 +609,10 @@ int main(int argc, char *argv[]) {
             ctrl.procfs = 1;
             break;
         case 'c':
+            ctrl.show_class_stats = 1;
+            break;
+        case 'o':
+            ctrl.show_only_stats = 1;
             ctrl.show_class_stats = 1;
             break;
         default:
