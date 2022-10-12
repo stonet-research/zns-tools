@@ -240,17 +240,17 @@ static void set_segment_counters(uint32_t segment_id, uint32_t num_segments) {
     segmap_man.segment_ctr += num_segments;
 
     switch (segman.sm_info[segment_id].type) {
-        case CURSEG_COLD_DATA:
-            segmap_man.cold_ctr += num_segments;
-            break;
-        case CURSEG_WARM_DATA:
-            segmap_man.warm_ctr += num_segments;
-            break;
-        case CURSEG_HOT_DATA:
-            segmap_man.hot_ctr += num_segments;
-            break;
-        default:
-            break;
+    case CURSEG_COLD_DATA:
+        segmap_man.cold_ctr += num_segments;
+        break;
+    case CURSEG_WARM_DATA:
+        segmap_man.warm_ctr += num_segments;
+        break;
+    case CURSEG_HOT_DATA:
+        segmap_man.hot_ctr += num_segments;
+        break;
+    default:
+        break;
     }
 }
 
@@ -389,16 +389,20 @@ static void show_segment_report() {
 
         uint64_t segment_start =
             (glob_extent_map->extent[i].phy_blk & ctrl.f2fs_segment_mask);
-        uint64_t extent_end = glob_extent_map->extent[i].phy_blk + glob_extent_map->extent[i].len;
+        uint64_t extent_end =
+            glob_extent_map->extent[i].phy_blk + glob_extent_map->extent[i].len;
 
         // if the beginning of the extent and the ending of the extent are in
         // the same segment
-        if (segment_start == (extent_end & ctrl.f2fs_segment_mask) || extent_end == (segment_start + (F2FS_SEGMENT_BYTES >> ctrl.sector_shift))) {
+        if (segment_start == (extent_end & ctrl.f2fs_segment_mask) ||
+            extent_end ==
+                (segment_start + (F2FS_SEGMENT_BYTES >> ctrl.sector_shift))) {
             if (segment_id != ctrl.cur_segment) {
                 show_segment_info(segment_id);
                 ctrl.cur_segment = segment_id;
                 if (ctrl.show_class_stats && ctrl.procfs) {
-                    set_segment_counters(segment_start >> ctrl.segment_shift, 1);
+                    set_segment_counters(segment_start >> ctrl.segment_shift,
+                                         1);
                 }
             }
 
@@ -425,7 +429,8 @@ static void show_segment_report() {
                 }
                 show_beginning_segment(i);
                 if (ctrl.show_class_stats && ctrl.procfs) {
-                    set_segment_counters(segment_start >> ctrl.segment_shift, 1);
+                    set_segment_counters(segment_start >> ctrl.segment_shift,
+                                         1);
                 }
                 segment_id++;
             }
@@ -451,21 +456,25 @@ static void show_segment_report() {
     }
 
     if (ctrl.show_class_stats) {
-        MSG("\n\n================================================================="
+        MSG("\n\n=============================================================="
+            "==="
             "===\n");
         MSG("\t\t\tSEGMENT STATS\n");
-        MSG("==================================================================="
-        "=\n");
+        MSG("=================================================================="
+            "="
+            "=\n");
 
         FORMATTER
-        MSG("%-50s | Number of Extents | Number of Occupied Segments | Number of "
+        MSG("%-50s | Number of Extents | Number of Occupied Segments | Number "
+            "of "
             "Occupied Zones | Cold Segments | Warm Segments | Hot Segments\n",
             "Dir/File Name");
         FORMATTER
 
         MSG("%-50s | %-17u | %-27u | %-24u | %-13u | %-13u | %-13u\n",
             segmap_man.dir, glob_extent_map->ext_ctr, segmap_man.segment_ctr,
-            glob_extent_map->zone_ctr, segmap_man.cold_ctr, segmap_man.warm_ctr, segmap_man.hot_ctr);
+            glob_extent_map->zone_ctr, segmap_man.cold_ctr, segmap_man.warm_ctr,
+            segmap_man.hot_ctr);
     }
 }
 

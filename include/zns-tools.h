@@ -86,7 +86,8 @@ struct control {
     uint8_t show_superblock; /* zns.inode flag to print superblock */
     uint8_t show_checkpoint; /* zns.inode flag to print checkpoint */
     uint8_t procfs; /* zns.segmap use procfs entry segment_info from F2FS */
-    uint8_t show_class_stats; /* zns.segmap show stats of heat classifications */
+    uint8_t
+        show_class_stats; /* zns.segmap show stats of heat classifications */
 };
 
 struct extent {

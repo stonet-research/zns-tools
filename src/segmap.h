@@ -6,8 +6,8 @@
 #include <dirent.h>
 
 struct segmap_manager {
-    char *dir; /* Storing the cmd_line arg */
-    uint8_t isdir; /* identify if it is a directory or a file */
+    char *dir;            /* Storing the cmd_line arg */
+    uint8_t isdir;        /* identify if it is a directory or a file */
     uint32_t segment_ctr; /* count number of segments occupied by file */
     uint32_t cold_ctr;    /* segment type counter: cold */
     uint32_t warm_ctr;    /* segment type counter: warm */
