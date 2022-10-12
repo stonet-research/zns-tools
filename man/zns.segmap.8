@@ -6,7 +6,7 @@ zns.segmap \- Map file extents to F2FS segments on ZNS devices. Running this too
 .SH SYNOPSIS
 .B zns.segmap
 .B \-d [dir]
-.I path to directory to be mapped
+.I path to directory/file to be mapped
 [
 .B \-h
 .I show help menu
@@ -40,8 +40,8 @@ zns.segmap \- Map file extents to F2FS segments on ZNS devices. Running this too
 takes extents of files and maps these to segments on the ZNS device. The aim being to locate data placement across segments, with fragmentation, as well as indicating good/bad hotness classification. The tool calls \fIioctl()\fP with \fiFIEMAP\fP on all files in a directory and maps these in LBA order to the segments on the device. Since there are thousands of segments, we recommend analyzing zones individually, for which the tool provides the option for, or depicting zone ranges. The directory to be mapped is typically the mount location of the file system, however any subdirectory of it can also be mapped, e.g., if there is particular interest for locating WAL files only for a database, such as with RocksDB.
 
 .SH OPTIONS
-.B \-d [dir] " path to directory to be mapped"
-The path to the directory for which all files to be mapped are in. Can be file system mount directory, or any of its subdirectories.
+.B \-d [dir] " path to directory/file to be mapped"
+The path to the directory or file, for which all files to be mapped are in. The directory can be the file system mount root directory, or any of its subdirectories, or a single file.
 .TP
 .BI \-h " show help menu"
 Show the help menu with flag and acronym information.

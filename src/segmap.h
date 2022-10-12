@@ -7,6 +7,7 @@
 
 struct segment_config {
     char *dir; /* Storing the cmd_line arg */
+    uint8_t isdir; /* identify if it is a directory or a file */
 };
 
 extern struct segment_config segconf;

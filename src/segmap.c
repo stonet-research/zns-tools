@@ -66,8 +66,11 @@ static void check_dir() {
         ERR_MSG("Failed stat on dir %s\n", segconf.dir);
     }
 
-    if (!S_ISDIR(stats.st_mode)) {
-        ERR_MSG("%s is not a directory\n", segconf.dir);
+    if (S_ISDIR(stats.st_mode)) {
+        segconf.isdir = 1;
+        INFO(1, "%s is a directory\n", segconf.dir);
+    } else {
+        INFO(1, "%s is a file\n", segconf.dir);
     }
 
     init_dev(&stats);
@@ -488,7 +491,21 @@ int main(int argc, char *argv[]) {
     ctrl.stats = calloc(sizeof(struct stat), sizeof(char *));
     glob_extent_map = calloc(sizeof(struct extent_map), sizeof(char *));
 
-    collect_extents(segconf.dir);
+    if (segconf.isdir) {
+        collect_extents(segconf.dir);
+    } else {
+        ctrl.filename = segconf.dir;
+        ctrl.fd = open(ctrl.filename, O_RDONLY);
+        ctrl.stats = calloc(sizeof(struct stat), sizeof(char *));
+
+        if (fstat(ctrl.fd, ctrl.stats) < 0) {
+            ERR_MSG("Failed stat on file %s\n", ctrl.filename);
+        }
+
+        glob_extent_map = (struct extent_map *)get_extents();
+        close(ctrl.fd);
+    }
+
     sort_extents(glob_extent_map);
 
     highest_segment =
