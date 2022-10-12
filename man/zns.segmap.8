@@ -35,6 +35,10 @@ zns.segmap \- Map file extents to F2FS segments on ZNS devices. Running this too
 .B \-z
 .I show only mappings in this zone
 ]
+[
+.B \-c
+.I show statistics of segments (requires -p to be enabled)
+]
 
 .SH DESCRIPTION
 takes extents of files and maps these to segments on the ZNS device. The aim being to locate data placement across segments, with fragmentation, as well as indicating good/bad hotness classification. The tool calls \fIioctl()\fP with \fiFIEMAP\fP on all files in a directory and maps these in LBA order to the segments on the device. Since there are thousands of segments, we recommend analyzing zones individually, for which the tool provides the option for, or depicting zone ranges. The directory to be mapped is typically the mount location of the file system, however any subdirectory of it can also be mapped, e.g., if there is particular interest for locating WAL files only for a database, such as with RocksDB.
@@ -63,6 +67,9 @@ Similarly, show only mappings up to this particular zone (Default: last zone).
 .TP
 .BI \-z " show only mappings in this zone"
 Decrease output further by only showing mappings for this particular zone.
+.TP
+.BI \-c " show segment statistics"
+Shows several statistics for segment information (requires procfs to be enabled with -p flag).
 
 .SH OUTPUT
 .B zns.segmap

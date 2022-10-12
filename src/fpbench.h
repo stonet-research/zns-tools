@@ -47,11 +47,6 @@ struct workload_manager {
     char *buf;            /* source buffer with random data to write from */
 };
 
-#define FORMATTER                                                              \
-    MSG("====================================================================" \
-        "====================================================================" \
-        "======================================\n");
-
 extern struct workload_manager wl_man;
 
 #endif

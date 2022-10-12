@@ -86,6 +86,7 @@ struct control {
     uint8_t show_superblock; /* zns.inode flag to print superblock */
     uint8_t show_checkpoint; /* zns.inode flag to print checkpoint */
     uint8_t procfs; /* zns.segmap use procfs entry segment_info from F2FS */
+    uint8_t show_class_stats; /* zns.segmap show stats of heat classifications */
 };
 
 struct extent {
@@ -152,5 +153,10 @@ extern void init_ctrl();
             printf("\033[1;33mInfo\033[0m: " fmt, ##__VA_ARGS__);              \
         }                                                                      \
     } while (0)
+
+#define FORMATTER                                                              \
+    MSG("--------------------------------------------------------------------" \
+        "--------------------------------------------------------------------" \
+        "--------------------------------------\n");
 
 #endif
