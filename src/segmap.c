@@ -226,6 +226,22 @@ static void show_beginning_segment(uint64_t i) {
         get_file_counter(glob_extent_map->extent[i].file));
 }
 
+static unsigned int get_file_stats_index(char *filename) {
+    uint32_t i = 0;
+
+    for (i = 0; i < segmap_man.ctr; i++) {
+        if (strncmp(segmap_man.fs[i].filename, filename, MAX_FILE_LENGTH) == 0) {
+            return i;
+        } 
+    }
+
+    segmap_man.fs[i].filename = calloc(MAX_FILE_LENGTH, 1);
+    memcpy(segmap_man.fs[i].filename, filename, MAX_FILE_LENGTH);
+    segmap_man.ctr++;
+
+    return i;
+}
+
 /*
  * Track information for the workload, counting the types of segments the
  * file is split up into. This function retrieves the segment type of the
@@ -236,18 +252,38 @@ static void show_beginning_segment(uint64_t i) {
  * 1, but for segment ranges this options allows different values.
  *
  * */
-static void set_segment_counters(uint32_t segment_id, uint32_t num_segments) {
+static void set_segment_counters(uint32_t segment_id, uint32_t num_segments, struct extent extent) {
+    uint32_t fs_stats_index = 0; 
+
     segmap_man.segment_ctr += num_segments;
+
+    if (ctrl.show_class_stats && ctrl.nr_files > 1) {
+        fs_stats_index = get_file_stats_index(extent.file);
+        segmap_man.fs[fs_stats_index].segment_ctr += num_segments;
+        if (segmap_man.fs[fs_stats_index].last_zone != extent.zone) {
+            segmap_man.fs[fs_stats_index].last_zone = extent.zone;
+            segmap_man.fs[fs_stats_index].zone_ctr++;
+        }
+    }
 
     switch (segman.sm_info[segment_id].type) {
     case CURSEG_COLD_DATA:
         segmap_man.cold_ctr += num_segments;
+        if (ctrl.show_class_stats && ctrl.nr_files > 1) {
+            segmap_man.fs[fs_stats_index].cold_ctr += num_segments;
+        }
         break;
     case CURSEG_WARM_DATA:
         segmap_man.warm_ctr += num_segments;
+        if (ctrl.show_class_stats && ctrl.nr_files > 1) {
+            segmap_man.fs[fs_stats_index].warm_ctr += num_segments;
+        }
         break;
     case CURSEG_HOT_DATA:
         segmap_man.hot_ctr += num_segments;
+        if (ctrl.show_class_stats && ctrl.nr_files > 1) {
+            segmap_man.fs[fs_stats_index].hot_ctr += num_segments;
+        }
         break;
     default:
         break;
@@ -271,7 +307,7 @@ static void show_consecutive_segments(uint64_t i, uint64_t segment_start) {
     uint64_t num_segments = segment_end - segment_start;
 
     if (ctrl.show_class_stats && ctrl.procfs) {
-        set_segment_counters(segment_start, num_segments);
+        set_segment_counters(segment_start, num_segments, glob_extent_map->extent[i]);
     }
 
     if (num_segments == 1) {
@@ -358,6 +394,10 @@ static void show_segment_report() {
     uint64_t end_lba =
         (ctrl.end_zone + 1) * ctrl.znsdev.zone_size - ctrl.znsdev.zone_size;
 
+    if (ctrl.show_class_stats) {
+        segmap_man.fs = calloc(sizeof(struct file_stats) * ctrl.nr_files, 1);
+    }
+
     MSG("================================================================="
         "===\n");
     MSG("\t\t\tSEGMENT MAPPINGS\n");
@@ -402,7 +442,7 @@ static void show_segment_report() {
                 ctrl.cur_segment = segment_id;
                 if (ctrl.show_class_stats && ctrl.procfs) {
                     set_segment_counters(segment_start >> ctrl.segment_shift,
-                                         1);
+                                         1, glob_extent_map->extent[i]);
                 }
             }
 
@@ -430,7 +470,7 @@ static void show_segment_report() {
                 show_beginning_segment(i);
                 if (ctrl.show_class_stats && ctrl.procfs) {
                     set_segment_counters(segment_start >> ctrl.segment_shift,
-                                         1);
+                                         1, glob_extent_map->extent[i]);
                 }
                 segment_id++;
             }
@@ -449,7 +489,7 @@ static void show_segment_report() {
                                    glob_extent_map->extent[i].len) {
                 show_remainder_segment(i);
                 if (ctrl.show_class_stats && ctrl.procfs) {
-                    set_segment_counters(segment_end >> ctrl.segment_shift, 1);
+                    set_segment_counters(segment_end >> ctrl.segment_shift, 1, glob_extent_map->extent[i]);
                 }
             }
         }
@@ -464,17 +504,33 @@ static void show_segment_report() {
             "="
             "=\n");
 
+        if (!(ctrl.exclude_flags & FIEMAP_EXTENT_DATA_INLINE)) {
+            WARN("Segment Heat Classification statistics exclude inode inlined file data, and is only for segments of type DATA, not NODE.\n");
+        }
+
         FORMATTER
-        MSG("%-50s | Number of Extents | Number of Occupied Segments | Number "
+        MSG("%-50s | Number of Extents | Number of Occupying Segments | Number "
             "of "
-            "Occupied Zones | Cold Segments | Warm Segments | Hot Segments\n",
+            "Occupying Zones | Cold Segments | Warm Segments | Hot Segments\n",
             "Dir/File Name");
         FORMATTER
 
-        MSG("%-50s | %-17u | %-27u | %-24u | %-13u | %-13u | %-13u\n",
+        MSG("%-50s | %-17u | %-28u | %-25u | %-13u | %-13u | %-13u\n",
             segmap_man.dir, glob_extent_map->ext_ctr, segmap_man.segment_ctr,
             glob_extent_map->zone_ctr, segmap_man.cold_ctr, segmap_man.warm_ctr,
             segmap_man.hot_ctr);
+
+        // Show the per file statistics of directory if has more than 1 file
+        if (segmap_man.isdir && ctrl.nr_files > 1) {
+            UNDERSCORE_FORMATTER
+            FORMATTER
+            for (uint32_t i = 0; i < segmap_man.ctr; i++) {
+                MSG("%-50s | %-17u | %-28u | %-25u | %-13u | %-13u | %-13u\n",
+                        segmap_man.fs[i].filename, get_file_counter(segmap_man.fs[i].filename), segmap_man.fs[i].segment_ctr,
+                        segmap_man.fs[i].zone_ctr, segmap_man.fs[i].cold_ctr, segmap_man.fs[i].warm_ctr,
+                        segmap_man.fs[i].hot_ctr);
+            }
+        }
     }
 }
 
@@ -605,6 +661,12 @@ int main(int argc, char *argv[]) {
     free(glob_extent_map);
     free(file_counter_map->file);
     free(file_counter_map);
+    if (ctrl.show_class_stats) {
+        free(segmap_man.fs);
+        for (uint32_t i = 0; i < segmap_man.ctr; i++) {
+            free(segmap_man.fs[i].filename);
+        }
+    }
     if (ctrl.procfs) {
         free(segman.sm_info);
     }
