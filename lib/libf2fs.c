@@ -496,6 +496,7 @@ int get_procfs_segment_bits(char *dev_name, uint32_t highest_segment) {
                 }
 
                 free(split_string);
+                segman.sm_info[segman.nr_segments].id = segman.nr_segments;
                 segman.nr_segments++;
             }
         }

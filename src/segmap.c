@@ -271,8 +271,7 @@ static void show_consecutive_segments(uint64_t i, uint64_t segment_start) {
     uint64_t num_segments = segment_end - segment_start;
 
     if (ctrl.show_class_stats && ctrl.procfs) {
-        set_segment_counters(segment_start >> ctrl.segment_shift,
-                             num_segments);
+        set_segment_counters(segment_start, num_segments);
     }
 
     if (num_segments == 1) {
@@ -390,15 +389,17 @@ static void show_segment_report() {
 
         uint64_t segment_start =
             (glob_extent_map->extent[i].phy_blk & ctrl.f2fs_segment_mask);
+        uint64_t extent_end = glob_extent_map->extent[i].phy_blk + glob_extent_map->extent[i].len;
 
         // if the beginning of the extent and the ending of the extent are in
         // the same segment
-        if (segment_start == ((glob_extent_map->extent[i].phy_blk +
-                               glob_extent_map->extent[i].len) &
-                              ctrl.f2fs_segment_mask)) {
+        if (segment_start == (extent_end & ctrl.f2fs_segment_mask) || extent_end == (segment_start + (F2FS_SEGMENT_BYTES >> ctrl.sector_shift))) {
             if (segment_id != ctrl.cur_segment) {
                 show_segment_info(segment_id);
                 ctrl.cur_segment = segment_id;
+                if (ctrl.show_class_stats && ctrl.procfs) {
+                    set_segment_counters(segment_start >> ctrl.segment_shift, 1);
+                }
             }
 
             MSG("***** EXTENT:  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
@@ -409,10 +410,6 @@ static void show_segment_report() {
                 glob_extent_map->extent[i].len, glob_extent_map->extent[i].file,
                 glob_extent_map->extent[i].ext_nr + 1,
                 get_file_counter(glob_extent_map->extent[i].file));
-
-            if (ctrl.show_class_stats && ctrl.procfs) {
-                set_segment_counters(segment_start >> ctrl.segment_shift, 1);
-            }
         } else {
             // Else the extent spans across multiple segments, so we need to
             // break it up
