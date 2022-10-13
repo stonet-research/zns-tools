@@ -75,12 +75,12 @@ Again, it requires to be run with root privileges. Possible flags are:
 
 The `-i` flag is meant for very small files that have their data inlined into the inode. If this flag is enabled, extents will show up with a `SIZE: 0`, indicating the data is inlined in the inode.
 
-### zns.fsinfo
+### zns.imap
 
-`zns.fsinfo` is meant to get some information from the F2FS setup. It locates and prints the inode a file, and can furthermore print the contents of the F2FS superblock and checkpoint area. We recommend running this in the verbose logging to get more information, as this tool is merely meant for information on F2FS layout.
+`zns.imap` is meant to get some information from the F2FS setup. It locates and prints the inode a file, and can furthermore print the contents of the F2FS superblock and checkpoint area. We recommend running this in the verbose logging to get more information, as this tool is merely meant for information on F2FS layout.
 
 ```bash
-sudo ./src/zns.fsinfo -f /mnt/f2fs/LOG -l 1
+sudo ./src/zns.imap -f /mnt/f2fs/LOG -l 1
 ```
 
 Possible flags are:
