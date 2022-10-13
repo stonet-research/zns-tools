@@ -1,6 +1,6 @@
 src/zns.fiemap
 src/zns.segmap
-src/zns.fsinfo
+src/zns.imap
 src/zns.fpbench
 
 Makefile

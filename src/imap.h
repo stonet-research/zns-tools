@@ -1,5 +1,5 @@
-#ifndef _FS_INFO_H_
-#define _FS_INFO_H_
+#ifndef _IMAP_H_
+#define _IMAP_H_
 
 #include "zns-tools.h"
 
