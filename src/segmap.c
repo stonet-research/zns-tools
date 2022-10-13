@@ -232,6 +232,15 @@ static void show_beginning_segment(uint64_t i) {
         get_file_counter(glob_extent_map->extent[i].file));
 }
 
+/* 
+ * Get the index in segmap_man.fs for the filename
+ *
+ * @filename: filename to get index of
+ *
+ * Note, creates a new fs entry if the file entry does not exits yet.
+ * segmap_man.ctr indicates the number of initialized entries.
+ *
+ * */
 static unsigned int get_file_stats_index(char *filename) {
     uint32_t i = 0;
 
@@ -315,7 +324,9 @@ static void show_consecutive_segments(uint64_t i, uint64_t segment_start) {
     uint64_t num_segments = segment_end - segment_start;
 
     if (ctrl.show_class_stats && ctrl.procfs) {
-        set_segment_counters(segment_start, num_segments,
+        // num_segments + 1 because the ending segment is included, but we only
+        // use its starting LBA
+        set_segment_counters(segment_start, num_segments + 1,
                              glob_extent_map->extent[i]);
     }
 
@@ -630,6 +641,10 @@ int main(int argc, char *argv[]) {
     }
 
     if (ctrl.show_class_stats && !ctrl.procfs) {
+        if (ctrl.show_only_stats) {
+            ERR_MSG("Cannot show stats without -p enabled\n");
+        }
+
         WARN("-c requires -p flag to be enabled. Disabling it.\n");
         ctrl.show_class_stats = 0;
     }

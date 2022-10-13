@@ -31,6 +31,11 @@ zns.fpbench \- benchmark F2FS data placement by generating workloads that pass w
 .B \-n 
 .I number of jobs to concurrently repeat the workload on different files
 ]
+[
+.B \-c 
+.I call fsync() after each block written
+]
+
 
 .SH DESCRIPTION
 is used for identifying the F2FS placement decisions based on the provided write hint from the benchmark. It writes the file with the specified size, in units of the specified block size, and sets the write hint with \fIfcntl()\fP. Concurrently repeating the workload is possible to run the same exact workload on different file names, hence allowing lockless concurrent writing. After writing, all files have extents located, the extents mapped to segments, and segment information retrieved, focusing on the heat classification that the segment was assigned.
@@ -81,6 +86,9 @@ RWH_WRITE_LIFE_EXTREME = 5
 .I number of jobs to concurrently repeat the workload on different files
 The number of jobs causes the program to \fIfork()\fP for each numjob, running the same workload on a different file.
 .TP
+.B \-c 
+.I call fsync() after each block written
+If enabled, after each block (specified with the given block size), fsync() is called on the file. Without, a single fsync() is called after all block have been written.
 
 .SH AUTHORS
 The code was written by Nick Tehrany <nicktehrany1@gmail.com>.
