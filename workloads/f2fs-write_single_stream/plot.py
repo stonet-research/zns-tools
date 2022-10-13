@@ -19,7 +19,7 @@ f2fs_single_stream_concur_iops = [131843.056436, 136349.526327, 135921.650850, 1
 if __name__ == '__main__':
     fig, ax = plt.subplots()
 
-    xticks=np.arange(0,8,1)
+    xticks = np.arange(1,9,1)
     queue_depths = np.arange(8)
 
     zns_data = [val / 1000 for val in zns_single_zone_iops]
@@ -34,8 +34,8 @@ if __name__ == '__main__':
     ax.grid(which='major', linestyle='dashed', linewidth='1')
     ax.set_axisbelow(True)
     ax.legend(loc='lower right')
-    ax.xaxis.set_ticks(np.arange(0,8,1))
-    ax.xaxis.set_ticklabels(queue_depths)
+    ax.xaxis.set_ticks(np.arange(1,9,1))
+    ax.xaxis.set_ticklabels(xticks)
     ax.set_ylim(bottom=0, top=170)
     ax.set_ylabel("KIOPS")
     ax.set_xlabel("Outstanding I/Os")
