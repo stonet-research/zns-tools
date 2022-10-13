@@ -1,0 +1,16 @@
+#! /bin/bash
+
+set -e
+
+DATA_DIR="zns_single_zone_iodepth"
+DEV="nvme0n2"
+IODEPTH=($(seq 1 1 8))
+
+mkdir -p $DATA_DIR
+
+for iodepth in ${IODEPTH[@]}; do
+    echo "Running benchmark with iodepth: ${iodepth}"
+    sudo nvme zns reset-zone -a /dev/${DEV}
+
+    sudo ${FIO_HOME}/fio --name=zns-fio --filename=/dev/nvme0n2 --size=40z --ioengine=libaio --iodepth=${iodepth} --rw=write --bs=4K  --runtime=30s --numjobs=1 --ramp_time=10s --output=${DATA_DIR}/zns_iodepth-${iodepth}.json --output-format=json
+done
