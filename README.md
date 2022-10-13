@@ -15,6 +15,14 @@ make
 sudo make install
 ```
 
+## Examples
+
+In the `examples/` directory we provide an execution for each of the tools, and detail what the output will look like. For more detail on running and understanding output, consult the respective manuals in `man` (or using man `zns.<tool_name>` if installed on system).
+
+## Workloads
+
+ We additionally run several workloads on F2FS, for which we then use the `zns-tools` present here to understand the file mappings of the workloads. These workloads include `fio` and `rocksdb` + `db_bench` runs. All workloads are provided in the `workloads/` directory, where respective Readmes provide further detail.
+
 ## File Mapping Tools
 
 The `src/` directory contains several tools for identifying and mapping out F2FS file allocation.
@@ -67,12 +75,12 @@ Again, it requires to be run with root privileges. Possible flags are:
 
 The `-i` flag is meant for very small files that have their data inlined into the inode. If this flag is enabled, extents will show up with a `SIZE: 0`, indicating the data is inlined in the inode.
 
-### zns.fsinfo
+### zns.imap
 
-`zns.fsinfo` is meant to get some information from the F2FS setup. It locates and prints the inode a file, and can furthermore print the contents of the F2FS superblock and checkpoint area. We recommend running this in the verbose logging to get more information, as this tool is merely meant for information on F2FS layout.
+`zns.imap` is meant to get some information from the F2FS setup. It locates and prints the inode a file, and can furthermore print the contents of the F2FS superblock and checkpoint area. We recommend running this in the verbose logging to get more information, as this tool is merely meant for information on F2FS layout.
 
 ```bash
-sudo ./src/zns.fsinfo -f /mnt/f2fs/LOG -l 1
+sudo ./src/zns.imap -f /mnt/f2fs/LOG -l 1
 ```
 
 Possible flags are:
@@ -108,8 +116,8 @@ Possible flags are:
                      RWH_WRITE_LIFE_EXTREME = 5
 -h:              Show this help
 -n:              Number of jobs to concurrently execute the benchmark
+-c:              Call fsync() after each block written
 ```
 
-## Examples
+The benchmark is simple and is meant for only testing the adherence of F2FS with write hints if I/O is buffered and an `fsync()` is called on each file. For more advanced benchmarks, with asynchronous I/O, different engines and more possible configuration, use `fio` (which also supports write hints with the `--write_hint=short` flag). We provide the workloads we run with `fio` in the `workloads/` directory.
 
-In the `examples/` directory we provide an execution for each of the tools, and detail what the output will look like. For more detail on running and understanding output, consult the respective manuals in `man` (or using man `zns.<tool_name>` if installed on system).

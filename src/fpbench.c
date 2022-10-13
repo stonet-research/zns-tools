@@ -20,6 +20,7 @@ static void show_help() {
         "4\n\t\tRWH_WRITE_LIFE_EXTREME = 5\n");
     MSG("-h \t\tShow this help\n");
     MSG("-n \t\tNumber of jobs to concurrently execute the benchmark\n");
+    MSG("-c \t\tCall fsync() after each block written\n");
 
     exit(0);
 }
@@ -99,9 +100,14 @@ static void write_file(struct workload workload) {
         lseek(out, i, SEEK_SET);
         w = write(out, wl_man.buf, workload.bsize);
         INFO(3, "Job %d: Wrote %dB at offset %lu\n", workload.id, w, i);
+        if (ctrl.const_fsync) {
+            fsync(out);
+        }
     }
 
-    fsync(out);
+    if (!ctrl.const_fsync) {
+        fsync(out);
+    }
     close(out);
 }
 
@@ -269,7 +275,7 @@ static uint64_t get_integer_value(char *optarg) {
                optarg[strlen(optarg) - 1] == 'm') {
         multiplier = 1024 * 1024;
     } else if (optarg[strlen(optarg) - 1] == 'G' ||
-               optarg[strlen(optarg) - 1] == 'G') {
+               optarg[strlen(optarg) - 1] == 'g') {
         multiplier = 1024 * 1024 * 1024;
     } else {
         return strtoul(optarg, &ptr, 10);
@@ -355,7 +361,7 @@ int main(int argc, char *argv[]) {
     wl_man.wl[0].bsize = BLOCK_SZ;
     wl_man.wl[0].fsize = BLOCK_SZ;
 
-    while ((c = getopt(argc, argv, "b:f:l:hn:s:w:")) != -1) {
+    while ((c = getopt(argc, argv, "b:f:l:hn:s:w:c")) != -1) {
         switch (c) {
         case 'h':
             show_help();
@@ -384,6 +390,9 @@ int main(int argc, char *argv[]) {
             break;
         case 'l':
             ctrl.log_level = atoi(optarg);
+            break;
+        case 'c':
+            ctrl.const_fsync = 1;
             break;
         default:
             show_help();

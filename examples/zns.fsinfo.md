@@ -1,4 +1,4 @@
-# zns.fsinfo
+# zns.imap
 
 This tool shows information of a file's inode and possible F2FS metadata.
 
@@ -7,7 +7,7 @@ This tool shows information of a file's inode and possible F2FS metadata.
 This example shows a run with all flags set, locating the inode of a file, and printing all possible metadata.
 
 ```bash
-user@stosys:~/src/zns-tools$ sudo ./src/zns.fsinfo -f /mnt/f2fs/LOG -l 1 -s -c
+user@stosys:~/src/zns-tools$ sudo ./src/zns.imap -f /mnt/f2fs/LOG -l 1 -s -c
 Info: Found device in superblock /dev/nvme0n1
 Info: Found device in superblock /dev/nvme0n2
 Info: Device is conventional block device: /dev/nvme0n1

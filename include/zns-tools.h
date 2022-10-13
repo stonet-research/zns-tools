@@ -90,6 +90,7 @@ struct control {
         show_class_stats;    /* zns.segmap show stats of heat classifications */
     uint8_t show_only_stats; /* zns.segmap only show class stats not segment
                                 mappints */
+    uint8_t const_fsync;     /* zns.fpbench fsync after each written bock */
 };
 
 struct extent {

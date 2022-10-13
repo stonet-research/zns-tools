@@ -1,0 +1,26 @@
+#! /bin/bash
+
+set -e
+
+if [[ "$#" -ne "2" ]]; then printf "Missing args. Requires device names (e.g.,nvme2n1):\n\tsetup_f2fs [ZNS] [SSD]\n" && exit; fi
+
+# If not set by parent script (when setup is called from shell not script)
+[[ -z "${ZNS}" ]] && ZNS=$1
+[[ -z "${SSD}" ]] && SSD=$2
+[[ -z "${MOUNT}" ]] && MOUNT="/mnt/f2fs"
+
+# check if mounted then unmount
+[[ ! -z "$(lsblk | grep "${SSD}" | awk '{print $7}')" ]] && sudo umount /dev/${SSD}
+
+# format devices (f2fs does this as well but we are pedantic here) 
+sudo nvme zns reset-zone /dev/${ZNS} -a
+sudo env "PATH=${PATH}" nvme format --force /dev/${SSD}
+
+# Set correct scheduler
+echo mq-deadline | sudo tee /sys/block/${ZNS}/queue/scheduler > /dev/null
+
+# initalize devices with f2fs
+sudo env "PATH=${PATH}" mkfs.f2fs -f -m -c /dev/${ZNS} /dev/${SSD}
+sudo mkdir -p /mnt/f2fs
+sudo mount -t f2fs /dev/${SSD} ${MOUNT}
+sudo chown -R ${USER} /mnt/f2fs

@@ -232,6 +232,15 @@ static void show_beginning_segment(uint64_t i) {
         get_file_counter(glob_extent_map->extent[i].file));
 }
 
+/*
+ * Get the index in segmap_man.fs for the filename
+ *
+ * @filename: filename to get index of
+ *
+ * Note, creates a new fs entry if the file entry does not exits yet.
+ * segmap_man.ctr indicates the number of initialized entries.
+ *
+ * */
 static unsigned int get_file_stats_index(char *filename) {
     uint32_t i = 0;
 
@@ -315,7 +324,9 @@ static void show_consecutive_segments(uint64_t i, uint64_t segment_start) {
     uint64_t num_segments = segment_end - segment_start;
 
     if (ctrl.show_class_stats && ctrl.procfs) {
-        set_segment_counters(segment_start, num_segments,
+        // num_segments + 1 because the ending segment is included, but we only
+        // use its starting LBA
+        set_segment_counters(segment_start, num_segments + 1,
                              glob_extent_map->extent[i]);
     }
 
@@ -396,6 +407,53 @@ static void show_remainder_segment(uint64_t i) {
         (segment_start << ctrl.segment_shift) + remainder, remainder,
         glob_extent_map->extent[i].file, glob_extent_map->extent[i].ext_nr + 1,
         get_file_counter(glob_extent_map->extent[i].file));
+}
+
+/*
+ * Show the segment statistics report
+ *
+ * */
+static void show_segment_stats() {
+    REP(ctrl.show_only_stats, "\n\n");
+    MSG("=============================================================="
+        "==="
+        "===\n");
+    MSG("\t\t\tSEGMENT STATS\n");
+    MSG("=================================================================="
+        "="
+        "=\n");
+
+    if (!(ctrl.exclude_flags & FIEMAP_EXTENT_DATA_INLINE)) {
+        WARN("Segment Heat Classification statistics exclude inode inlined "
+             "file data, and is only for segments of type DATA, not "
+             "NODE.\n");
+    }
+
+    FORMATTER
+    MSG("%-50s | Number of Extents | Number of Occupying Segments | Number "
+        "of "
+        "Occupying Zones | Cold Segments | Warm Segments | Hot Segments\n",
+        "Dir/File Name");
+    FORMATTER
+
+    MSG("%-50s | %-17u | %-28u | %-25u | %-13u | %-13u | %-13u\n",
+        segmap_man.dir, glob_extent_map->ext_ctr, segmap_man.segment_ctr,
+        glob_extent_map->zone_ctr, segmap_man.cold_ctr, segmap_man.warm_ctr,
+        segmap_man.hot_ctr);
+
+    // Show the per file statistics of directory if has more than 1 file
+    if (segmap_man.isdir && ctrl.nr_files > 1) {
+        UNDERSCORE_FORMATTER
+        FORMATTER
+        for (uint32_t i = 0; i < segmap_man.ctr; i++) {
+            MSG("%-50s | %-17u | %-28u | %-25u | %-13u | %-13u | %-13u\n",
+                segmap_man.fs[i].filename,
+                get_file_counter(segmap_man.fs[i].filename),
+                segmap_man.fs[i].segment_ctr, segmap_man.fs[i].zone_ctr,
+                segmap_man.fs[i].cold_ctr, segmap_man.fs[i].warm_ctr,
+                segmap_man.fs[i].hot_ctr);
+        }
+    }
 }
 
 /*
@@ -519,46 +577,7 @@ static void show_segment_report() {
     }
 
     if (ctrl.show_class_stats) {
-        REP(ctrl.show_only_stats, "\n\n");
-        MSG("=============================================================="
-            "==="
-            "===\n");
-        MSG("\t\t\tSEGMENT STATS\n");
-        MSG("=================================================================="
-            "="
-            "=\n");
-
-        if (!(ctrl.exclude_flags & FIEMAP_EXTENT_DATA_INLINE)) {
-            WARN("Segment Heat Classification statistics exclude inode inlined "
-                 "file data, and is only for segments of type DATA, not "
-                 "NODE.\n");
-        }
-
-        FORMATTER
-        MSG("%-50s | Number of Extents | Number of Occupying Segments | Number "
-            "of "
-            "Occupying Zones | Cold Segments | Warm Segments | Hot Segments\n",
-            "Dir/File Name");
-        FORMATTER
-
-        MSG("%-50s | %-17u | %-28u | %-25u | %-13u | %-13u | %-13u\n",
-            segmap_man.dir, glob_extent_map->ext_ctr, segmap_man.segment_ctr,
-            glob_extent_map->zone_ctr, segmap_man.cold_ctr, segmap_man.warm_ctr,
-            segmap_man.hot_ctr);
-
-        // Show the per file statistics of directory if has more than 1 file
-        if (segmap_man.isdir && ctrl.nr_files > 1) {
-            UNDERSCORE_FORMATTER
-            FORMATTER
-            for (uint32_t i = 0; i < segmap_man.ctr; i++) {
-                MSG("%-50s | %-17u | %-28u | %-25u | %-13u | %-13u | %-13u\n",
-                    segmap_man.fs[i].filename,
-                    get_file_counter(segmap_man.fs[i].filename),
-                    segmap_man.fs[i].segment_ctr, segmap_man.fs[i].zone_ctr,
-                    segmap_man.fs[i].cold_ctr, segmap_man.fs[i].warm_ctr,
-                    segmap_man.fs[i].hot_ctr);
-            }
-        }
+        show_segment_stats();
     }
 }
 
@@ -630,6 +649,10 @@ int main(int argc, char *argv[]) {
     }
 
     if (ctrl.show_class_stats && !ctrl.procfs) {
+        if (ctrl.show_only_stats) {
+            ERR_MSG("Cannot show stats without -p enabled\n");
+        }
+
         WARN("-c requires -p flag to be enabled. Disabling it.\n");
         ctrl.show_class_stats = 0;
     }

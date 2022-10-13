@@ -1,0 +1,17 @@
+#! /bin/bash
+
+set -e
+
+DATA_DIR="f2fs_single_stream_concur"
+DEV="nvme0n1"
+ZNS="nvme0n2"
+THREADS=($(seq 1 1 8))
+
+mkdir -p $DATA_DIR
+
+for thread in ${THREADS[@]}; do
+    echo "Running benchmark with concurrency: ${thread}"
+    ../setup_f2fs ${ZNS} ${DEV}
+
+    sudo ${FIO_HOME}/fio --name=zns-fio --directory=/mnt/f2fs --size=10G --ioengine=libaio --iodepth=1 --rw=write --bs=4K --runtime=30s --numjobs=1 --ramp_time=10s --output=${DATA_DIR}/f2fs_concur-${thread}.json --output-format=json --write_hint=short --nrfiles=${thread} --thread=${thread}
+done
