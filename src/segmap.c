@@ -232,7 +232,7 @@ static void show_beginning_segment(uint64_t i) {
         get_file_counter(glob_extent_map->extent[i].file));
 }
 
-/* 
+/*
  * Get the index in segmap_man.fs for the filename
  *
  * @filename: filename to get index of
@@ -416,43 +416,43 @@ static void show_remainder_segment(uint64_t i) {
 static void show_segment_stats() {
     REP(ctrl.show_only_stats, "\n\n");
     MSG("=============================================================="
-            "==="
-            "===\n");
+        "==="
+        "===\n");
     MSG("\t\t\tSEGMENT STATS\n");
     MSG("=================================================================="
-            "="
-            "=\n");
+        "="
+        "=\n");
 
     if (!(ctrl.exclude_flags & FIEMAP_EXTENT_DATA_INLINE)) {
         WARN("Segment Heat Classification statistics exclude inode inlined "
-                "file data, and is only for segments of type DATA, not "
-                "NODE.\n");
+             "file data, and is only for segments of type DATA, not "
+             "NODE.\n");
     }
 
     FORMATTER
-        MSG("%-50s | Number of Extents | Number of Occupying Segments | Number "
-                "of "
-                "Occupying Zones | Cold Segments | Warm Segments | Hot Segments\n",
-                "Dir/File Name");
+    MSG("%-50s | Number of Extents | Number of Occupying Segments | Number "
+        "of "
+        "Occupying Zones | Cold Segments | Warm Segments | Hot Segments\n",
+        "Dir/File Name");
     FORMATTER
 
-        MSG("%-50s | %-17u | %-28u | %-25u | %-13u | %-13u | %-13u\n",
-                segmap_man.dir, glob_extent_map->ext_ctr, segmap_man.segment_ctr,
-                glob_extent_map->zone_ctr, segmap_man.cold_ctr, segmap_man.warm_ctr,
-                segmap_man.hot_ctr);
+    MSG("%-50s | %-17u | %-28u | %-25u | %-13u | %-13u | %-13u\n",
+        segmap_man.dir, glob_extent_map->ext_ctr, segmap_man.segment_ctr,
+        glob_extent_map->zone_ctr, segmap_man.cold_ctr, segmap_man.warm_ctr,
+        segmap_man.hot_ctr);
 
     // Show the per file statistics of directory if has more than 1 file
     if (segmap_man.isdir && ctrl.nr_files > 1) {
         UNDERSCORE_FORMATTER
-            FORMATTER
-            for (uint32_t i = 0; i < segmap_man.ctr; i++) {
-                MSG("%-50s | %-17u | %-28u | %-25u | %-13u | %-13u | %-13u\n",
-                        segmap_man.fs[i].filename,
-                        get_file_counter(segmap_man.fs[i].filename),
-                        segmap_man.fs[i].segment_ctr, segmap_man.fs[i].zone_ctr,
-                        segmap_man.fs[i].cold_ctr, segmap_man.fs[i].warm_ctr,
-                        segmap_man.fs[i].hot_ctr);
-            }
+        FORMATTER
+        for (uint32_t i = 0; i < segmap_man.ctr; i++) {
+            MSG("%-50s | %-17u | %-28u | %-25u | %-13u | %-13u | %-13u\n",
+                segmap_man.fs[i].filename,
+                get_file_counter(segmap_man.fs[i].filename),
+                segmap_man.fs[i].segment_ctr, segmap_man.fs[i].zone_ctr,
+                segmap_man.fs[i].cold_ctr, segmap_man.fs[i].warm_ctr,
+                segmap_man.fs[i].hot_ctr);
+        }
     }
 }
 
