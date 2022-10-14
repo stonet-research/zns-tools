@@ -123,4 +123,4 @@ The benchmark is simple and is meant for only testing the adherence of F2FS with
 
 ## zns.trace
 
-zns.trace provides a simple way to trace activity on zns devices across its different zones, collecting information on number of read/write operations to each zone, amount of data read/written in each zone, and reset statistics, including reset latency per zone. After collecting tracing statistics, zns.trace automatically generates heatmaps for each collected statistic, depicting the information for each zone in a comprehensible manner.
+In the `zns.trace/` directory, we provide a framework to trace activity on zns devices across its different zones using BPF, collecting information on number of read/write operations to each zone, amount of data read/written in each zone, and reset statistics, including reset latency per zone. After collecting tracing statistics, zns.trace automatically generates heatmaps for each collected statistic, depicting the information for each zone in a comprehensible manner.
