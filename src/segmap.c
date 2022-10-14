@@ -182,14 +182,8 @@ static void show_segment_flags(uint32_t segment_id, uint8_t is_range) {
 
 static void show_segment_info(uint64_t segment_start) {
     if (ctrl.cur_segment != segment_start) {
-        REP(ctrl.show_only_stats,
-            "\n________________________________________________________________"
-            "__________________________________________________________________"
-            "__________\n");
-        REP(ctrl.show_only_stats,
-            "------------------------------------------------------------------"
-            "------------------------------------------------------------------"
-            "--------\n");
+        REP_UNDERSCORE
+        REP_FORMATTER
         REP(ctrl.show_only_stats,
             "SEGMENT: %-4lu  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
             "  SIZE: %#-10" PRIx64 "\n",
@@ -199,10 +193,7 @@ static void show_segment_info(uint64_t segment_start) {
         if (ctrl.procfs) {
             show_segment_flags(segment_start, 0);
         }
-        REP(ctrl.show_only_stats,
-            "------------------------------------------------------------------"
-            "------------------------------------------------------------------"
-            "--------\n");
+        REP_FORMATTER
         ctrl.cur_segment = segment_start;
     }
 }
@@ -345,14 +336,8 @@ static void show_consecutive_segments(uint64_t i, uint64_t segment_start) {
             glob_extent_map->extent[i].ext_nr + 1,
             get_file_counter(glob_extent_map->extent[i].file));
     } else {
-        REP(ctrl.show_only_stats,
-            "\n________________________________________________________________"
-            "__________________________________________________________________"
-            "__________\n");
-        REP(ctrl.show_only_stats,
-            "------------------------------------------------------------------"
-            "------------------------------------------------------------------"
-            "--------\n");
+        REP_UNDERSCORE
+        REP_FORMATTER
         REP(ctrl.show_only_stats,
             ">>>>> SEGMENT RANGE: %-4lu-%-4lu   PBAS: %#-10" PRIx64
             "  PBAE: %#-10" PRIx64 "  SIZE: %#-10" PRIx64 "\n",
@@ -369,10 +354,7 @@ static void show_consecutive_segments(uint64_t i, uint64_t segment_start) {
             show_segment_flags(segment_start, 1);
         }
 
-        REP(ctrl.show_only_stats,
-            "------------------------------------------------------------------"
-            "------------------------------------------------------------------"
-            "--------\n");
+        REP_FORMATTER
         REP(ctrl.show_only_stats,
             "***** EXTENT:  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
             "  SIZE: %#-10" PRIx64 "  FILE: %50s  EXTID:  %d/%-5d\n",
@@ -494,10 +476,7 @@ static void show_segment_report() {
 
         if (current_zone != glob_extent_map->extent[i].zone) {
             if (current_zone != 0) {
-                REP(ctrl.show_only_stats,
-                    "----------------------------------------------------------"
-                    "----------------------------------------------------------"
-                    "------------------------\n");
+                REP_FORMATTER
             }
             current_zone = glob_extent_map->extent[i].zone;
             glob_extent_map->zone_ctr++;
