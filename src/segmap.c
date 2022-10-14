@@ -8,11 +8,9 @@ struct extent_map *glob_extent_map;
  *
  * */
 static void show_info() {
-    MSG("\n============================================================="
-        "=======\n");
+    EQUAL_FORMATTER
     MSG("\t\t\tACRONYM INFO\n");
-    MSG("==============================================================="
-        "=====\n");
+    EQUAL_FORMATTER
     MSG("LBAS:   Logical Block Address Start (for the Zone)\n");
     MSG("LBAE:   Logical Block Address End (for the Zone, equal to LBAS + "
         "ZONE CAP)\n");
@@ -397,13 +395,9 @@ static void show_remainder_segment(uint64_t i) {
  * */
 static void show_segment_stats() {
     REP(ctrl.show_only_stats, "\n\n");
-    MSG("=============================================================="
-        "==="
-        "===\n");
-    MSG("\t\t\tSEGMENT STATS\n");
-    MSG("=================================================================="
-        "="
-        "=\n");
+    EQUAL_FORMATTER
+    MSG("\t\t\tSEGMENT STATS");
+    EQUAL_FORMATTER
 
     if (!(ctrl.exclude_flags & FIEMAP_EXTENT_DATA_INLINE)) {
         WARN("Segment Heat Classification statistics exclude inode inlined "
@@ -454,13 +448,9 @@ static void show_segment_report() {
         segmap_man.fs = calloc(sizeof(struct file_stats) * ctrl.nr_files, 1);
     }
 
-    REP(ctrl.show_only_stats,
-        "================================================================="
-        "===\n");
+    REP_EQUAL_FORMATTER
     REP(ctrl.show_only_stats, "\t\t\tSEGMENT MAPPINGS\n");
-    REP(ctrl.show_only_stats,
-        "==================================================================="
-        "=\n");
+    REP_EQUAL_FORMATTER
 
     for (uint64_t i = 0; i < glob_extent_map->ext_ctr; i++) {
         segment_id =
