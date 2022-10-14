@@ -12,6 +12,9 @@
 #ifndef __F2FS_H__
 #define __F2FS_H__
 
+#ifndef _GNU_SOURCE
+# define _GNU_SOURCE 1
+#endif
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
