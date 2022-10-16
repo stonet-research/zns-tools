@@ -35,6 +35,10 @@ zns.fpbench \- benchmark F2FS data placement by generating workloads that pass w
 .B \-c 
 .I call fsync() after each block written
 ]
+[
+.B \-d 
+.I use \fIO_DIRECT\fP for file writes
+]
 
 
 .SH DESCRIPTION
@@ -89,6 +93,10 @@ The number of jobs causes the program to \fIfork()\fP for each numjob, running t
 .B \-c 
 .I call fsync() after each block written
 If enabled, after each block (specified with the given block size), fsync() is called on the file. Without, a single fsync() is called after all block have been written.
+.TP
+.B \-d 
+.I use \fIO_DIRECT\fP for file writes
+Use direct I/O for all file writes, opening the file(s) with \fIO_DIRECT\fP
 
 .SH AUTHORS
 The code was written by Nick Tehrany <nicktehrany1@gmail.com>.

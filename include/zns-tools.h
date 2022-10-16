@@ -91,6 +91,7 @@ struct control {
     uint8_t show_only_stats; /* zns.segmap only show class stats not segment
                                 mappints */
     uint8_t const_fsync;     /* zns.fpbench fsync after each written bock */
+    uint8_t o_direct;        /* zns.fpbench use direct I/O */
 };
 
 struct extent {

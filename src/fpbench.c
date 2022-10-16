@@ -21,6 +21,7 @@ static void show_help() {
     MSG("-h \t\tShow this help\n");
     MSG("-n \t\tNumber of jobs to concurrently execute the benchmark\n");
     MSG("-c \t\tCall fsync() after each block written\n");
+    MSG("-d \t\tUse O_DIRECT for file writes\n");
 
     exit(0);
 }
@@ -52,6 +53,7 @@ static void check_options() {
 static void write_file(struct workload workload) {
     int out, w, ret;
     uint64_t hint = 99;
+    int flags = 0;
 
     MSG("Starting job for file %s with pid %d\n", workload.filename, getpid());
 
@@ -65,7 +67,12 @@ static void write_file(struct workload workload) {
         }
     }
 
-    out = open(workload.filename, O_WRONLY | O_CREAT, 0664);
+    flags |= O_WRONLY | O_CREAT;
+    if (ctrl.o_direct) {
+        flags |= O_DIRECT;
+    }
+
+    out = open(workload.filename, flags, 0664);
 
     if (!out) {
         ERR_MSG("Job %d: Failed opening file for writing\n", workload.id);
@@ -361,7 +368,7 @@ int main(int argc, char *argv[]) {
     wl_man.wl[0].bsize = BLOCK_SZ;
     wl_man.wl[0].fsize = BLOCK_SZ;
 
-    while ((c = getopt(argc, argv, "b:f:l:hn:s:w:c")) != -1) {
+    while ((c = getopt(argc, argv, "b:f:dl:hn:s:w:c")) != -1) {
         switch (c) {
         case 'h':
             show_help();
@@ -393,6 +400,9 @@ int main(int argc, char *argv[]) {
             break;
         case 'c':
             ctrl.const_fsync = 1;
+            break;
+        case 'd':
+            ctrl.o_direct = 1;
             break;
         default:
             show_help();
