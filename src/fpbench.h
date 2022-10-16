@@ -13,11 +13,6 @@
 #define F_SET_RW_HINT (F_LINUX_SPECIFIC_BASE + 12)
 #endif
 
-#if __linux__ && !defined(F_SET_FILE_RW_HINT)
-#define F_GET_FILE_RW_HINT (F_LINUX_SPECIFIC_BASE + 13)
-#define F_SET_FILE_RW_HINT (F_LINUX_SPECIFIC_BASE + 14)
-#endif
-
 #if __linux__ && !defined(RWF_WRITE_LIFE_NOT_SET)
 #define RWF_WRITE_LIFE_NOT_SET 0
 #define RWH_WRITE_LIFE_NONE 1
