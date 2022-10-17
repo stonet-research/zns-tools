@@ -64,8 +64,8 @@ def plot_throughput():
 
     # Plotting horizontal lines for max throughput on ZNS
     plt.axhline(y = 257364.462305/1000, color = 'r', linestyle = ':', label = "ZNS 1 Zone")
-    plt.axhline(y = 459717.450472/1000, color = 'orange', linestyle = 'dashed', label = "ZNS 2 Zones")
-    plt.axhline(y = 378353.052926/1000, color = 'gray', linestyle = 'dotted', label = "ZNS 3 Zones")
+    plt.axhline(y = 459717.450472/1000, color = 'gray', linestyle = 'dashed', label = "ZNS 2 Zones")
+    plt.axhline(y = 378353.052926/1000, color = 'green', linestyle = 'dashdot', label = "ZNS 3 Zones")
 
     fig.tight_layout()
     # ax.grid(which='major', linestyle='dashed', linewidth='1')
