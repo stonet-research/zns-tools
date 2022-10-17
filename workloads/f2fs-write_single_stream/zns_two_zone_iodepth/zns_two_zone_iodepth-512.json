@@ -1,15 +1,15 @@
 {
   "fio version" : "fio-3.32-10-g6b6f5-dirty",
-  "timestamp" : 1666015508,
-  "timestamp_ms" : 1666015508956,
-  "time" : "Mon Oct 17 14:05:08 2022",
+  "timestamp" : 1666019790,
+  "timestamp_ms" : 1666019790203,
+  "time" : "Mon Oct 17 15:16:30 2022",
   "jobs" : [
     {
       "jobname" : "zns-two_zone",
       "groupid" : 0,
       "error" : 0,
       "eta" : 0,
-      "elapsed" : 28,
+      "elapsed" : 26,
       "job options" : {
         "name" : "zns-two_zone",
         "filename" : "/dev/nvme0n2",
@@ -18,7 +18,7 @@
         "fixedbufs" : "1",
         "registerfiles" : "1",
         "hipri" : "1",
-        "sqthread_poll" : "1",
+        "sqthread_poll" : "2",
         "iodepth" : "512",
         "rw" : "write",
         "bs" : "4K",
@@ -75,13 +75,13 @@
         "iops_samples" : 0
       },
       "write" : {
-        "io_bytes" : 29674676224,
-        "io_kbytes" : 28979176,
-        "bw_bytes" : 1696083460,
-        "bw" : 1656331,
-        "iops" : 414024.462734,
-        "runtime" : 17496,
-        "total_ios" : 7243772,
+        "io_bytes" : 29753745408,
+        "io_kbytes" : 29056392,
+        "bw_bytes" : 1883267637,
+        "bw" : 1839128,
+        "iops" : 459717.450472,
+        "runtime" : 15799,
+        "total_ios" : 7263076,
         "short_ios" : 0,
         "drop_ios" : 0,
         "slat_ns" : {
@@ -92,11 +92,11 @@
           "N" : 0
         },
         "clat_ns" : {
-          "min" : 1011384137205,
-          "max" : 1028879371970,
-          "mean" : 1019874944790.390015,
-          "stddev" : 4958441551.783211,
-          "N" : 7244794,
+          "min" : 5294337511945,
+          "max" : 5310136272259,
+          "mean" : 5302233358354.192383,
+          "stddev" : 4552470468.115514,
+          "N" : 7264098,
           "percentile" : {
             "1.000000" : 17112760320,
             "5.000000" : 17112760320,
@@ -118,23 +118,23 @@
           }
         },
         "lat_ns" : {
-          "min" : 92267,
-          "max" : 10850421,
-          "mean" : 2471915.079422,
-          "stddev" : 861015.442456,
-          "N" : 7244794
+          "min" : 89447,
+          "max" : 7534551,
+          "mean" : 2223821.648816,
+          "stddev" : 583442.887275,
+          "N" : 7264098
         },
-        "bw_min" : 999160,
-        "bw_max" : 1890642,
+        "bw_min" : 1791208,
+        "bw_max" : 1889680,
         "bw_agg" : 100.000000,
-        "bw_mean" : 1675480.911765,
-        "bw_dev" : 164328.957952,
-        "bw_samples" : 68,
-        "iops_min" : 249790,
-        "iops_max" : 472660,
-        "iops_mean" : 418869.941176,
-        "iops_stddev" : 41082.228899,
-        "iops_samples" : 68
+        "bw_mean" : 1842103.000000,
+        "bw_dev" : 12194.024686,
+        "bw_samples" : 62,
+        "iops_min" : 447802,
+        "iops_max" : 472420,
+        "iops_mean" : 460525.709677,
+        "iops_stddev" : 3048.517974,
+        "iops_samples" : 62
       },
       "trim" : {
         "io_bytes" : 0,
@@ -189,10 +189,10 @@
           "N" : 0
         }
       },
-      "job_runtime" : 34982,
-      "usr_cpu" : 98.404894,
-      "sys_cpu" : 1.569379,
-      "ctx" : 803,
+      "job_runtime" : 31554,
+      "usr_cpu" : 97.911517,
+      "sys_cpu" : 2.053622,
+      "ctx" : 590,
       "majf" : 0,
       "minf" : 0,
       "iodepth_level" : {
@@ -258,7 +258,7 @@
         "750" : 0.000000,
         "1000" : 0.000000,
         "2000" : 0.000000,
-        ">=2000" : 100.014109
+        ">=2000" : 100.014071
       },
       "latency_depth" : 512,
       "latency_target" : 0,
@@ -269,14 +269,14 @@
   "disk_util" : [
     {
       "name" : "nvme0n2",
-      "read_ios" : 0,
-      "write_ios" : 86766,
+      "read_ios" : 48,
+      "write_ios" : 87002,
       "read_merges" : 0,
-      "write_merges" : 10878126,
-      "read_ticks" : 0,
-      "write_ticks" : 252905,
-      "in_queue" : 252905,
-      "util" : 99.747484
+      "write_merges" : 10931047,
+      "read_ticks" : 1,
+      "write_ticks" : 240692,
+      "in_queue" : 240694,
+      "util" : 99.709786
     }
   ]
 }
