@@ -5,7 +5,7 @@ set -e
 DATA_DIR="f2fs_single_stream_iodepth"
 DEV="nvme0n1"
 ZNS="nvme0n2"
-IODEPTH=(1 2 4 8 16 32 64 128 256 512 1028)
+IODEPTH=($(seq 1 1 8))
 
 mkdir -p $DATA_DIR
 
