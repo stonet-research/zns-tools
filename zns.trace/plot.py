@@ -301,7 +301,7 @@ if __name__ == "__main__":
                         line = line[11:]
                         line = line.split(",")
                         # index zone starting with 1 not 0
-                        zone_index = math.floor(int(line[0])/ZONE_SIZE) + 1 
+                        zone_index = math.floor(int(line[0])/ZONE_SIZE)
                         if zone_index not in data["z_data_map"]:
                             data["z_data_map"][zone_index] = dict()
                             # Initialize if they are never used
@@ -320,7 +320,7 @@ if __name__ == "__main__":
                     elif "z_rw_ctr_map" in line:
                         line = line[13:]
                         line = line.split(",")
-                        zone_index = math.floor(int(line[0])/ZONE_SIZE) + 1
+                        zone_index = math.floor(int(line[0])/ZONE_SIZE)
                         if zone_index not in data["z_rw_ctr_map"]:
                             data["z_rw_ctr_map"][zone_index] = dict()
                             # Initialize if they are never used
@@ -339,12 +339,12 @@ if __name__ == "__main__":
                     elif "z_reset_ctr_map" in line:
                         line = line[16:]
                         line = line.split(",")
-                        zone_index = math.floor(int(line[0].split("]")[0])/ZONE_SIZE) + 1
+                        zone_index = math.floor(int(line[0].split("]")[0])/ZONE_SIZE)
                         data["z_reset_ctr_map"][zone_index] = line[0].split(" ")[1].strip()
                     elif "z_reset_lat_map" in line:
                         line = line[16:]
                         line = line.split(",")
-                        zone_index = math.floor(int(line[0].split("]")[0])/ZONE_SIZE) + 1
+                        zone_index = math.floor(int(line[0].split("]")[0])/ZONE_SIZE)
                         if zone_index not in data["z_reset_lat_map"]:
                             data["z_reset_lat_map"][zone_index] = dict()
 
