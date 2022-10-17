@@ -21,7 +21,7 @@ wait $!
 
 read -rep "Input comments to embed in data file (Enter for none): " COMMENTS
 
-# Place the comments in the data file
+# Place the comments in the data file // TODO: this is broken somehow?
 sed -i "1s/^/${COMMENTS}\n/" data/${DATA_FILE}
 
 mkdir -p figs/${DATA_FILE}

@@ -1,6 +1,14 @@
 # workloads
 
-This directory contains workloads that we run on the ZNS device and F2FS using `fio`. We modified `fio` slightly to support write_hints with `O_DIRECT` and to log zone resets in the json output (which for whatever reason it does not do by default?). The changes are
+This directory contains workloads that we run on the ZNS device and F2FS using `fio`. 
+
+## Running
+
+In each directory we provide a `bench` script that runs the benchmarks and generates the figures. Execute it with `./bench`. **Note:** change the device names in all the scripts accordingly to your setup (and possibly sizes as well).
+
+## Fio modifications
+
+We modified `fio` slightly to support write_hints with `O_DIRECT` and to log zone resets in the json output (which for whatever reason it does not do by default?). The changes are
 
 ```c
 user@stosys:~/src/fio$ git diff
@@ -33,6 +41,6 @@ index 949af5ed..8e1bcba8 100644
         add_ddir_status_json(ts, rs, DDIR_TRIM, root);
 ```
 
-## f2fs-baseline
+## ZNS-baseline
 
-This contains our baseline experiments, identifying the ZNS device performance and F2FS performance with the ZNS.
+This contains our baseline ZNS experiments to identify hardware performance.

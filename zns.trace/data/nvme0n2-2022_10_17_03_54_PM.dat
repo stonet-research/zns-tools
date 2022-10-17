@@ -1,0 +1,37 @@
+sudo ${FIO_HOME}/fio --name=zns-single_zone --filename=/dev/nvme0n2 --size=20z --ioengine=io_uring --fixedbufs=1 --registerfiles=1 --hipri=1 --sqthread_poll=2 --iodepth=2 --rw=write --bs=4K --direct=1 --zonemode=zbd --runtime=30s --numjobs=1 --offset_increment=20z --max_open_zones=14 --group_reporting --thread=1 --ramp_time=10s --ioscheduler=mq-deadline
+Attaching 4 probes...
+
+
+
+
+
+@z_data_map[0, 2]: 184
+@z_data_map[415236096, 2]: 224
+@z_data_map[12582912, 2]: 520
+@z_data_map[79691776, 1]: 528
+@z_data_map[96468992, 1]: 568
+@z_data_map[104857600, 1]: 2088
+@z_data_map[29360128, 2]: 2208
+@z_data_map[25165824, 1]: 1460656
+@z_data_map[16777216, 1]: 2204656
+@z_data_map[12582912, 1]: 2204688
+@z_data_map[8388608, 1]: 2205184
+@z_data_map[4194304, 1]: 2205552
+@z_data_map[0, 1]: 2205696
+@z_data_map[20971520, 1]: 2206752
+
+
+@z_rw_ctr_map[0, 2]: 23
+@z_rw_ctr_map[415236096, 2]: 28
+@z_rw_ctr_map[104857600, 1]: 48
+@z_rw_ctr_map[29360128, 2]: 63
+@z_rw_ctr_map[12582912, 2]: 64
+@z_rw_ctr_map[79691776, 1]: 64
+@z_rw_ctr_map[96468992, 1]: 71
+@z_rw_ctr_map[25165824, 1]: 182582
+@z_rw_ctr_map[16777216, 1]: 275580
+@z_rw_ctr_map[12582912, 1]: 275583
+@z_rw_ctr_map[8388608, 1]: 275643
+@z_rw_ctr_map[4194304, 1]: 275683
+@z_rw_ctr_map[0, 1]: 275705
+@z_rw_ctr_map[20971520, 1]: 275841

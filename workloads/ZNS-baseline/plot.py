@@ -18,7 +18,6 @@ plt.rc('legend', fontsize=12)    # legend fontsize
 zns_single_zone_data = dict()
 zns_two_zone_data = dict()
 zns_three_zone_data = dict()
-f2fs_iodepth_data = dict()
 
 def parse_fio_data(data_path, data):
     if not os.path.exists(f'{data_path}') or \
@@ -52,8 +51,6 @@ def plot_throughput():
     zns_dzd_stdev = [None] * len(queue_depths)
     zns_tzd = [None] * len(queue_depths)
     zns_tzd_stdev = [None] * len(queue_depths)
-    f2fs_iod = [None] * len(queue_depths)
-    f2fs_iod_stdev = [None] * len(queue_depths)
 
     for key, item in zns_single_zone_data.items():
         zns_szd[int(math.log2(int(item['jobs'][0]['job options']['iodepth'])))] = item['jobs'][0]['write']['iops']/1000
@@ -67,21 +64,11 @@ def plot_throughput():
         zns_tzd[int(math.log2(int(item['jobs'][0]['job options']['iodepth'])))] = item['jobs'][0]['write']['iops']/1000
         zns_tzd_stdev[int(math.log2(int(item['jobs'][0]['job options']['iodepth'])))] = item['jobs'][0]['write']['iops_stddev']/1000
 
-    for key, item in f2fs_iodepth_data.items():
-        f2fs_iod[int(math.log2(int(item['jobs'][0]['job options']['iodepth'])))] = item['jobs'][0]['write']['iops']/1000
-        f2fs_iod_stdev[int(math.log2(int(item['jobs'][0]['job options']['iodepth'])))] = item['jobs'][0]['write']['iops_stddev']/1000
-
     fig, ax = plt.subplots()
 
     ax.errorbar(queue_depths, zns_szd, yerr=zns_szd_stdev, markersize=4, capsize=3, marker='x', label='ZNS 1 Zone')
     ax.errorbar(queue_depths, zns_dzd, yerr=zns_dzd_stdev, markersize=4, capsize=3, marker='o', label='ZNS 2 Zones')
     ax.errorbar(queue_depths, zns_tzd, yerr=zns_tzd_stdev, markersize=4, capsize=3, marker='o', label='ZNS 3 Zones')
-    ax.errorbar(queue_depths, f2fs_iod, yerr=f2fs_iod_stdev, markersize=4, capsize=3, marker='v', label='f2fs')
-
-    # ax.plot(queue_depths, zns_szd, markersize=4, marker='x', label='ZNS 1 Zone')
-    # ax.plot(queue_depths, zns_dzd, markersize=4, marker='x', label='ZNS 2 Zones')
-    # ax.plot(xticks, f2fs_iod, markersize=4, marker='o', label='f2fs-single-thread')
-    # ax.plot(xticks, f2fs_concur_data, markersize=4, marker='v', label='f2fs-concurrent')
 
     fig.tight_layout()
     ax.grid(which='major', linestyle='dashed', linewidth='1')
@@ -102,6 +89,5 @@ if __name__ == '__main__':
     parse_fio_data(f'{file_path}/zns_single_zone_iodepth/', zns_single_zone_data)
     parse_fio_data(f'{file_path}/zns_two_zone_iodepth/', zns_two_zone_data)
     parse_fio_data(f'{file_path}/zns_three_zone_iodepth/', zns_three_zone_data)
-    parse_fio_data(f'{file_path}/f2fs_single_stream_iodepth/', f2fs_iodepth_data)
 
     plot_throughput()
