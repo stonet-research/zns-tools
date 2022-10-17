@@ -1,0 +1,11 @@
+#! /bin/bash
+
+set -e
+
+./zns_zone_bench
+
+./f2fs_single_stream_iodepth_bench
+
+
+
+python3 plot.py
