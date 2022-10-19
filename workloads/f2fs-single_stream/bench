@@ -1,9 +1,0 @@
-#! /bin/bash
-
-set -e
-
-./f2fs_single_stream_iodepth_bench
-
-./f2fs_single_stream_concur_bench
-
-python3 plot.py
