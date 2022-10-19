@@ -21,7 +21,7 @@ In the `examples/` directory we provide an execution for each of the tools, and 
 
 ## Workloads
 
- We additionally run several workloads on F2FS, for which we then use the `zns-tools` present here to understand the file mappings of the workloads. These workloads include `fio` and `rocksdb` + `db_bench` runs. All workloads are provided in the `workloads/` directory, where respective Readmes provide further detail.
+ We additionally run several workloads on F2FS, for which we then use the `zns-tools` present here to understand the file mappings of the workloads. These workloads include `fio` and `rocksdb` + `db_bench` runs. All workloads are provided in the [f2fs-zns-workloads](https://github.com/nicktehrany/f2fs-zns-workloads) repo, where respective Readmes provide further detail.
 
 ## File Mapping Tools
 

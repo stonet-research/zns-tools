@@ -1,7 +1,0 @@
-#! /bin/bash
-
-set -e
-
-./zns_zone_bench
-
-python3 plot.py
