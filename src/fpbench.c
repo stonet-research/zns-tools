@@ -68,9 +68,11 @@ static void write_file(struct workload workload) {
     }
 
     flags |= O_WRONLY | O_CREAT;
+#ifdef _GNU_SOURCE
     if (ctrl.o_direct) {
         flags |= O_DIRECT;
     }
+#endif
 
     out = open(workload.filename, flags, 0664);
 
@@ -402,6 +404,9 @@ int main(int argc, char *argv[]) {
             ctrl.const_fsync = 1;
             break;
         case 'd':
+#ifndef _GNU_SOURCE
+            ERR_MSG("O_DIRECT requires GNU_SOURCE\n");
+#endif
             ctrl.o_direct = 1;
             break;
         default:
