@@ -120,7 +120,7 @@ Possible flags are:
 -d:              Use O_DIRECT for file writes
 ```
 
-The benchmark is simple and is meant for only testing the adherence of F2FS with write hints if I/O is buffered and an `fsync()` is called on each file. For more advanced benchmarks, with asynchronous I/O, different engines and more possible configuration, use `fio` (which also supports write hints with the `--write_hint=short` flag). We provide the workloads we run with `fio` in the (f2fs-zns-workloads)[https://github.com/nicktehrany/f2fs-zns-workloads] repo.
+The benchmark is simple and is meant for only testing the adherence of F2FS with write hints if I/O is buffered and an `fsync()` is called on each file. For more advanced benchmarks, with asynchronous I/O, different engines and more possible configuration, use `fio` (which also supports write hints with the `--write_hint=short` flag). We provide the workloads we run with `fio` in the [f2fs-zns-workloads](https://github.com/nicktehrany/f2fs-zns-workloads) repo.
 
 ## zns.trace
 
