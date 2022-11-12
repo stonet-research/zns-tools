@@ -92,6 +92,7 @@ struct control {
                                 mappints */
     uint8_t const_fsync;     /* zns.fpbench fsync after each written bock */
     uint8_t o_direct;        /* zns.fpbench use direct I/O */
+    uint64_t inlined_extent_ctr; /* track the number of inlined extents */
 };
 
 struct extent {

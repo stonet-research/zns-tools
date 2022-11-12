@@ -457,6 +457,10 @@ struct extent_map *get_extents() {
             extent_map->extent[extent_map->ext_ctr].fileID = ctrl.nr_files;
             extent_map->ext_ctr++;
         }
+        
+        if (fiemap->fm_extents[0].fe_flags & FIEMAP_EXTENT_DATA_INLINE) {
+            ctrl.inlined_extent_ctr++;
+        }
 
         if (fiemap->fm_extents[0].fe_flags & FIEMAP_EXTENT_LAST) {
             last_ext = 1;
