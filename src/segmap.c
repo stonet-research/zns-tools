@@ -650,7 +650,9 @@ int main(int argc, char *argv[]) {
     if (segmap_man.isdir) {
         collect_extents(segmap_man.dir);
         if (glob_extent_map->ext_ctr == 0) {
-            WARN("No separate extent mappings found for any file.\nFound Inlined inode Extents: %lu\n", ctrl.inlined_extent_ctr);
+            WARN("No separate extent mappings found for any file.\nFound "
+                 "Inlined inode Extents: %lu\n",
+                 ctrl.inlined_extent_ctr);
             goto cleanup;
         }
     } else {
