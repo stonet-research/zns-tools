@@ -261,6 +261,9 @@ static void set_segment_counters(uint32_t segment_id, uint32_t num_segments,
                                  struct extent extent) {
     uint32_t fs_stats_index = 0;
 
+    if (extent.flags & FIEMAP_EXTENT_DATA_INLINE && !(ctrl.exclude_flags & FIEMAP_EXTENT_DATA_INLINE))
+        return;
+
     segmap_man.segment_ctr += num_segments;
 
     if (ctrl.show_class_stats && ctrl.nr_files > 1) {
@@ -416,6 +419,13 @@ static void show_segment_stats() {
         segmap_man.dir, glob_extent_map->ext_ctr, segmap_man.segment_ctr,
         glob_extent_map->zone_ctr, segmap_man.cold_ctr, segmap_man.warm_ctr,
         segmap_man.hot_ctr);
+
+    if (ctrl.inlined_extent_ctr > 0 && !(ctrl.exclude_flags & FIEMAP_EXTENT_DATA_INLINE)) {
+        FORMATTER
+        MSG("%-50s | %-17lu | %-28s | %-25s | %-13s | %-13s | %-13s\n",
+            "FIEMAP_EXTENT_DATA_INLINE", ctrl.inlined_extent_ctr, "-", 
+            "-", "-", "-", "-");
+    }
 
     // Show the per file statistics of directory if has more than 1 file
     if (segmap_man.isdir && ctrl.nr_files > 1) {
