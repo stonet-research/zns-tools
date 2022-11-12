@@ -115,8 +115,8 @@ static void collect_extents(char *path) {
 
             temp_map = (struct extent_map *)get_extents();
 
-            if (!temp_map) {
-                INFO(2, "No extents found for empty file: %s\n", ctrl.filename);
+            if (!temp_map || temp_map->ext_ctr == 0) {
+                INFO(1, "No extents found for file: %s\n", ctrl.filename);
             } else {
                 glob_extent_map->ext_ctr += temp_map->ext_ctr;
                 glob_extent_map = realloc(
@@ -649,6 +649,12 @@ int main(int argc, char *argv[]) {
 
     if (segmap_man.isdir) {
         collect_extents(segmap_man.dir);
+        if (glob_extent_map->ext_ctr == 0) {
+            WARN("No separate extent mappings found for any file.\nFound "
+                 "Inlined inode Extents: %lu\n",
+                 ctrl.inlined_extent_ctr);
+            goto cleanup;
+        }
     } else {
         ctrl.filename = segmap_man.dir;
         ctrl.fd = open(ctrl.filename, O_RDONLY);
@@ -680,9 +686,6 @@ int main(int argc, char *argv[]) {
 
     show_segment_report();
 
-    cleanup_ctrl();
-
-    free(glob_extent_map);
     free(file_counter_map->file);
     free(file_counter_map);
     if (ctrl.show_class_stats) {
@@ -694,6 +697,11 @@ int main(int argc, char *argv[]) {
     if (ctrl.procfs) {
         free(segman.sm_info);
     }
+
+cleanup:
+    cleanup_ctrl();
+
+    free(glob_extent_map);
 
     return 0;
 }
