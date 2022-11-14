@@ -599,7 +599,10 @@ found:
 
     uint32_t zone = get_zone_number(cur_segment << ctrl.segment_shift);
     if (file_counter_map->file[i].last_zone != zone) {
-        file_counter_map->file[i].zone_ctr += (num_segments * F2FS_SEGMENT_BYTES >> ctrl.sector_shift) / zone_cap + 1;
+        file_counter_map->file[i].zone_ctr +=
+            (num_segments * F2FS_SEGMENT_BYTES >> ctrl.sector_shift) /
+                zone_cap +
+            1;
         file_counter_map->file[i].last_zone = zone;
     }
 }
