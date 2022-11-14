@@ -301,6 +301,7 @@ static void get_zone_info(struct extent *extent) {
 
     extent->zone_wp = hdr->zones[0].wp;
     extent->zone_lbae = hdr->zones[0].start + hdr->zones[0].capacity;
+    extent->zone_cap = hdr->zones[0].capacity;
     extent->zone_lbas = hdr->zones[0].start;
 
     close(fd);
@@ -512,7 +513,7 @@ uint32_t get_file_counter(char *file) {
     for (uint32_t i = 0; i < file_counter_map->cur_ctr; i++) {
         if (strncmp(file_counter_map->file[i].file, file,
                     strlen(file_counter_map->file[i].file)) == 0) {
-            return file_counter_map->file[i].ctr;
+            return file_counter_map->file[i].ext_ctr;
         }
     }
 
@@ -525,18 +526,18 @@ uint32_t get_file_counter(char *file) {
  * @file: char * to file name (full path)
  *
  * */
-static void increase_file_counter(char *file) {
+static void increase_file_extent_counter(char *file) {
     for (uint32_t i = 0; i < file_counter_map->cur_ctr; i++) {
         if (strncmp(file_counter_map->file[i].file, file,
                     strlen(file_counter_map->file[i].file)) == 0) {
-            file_counter_map->file[i].ctr++;
+            file_counter_map->file[i].ext_ctr++;
             return;
         }
     }
 
     memcpy(file_counter_map->file[file_counter_map->cur_ctr].file, file,
            MAX_FILE_LENGTH);
-    file_counter_map->file[file_counter_map->cur_ctr].ctr = 1;
+    file_counter_map->file[file_counter_map->cur_ctr].ext_ctr = 1;
     file_counter_map->cur_ctr++;
 }
 
@@ -547,14 +548,59 @@ static void increase_file_counter(char *file) {
  * @extent_map: extents to count file extents
  *
  * */
-void set_file_counters(struct extent_map *extent_map) {
+void set_file_extent_counters(struct extent_map *extent_map) {
     file_counter_map =
         (struct file_counter_map *)calloc(1, sizeof(struct file_counter_map));
     file_counter_map->file = (struct file_counter *)calloc(
         1, sizeof(struct file_counter) * ctrl.nr_files);
 
     for (uint32_t i = 0; i < extent_map->ext_ctr; i++) {
-        increase_file_counter(extent_map->extent[i].file);
+        increase_file_extent_counter(extent_map->extent[i].file);
+    }
+}
+
+/*
+ * Increase the segment counts for a particular file
+ *
+ * @file: char * to file name (full path)
+ *
+ * */
+void increase_file_segment_counter(char *file, unsigned int num_segments,
+                                   unsigned int cur_segment, enum type type,
+                                   uint64_t zone_cap) {
+    uint32_t i;
+
+    for (i = 0; i < file_counter_map->cur_ctr; i++) {
+        if (strncmp(file_counter_map->file[i].file, file,
+                    strlen(file_counter_map->file[i].file)) == 0) {
+            goto found;
+        }
+    }
+
+found:
+    if (file_counter_map->file[i].last_segment_id != cur_segment) {
+        file_counter_map->file[i].segment_ctr += num_segments;
+        file_counter_map->file[i].last_segment_id = cur_segment;
+
+        switch (type) {
+        case CURSEG_COLD_DATA:
+            file_counter_map->file[i].cold_ctr += num_segments;
+            break;
+        case CURSEG_WARM_DATA:
+            file_counter_map->file[i].warm_ctr += num_segments;
+            break;
+        case CURSEG_HOT_DATA:
+            file_counter_map->file[i].hot_ctr += num_segments;
+            break;
+        default:
+            break;
+        }
+    }
+
+    uint32_t zone = get_zone_number(cur_segment >> ctrl.segment_shift);
+    if (file_counter_map->file[i].last_zone != zone) {
+        file_counter_map->file[i].zone_ctr += (num_segments / zone_cap) + 1;
+        file_counter_map->file[i].last_segment_id = cur_segment;
     }
 }
 

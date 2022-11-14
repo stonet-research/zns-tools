@@ -141,7 +141,7 @@ struct f2fs_checkpoint {
 
 static_assert(sizeof(struct f2fs_checkpoint) == 192, "");
 
-enum {
+enum type {
     CURSEG_HOT_DATA = 0, /* directory entry blocks */
     CURSEG_WARM_DATA,    /* data blocks */
     CURSEG_COLD_DATA,    /* multimedia or GCed data blocks */
@@ -309,7 +309,7 @@ static_assert(sizeof(struct f2fs_node) == 4096, "");
 
 struct segment_info {
     unsigned int id;
-    unsigned int type;
+    enum type type;
     uint32_t valid_blocks;
     /* uint8_t bitmap[]; */ /* TODO: we can get this info from segment_bits */
 };

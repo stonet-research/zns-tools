@@ -381,7 +381,7 @@ int main(int argc, char *argv[]) {
             break;
         case 's':
             size = get_integer_value(optarg);
-            if (size > 4096) {
+            if (size >= 4096) {
                 wl_man.wl[0].fsize = size;
             } else {
                 ERR_MSG("Minimum size of 4K required. Otherwise F2FS inlines "
