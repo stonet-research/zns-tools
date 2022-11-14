@@ -99,11 +99,11 @@ k:nvme_complete_rq / ((struct request *)arg0)->q->disk->disk_name == str($1) / {
 
         // If nvme device is in passthrough (e.g., qemu passthrough) Zone reset has flag REQ_OP_DRV_OUT
         if(@logging == 1 && $cmd == REQ_OP_DRV_OUT) {
-            printf("completed reset_cmd (passthrough mode) zone %ld in: %d\n", $zlbas / $2, @z_reset_lat_map[$zlbas, @z_reset_ctr_map[$zlbas]]);
+            printf("completed reset_cmd (passthrough mode) zone %ld in (usec): %d\n", $zlbas / $2, @z_reset_lat_map[$zlbas, @z_reset_ctr_map[$zlbas]] / 1000);
         }
 
         if(@logging == 1 && $cmd != REQ_OP_DRV_OUT) {
-            printf("completed reset_cmd zone %ld in: %d\n", $zlbas / $2, @z_reset_lat_map[$zlbas, @z_reset_ctr_map[$zlbas]]);
+            printf("completed reset_cmd zone %ld in (usec): %d\n", $zlbas / $2, @z_reset_lat_map[$zlbas, @z_reset_ctr_map[$zlbas]] / 1000);
         }
     }
 }
