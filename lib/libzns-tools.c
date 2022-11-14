@@ -565,8 +565,9 @@ void set_file_extent_counters(struct extent_map *extent_map) {
  * @file: char * to file name (full path)
  *
  * */
-void increase_file_segment_counter(char *file, unsigned int num_segments, 
-        unsigned int cur_segment, enum type type, uint64_t zone_cap) {
+void increase_file_segment_counter(char *file, unsigned int num_segments,
+                                   unsigned int cur_segment, enum type type,
+                                   uint64_t zone_cap) {
     uint32_t i;
 
     for (i = 0; i < file_counter_map->cur_ctr; i++) {
@@ -582,17 +583,17 @@ found:
         file_counter_map->file[i].last_segment_id = cur_segment;
 
         switch (type) {
-            case CURSEG_COLD_DATA:
-                file_counter_map->file[i].cold_ctr += num_segments;
-                break;
-            case CURSEG_WARM_DATA:
-                file_counter_map->file[i].warm_ctr += num_segments;
-                break;
-            case CURSEG_HOT_DATA:
-                file_counter_map->file[i].hot_ctr += num_segments;
-                break;
-            default:
-                break;
+        case CURSEG_COLD_DATA:
+            file_counter_map->file[i].cold_ctr += num_segments;
+            break;
+        case CURSEG_WARM_DATA:
+            file_counter_map->file[i].warm_ctr += num_segments;
+            break;
+        case CURSEG_HOT_DATA:
+            file_counter_map->file[i].hot_ctr += num_segments;
+            break;
+        default:
+            break;
         }
     }
 

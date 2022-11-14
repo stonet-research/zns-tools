@@ -494,17 +494,21 @@ static void show_segment_report() {
         uint64_t extent_end =
             glob_extent_map->extent[i].phy_blk + glob_extent_map->extent[i].len;
 
-        uint64_t segment_end =
-            ((glob_extent_map->extent[i].phy_blk + glob_extent_map->extent[i].len) &
-             ctrl.f2fs_segment_mask) >>
-            ctrl.segment_shift;
+        uint64_t segment_end = ((glob_extent_map->extent[i].phy_blk +
+                                 glob_extent_map->extent[i].len) &
+                                ctrl.f2fs_segment_mask) >>
+                               ctrl.segment_shift;
 
-        /* Can be zero if file starts and ends in same segment therefore + 1 for current segment */
-        uint64_t num_segments = segment_end - (segment_start >> ctrl.segment_shift) + 1;
+        /* Can be zero if file starts and ends in same segment therefore + 1 for
+         * current segment */
+        uint64_t num_segments =
+            segment_end - (segment_start >> ctrl.segment_shift) + 1;
 
         /* Extent can only be a single file so add all segments we have here */
-        increase_file_segment_counter(glob_extent_map->extent[i].file, num_segments, segment_id, segman.sm_info[segment_id].type, glob_extent_map->extent[i].zone_cap); 
-
+        increase_file_segment_counter(glob_extent_map->extent[i].file,
+                                      num_segments, segment_id,
+                                      segman.sm_info[segment_id].type,
+                                      glob_extent_map->extent[i].zone_cap);
 
         // if the beginning of the extent and the ending of the extent are in
         // the same segment

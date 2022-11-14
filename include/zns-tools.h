@@ -104,7 +104,7 @@ struct extent {
     uint64_t logical_blk; /* LBA starting address of the extent */
     uint64_t phy_blk;     /* PBA starting address of the extent */
     uint64_t zone_lbas;   /* LBAS of the zone the extent is in */
-    uint64_t zone_cap; /* Zone capacity */
+    uint64_t zone_cap;    /* Zone capacity */
     uint64_t len;         /* Length of the extent in 512B sectors */
     uint64_t zone_size;   /* Size of the zone the extent is in */
     uint64_t zone_wp;     /* Write Pointer of this current zone */
@@ -124,14 +124,17 @@ struct extent_map {
 struct file_counter {
     char file[MAX_FILE_LENGTH]; /* file name, fix maximum file length to avoid
                                    messy reallocs */
-    uint32_t ext_ctr;               /* extent counter for the file */
-    uint32_t segment_ctr; /* number of segments the file contained in */
-    uint32_t zone_ctr; /* number of zones the file is contained in */
+    uint32_t ext_ctr;           /* extent counter for the file */
+    uint32_t segment_ctr;       /* number of segments the file contained in */
+    uint32_t zone_ctr;          /* number of zones the file is contained in */
     uint32_t cold_ctr; /* number of the segments that are CURSEG_COLD_DATA */
     uint32_t warm_ctr; /* number of the segments that are CURSEG_WARM_DATA*/
-    uint32_t hot_ctr; /* number of the segments that are CURSEG_HOT_DATA */
-    uint64_t last_segment_id; /* track the last segment id so we don't increase counters for extents in the same segment for a file */
-    uint32_t last_zone; /* track the last zone number so we don't increase counters for extents in the same zone */
+    uint32_t hot_ctr;  /* number of the segments that are CURSEG_HOT_DATA */
+    uint64_t last_segment_id; /* track the last segment id so we don't increase
+                                 counters for extents in the same segment for a
+                                 file */
+    uint32_t last_zone;       /* track the last zone number so we don't increase
+                                 counters for extents in the same zone */
 };
 
 struct file_counter_map {
@@ -158,7 +161,8 @@ extern void sort_extents(struct extent_map *);
 extern void show_extent_flags(uint32_t);
 extern uint32_t get_file_counter(char *);
 extern void set_file_extent_counters(struct extent_map *);
-extern void increase_file_segment_counter(char *, unsigned int, unsigned int, enum type, uint64_t);
+extern void increase_file_segment_counter(char *, unsigned int, unsigned int,
+                                          enum type, uint64_t);
 extern void set_super_block_info(struct f2fs_super_block);
 extern void init_ctrl();
 
