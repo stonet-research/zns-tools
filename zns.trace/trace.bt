@@ -2,6 +2,12 @@
 #include <linux/blkdev.h>
 #include <linux/blk-mq.h>
 
+/* NOTE, the values are defined as 512B sector size
+ * Change the below define to 12 for 4K sector size
+ */
+
+#define SECTOR_SHIFT 9
+
 BEGIN {
     if($# != 2) {
          printf("Invalid args. Requires [dev name] [Zone Size].");
@@ -14,52 +20,53 @@ BEGIN {
 
 k:nvme_setup_cmd / ((struct request *)arg1)->q->disk->disk_name == str($1) / {
     $nvme_cmd = (struct nvme_command *)*(arg1+sizeof(struct request));
+    $cmd = (((struct request *)arg1)->cmd_flags & REQ_OP_MASK);
     $opcode = (uint8)$nvme_cmd->rw.opcode;
 
-    $secnum = $nvme_cmd->rw.slba;
+    $secnum = ((struct request *)arg1)->__sector;
     // Bitwise And to get zone starting LBA with zone MASK
     $zlbas = ($secnum & @ZONE_MASK);
 
     // Trace Write and Append command counters and I/O sizes
-    if($opcode == nvme_cmd_write || $opcode == nvme_cmd_zone_append) {
+    if($cmd == REQ_OP_WRITE || $cmd == REQ_OP_ZONE_APPEND) {
         // Store zone operation counter map under ZLBAS, operation 0x01 for write and append
         @z_rw_ctr_map[$zlbas, nvme_cmd_write]++;
 
         // Convert data_len to 512B sectors
-        $data_len = (((struct request *)arg1)->__data_len >> 9);
+        $data_len = (((struct request *)arg1)->__data_len >> SECTOR_SHIFT);
         @z_data_map[$zlbas, nvme_cmd_write] = @z_data_map[$zlbas, nvme_cmd_write] + $data_len; 
 
         if(@logging == 1) {
-            printf("w_cmd at ZLBAS: %ld size: %d\n", $zlbas, $data_len);
+            printf("w_cmd at <LBAS, ZONE, SIZE>: <%lld, %d, %d>\n", $secnum, $zlbas / $2, $data_len);
         }
     }
 
     // Trace Read command counter and total I/O sizes
-    if($opcode == nvme_cmd_read) {
+    if($cmd == REQ_OP_READ) {
         // Store zone operation counter map under ZLBAS, operation 0x01 for write and append
         @z_rw_ctr_map[$zlbas, nvme_cmd_read]++;
 
         // Convert data_len to 512B sectors
-        $data_len = (((struct request *)arg1)->__data_len >> 9);
+        $data_len = (((struct request *)arg1)->__data_len >> SECTOR_SHIFT);
         @z_data_map[$zlbas, nvme_cmd_read] = @z_data_map[$zlbas, nvme_cmd_read] + $data_len; 
 
         if(@logging == 1) {
-            printf("r_cmd at ZLBAS: %ld size: %d\n", $zlbas, $data_len);
+            printf("r_cmd at <LBAS, ZONE, SIZE>: <%ld, %d, %d>\n", $secnum, $zlbas / $2, $data_len);
         }
     }
-
-    // Trace ZONE RESETS
-    $cmd = (((struct request *)arg1)->cmd_flags & REQ_OP_MASK);
 
     // If nvme device is in passthrough (e.g., qemu passthrough) Zone reset has flag REQ_OP_DRV_OUT
     // therefore include more checks on nvme_zone_mgnt_action
     if($cmd == REQ_OP_ZONE_RESET || (($cmd == REQ_OP_DRV_OUT && $opcode == nvme_cmd_zone_mgmt_send) && $nvme_cmd->zms.zsa == NVME_ZONE_RESET)) {
+        $secnum = $nvme_cmd->rw.slba;
+        $zlbas = ($secnum & @ZONE_MASK);
+
         if(@logging == 1 && $cmd == REQ_OP_DRV_OUT) {
-            printf("reset_cmd (passthrough mode) zlbas: %ld\n", $zlbas);
+            printf("reset_cmd (passthrough mode) <LBAS, ZONE>: <%ld, %d>\n", $secnum, $zlbas / $2);
         }
 
         if(@logging == 1 && $cmd != REQ_OP_DRV_OUT) {
-            printf("reset_cmd zlbas: %ld\n", $zlbas);
+            printf("reset_cmd <LBAS, ZONE>: <%ld, %d>\n", $secnum, $zlbas / $2);
         }
 
         @z_reset_ctr_map[$zlbas]++;
@@ -90,11 +97,11 @@ k:nvme_complete_rq / ((struct request *)arg0)->q->disk->disk_name == str($1) / {
 
         // If nvme device is in passthrough (e.g., qemu passthrough) Zone reset has flag REQ_OP_DRV_OUT
         if(@logging == 1 && $cmd == REQ_OP_DRV_OUT) {
-            printf("completed reset_cmd (passthrough mode) zlbas %ld in: %d\n", $zlbas, @z_reset_lat_map[$zlbas, @z_reset_ctr_map[$zlbas]]);
+            printf("completed reset_cmd (passthrough mode) zone %ld in (usec): %d\n", $zlbas / $2, @z_reset_lat_map[$zlbas, @z_reset_ctr_map[$zlbas]] / 1000);
         }
 
         if(@logging == 1 && $cmd != REQ_OP_DRV_OUT) {
-            printf("completed reset_cmd zlbas %ld in: %d\n", $zlbas, @z_reset_lat_map[$zlbas, @z_reset_ctr_map[$zlbas]]);
+            printf("completed reset_cmd zone %ld in (usec): %d\n", $zlbas / $2, @z_reset_lat_map[$zlbas, @z_reset_ctr_map[$zlbas]] / 1000);
         }
     }
 }
