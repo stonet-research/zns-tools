@@ -45,7 +45,7 @@ static void show_help() {
     MSG("-s [uint]\tSet the starting zone to map. Default zone 1.\n");
     MSG("-z [uint]\tOnly show this single zone\n");
     MSG("-e [uint]\tSet the ending zone to map. Default last zone.\n");
-    MSG("-s\t\tShow segment statistics (requires -p to be enabled).\n");
+    MSG("-c\t\tShow segment statistics (requires -p to be enabled).\n");
     MSG("-o\t\tShow only segment statistics (automatically enables -s).\n");
 
     show_info();
@@ -433,13 +433,15 @@ static void show_segment_stats() {
     if (segmap_man.isdir && ctrl.nr_files > 1) {
         UNDERSCORE_FORMATTER
         FORMATTER
-        for (uint32_t i = 0; i < segmap_man.ctr; i++) {
+        for (uint32_t i = 0; i < file_counter_map->cur_ctr; i++) {
             MSG("%-50s | %-17u | %-28u | %-25u | %-13u | %-13u | %-13u\n",
-                segmap_man.fs[i].filename,
-                get_file_counter(segmap_man.fs[i].filename),
-                segmap_man.fs[i].segment_ctr, segmap_man.fs[i].zone_ctr,
-                segmap_man.fs[i].cold_ctr, segmap_man.fs[i].warm_ctr,
-                segmap_man.fs[i].hot_ctr);
+                file_counter_map->file[i].file,
+                file_counter_map->file[i].ext_ctr,
+                file_counter_map->file[i].segment_ctr,
+                file_counter_map->file[i].zone_ctr,
+                file_counter_map->file[i].cold_ctr,
+                file_counter_map->file[i].warm_ctr,
+                file_counter_map->file[i].hot_ctr);
         }
     }
 }
@@ -491,6 +493,18 @@ static void show_segment_report() {
             (glob_extent_map->extent[i].phy_blk & ctrl.f2fs_segment_mask);
         uint64_t extent_end =
             glob_extent_map->extent[i].phy_blk + glob_extent_map->extent[i].len;
+
+        uint64_t segment_end =
+            ((glob_extent_map->extent[i].phy_blk + glob_extent_map->extent[i].len) &
+             ctrl.f2fs_segment_mask) >>
+            ctrl.segment_shift;
+
+        /* Can be zero if file starts and ends in same segment therefore + 1 for current segment */
+        uint64_t num_segments = segment_end - (segment_start >> ctrl.segment_shift) + 1;
+
+        /* Extent can only be a single file so add all segments we have here */
+        increase_file_segment_counter(glob_extent_map->extent[i].file, num_segments, segment_id, segman.sm_info[segment_id].type, glob_extent_map->extent[i].zone_cap); 
+
 
         // if the beginning of the extent and the ending of the extent are in
         // the same segment
@@ -694,7 +708,7 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    set_file_counters(glob_extent_map);
+    set_file_extent_counters(glob_extent_map);
 
     show_segment_report();
 
