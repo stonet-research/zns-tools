@@ -12,6 +12,8 @@ To run the tracing, simply provide the script with a ZNS device to trace, and pr
 
 The python plotting script will directly be called, however if for some reason you have data that has not been plotted you can run the python script itself with `python3 plot.py`. **Note** however, that it takes the zone size and number of zones as arguments, and therefore attempts to create figures for all data with these values. If a figure for a particular data file already exists, this data will be skipped an no new figure is generated. Therefore, in the case there are multiple data files without figures, and with different ZNS devices, simply move the files from different devices to a temporary directory and plot only data for one device at a time. Since it does not regenerate existing figures, this way you can iteratively generate figures for all data files. Or move generated data and files to different directories, we do not have an effective way to integrate this for everyone, therefore this part involves individual configuration.
 
+**NOTE,** the script has the sector size hardcoded to 512B, for 4K sector size change the define to `SECTOR_SHIFT 12`.
+
 ## Requirements
 
 The main requirements is for the Kernel to be built with `BPF` enabled, and [`bpftrace`](https://github.com/iovisor/bpftrace) to be installed. See their [install manual](https://github.com/iovisor/bpftrace/blob/master/INSTALL.md) for an installation guide. For plotting we provide a `requirements.txt` file with libs to install. Run `pip install -r requirements.txt` to install them. If there are version errors for `numpy` during installing, using an older `numpy` version is typically fine, as utilize only the very basics of it.
