@@ -14,6 +14,47 @@ The python plotting script will directly be called, however if for some reason y
 
 **NOTE,** the script has the sector size hardcoded to 512B, for 4K sector size change the define to `SECTOR_SHIFT 12`.
 
+## BPF Errors
+
+If the following error about the `REQ_OP_MASK` show up, change all usages of it to `0x99`.
+
+```bash
+./trace.bt:23:52-63: ERROR: Macro recursion limit reached: REQ_OP_MASK, ((1<<REQ_OP_BITS)-1)
+$cmd = (((struct request *)arg1)->cmd_flags & REQ_OP_MASK);
+~~~~~~~~~~~
+./trace.bt:23:52-63: ERROR: syntax error, unexpected end of file
+$cmd = (((struct request *)arg1)->cmd_flags & REQ_OP_MASK);
+~~~~~~~~~~~
+```
+
+The changes are:
+
+```bash
+user@stosys:~/src/zns-tools/zns.trace$ git diff trace.bt
+diff --git a/zns.trace/trace.bt b/zns.trace/trace.bt
+index 120f356..bd69f4b 100644
+--- a/zns.trace/trace.bt
++++ b/zns.trace/trace.bt
+@@ -20,7 +20,7 @@ BEGIN {
+
+ k:nvme_setup_cmd / ((struct request *)arg1)->q->disk->disk_name == str($1) / {
+     $nvme_cmd = (struct nvme_command *)*(arg1+sizeof(struct request));
+-    $cmd = (((struct request *)arg1)->cmd_flags & REQ_OP_MASK);
++    $cmd = (((struct request *)arg1)->cmd_flags & 0x99);
+     $opcode = (uint8)$nvme_cmd->rw.opcode;
+
+     $secnum = ((struct request *)arg1)->__sector;
+@@ -88,7 +88,7 @@ k:nvme_setup_cmd / ((struct request *)arg1)->q->disk->disk_name == str($1) / {
+ k:nvme_complete_rq / ((struct request *)arg0)->q->disk->disk_name == str($1) / {
+     $nvme_cmd = (struct nvme_command *)*(arg0+sizeof(struct request));
+     $opcode = (uint8)$nvme_cmd->rw.opcode;
+-    $cmd = (((struct request *)arg0)->cmd_flags & REQ_OP_MASK);
++    $cmd = (((struct request *)arg0)->cmd_flags & 0x99);
+
+     if($cmd == REQ_OP_ZONE_RESET || (($cmd == REQ_OP_DRV_OUT && $opcode == nvme_cmd_zone_mgmt_send) && $nvme_cmd->zms.zsa == NVME_ZONE_RESET)) {
+         $cmdid = ((struct request *)arg0)->tag;
+```
+
 ## Requirements
 
 The main requirements is for the Kernel to be built with `BPF` enabled, and [`bpftrace`](https://github.com/iovisor/bpftrace) to be installed. See their [install manual](https://github.com/iovisor/bpftrace/blob/master/INSTALL.md) for an installation guide. For plotting we provide a `requirements.txt` file with libs to install. Run `pip install -r requirements.txt` to install them. If there are version errors for `numpy` during installing, using an older `numpy` version is typically fine, as utilize only the very basics of it.
