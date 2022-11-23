@@ -24,6 +24,11 @@ k:nvme_setup_cmd / ((struct request *)arg1)->q->disk->disk_name == str($1) / {
     $opcode = (uint8)$nvme_cmd->rw.opcode;
 
     $secnum = ((struct request *)arg1)->__sector;
+    if (!$secnum) {
+        // If not passed in struct request get it from nvme request
+        $secnum = $nvme_cmd->rw.slba;
+    }
+
     // Bitwise And to get zone starting LBA with zone MASK
     $zlbas = ($secnum & @ZONE_MASK);
 
