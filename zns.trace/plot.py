@@ -59,11 +59,9 @@ def plot_z_op_map(data, type):
             write_data[-1, -1 - val] = None
     
     for key, entry in data.items():
-        x_ind = dimension - 1 if key%dimension == 0 else (key%dimension) - 1
-        # Key is indexed by 1 and np for data by 0, so - 1 for remainder on 2nd index
-        # Don't need -1 for for 1st index because we floor
-        read_data[math.ceil(key/dimension) - 1][x_ind] = entry["read"]
-        write_data[math.ceil(key/dimension) - 1][x_ind] = entry["write"]
+        x_ind = key % dimension 
+        read_data[math.floor(key/dimension)][x_ind] = entry["read"]
+        write_data[math.floor(key/dimension)][x_ind] = entry["write"]
  
     if type == "z_data_map":
         ax = sns.heatmap(read_data, linewidth=0.5, xticklabels=False, cmap="rocket_r", cbar_kws={'format': '%d Blocks (512B)'})
@@ -126,8 +124,8 @@ def plot_z_reset_ctr_map(data):
             plt_data[-1, -1 - val] = None
     
     for key, entry in data.items():
-        x_ind = dimension - 1 if key%dimension == 0 else (key%dimension) - 1
-        plt_data[math.ceil(key/dimension) - 1][x_ind] = entry
+        x_ind = key % dimension 
+        plt_data[math.floor(key/dimension)][x_ind] = entry
 
     ax = sns.heatmap(plt_data, linewidth=0.5, xticklabels=False, cmap="rocket_r")
     plt.ylim(0, dimension + remainder)
@@ -169,11 +167,11 @@ def plot_z_reset_lat_map(data):
             total += val
             counter += 1
 
-        x_ind = dimension - 1 if key%dimension == 0 else (key%dimension) - 1
+        x_ind = key % dimension 
         if LAT_CONV == 10**3:
-            plt_data[math.ceil(key/dimension) - 1][x_ind] = total/counter/10**3 # convert to μsec
+            plt_data[math.floor(key/dimension)][x_ind] = total/counter/10**3 # convert to μsec
         elif LAT_CONV == 10**6:
-            plt_data[math.ceil(key/dimension) - 1][x_ind] = total/counter/10**6 # convert to msec
+            plt_data[math.floor(key/dimension)][x_ind] = total/counter/10**6 # convert to msec
 
     if LAT_CONV == 10**3:
         ax = sns.heatmap(plt_data, linewidth=0.5, xticklabels=False, cmap="rocket_r", cbar_kws={'format': '%d μsec'})
@@ -219,11 +217,11 @@ def plot_avg_io_size(data, counter):
             write_data[-1, -1 - val] = None
 
     for key, entry in data.items():
-        x_ind = dimension - 1 if key%dimension == 0 else (key%dimension) - 1
+        x_ind = key % dimension 
         if entry["read"] != 0:
-            read_data[math.ceil(key/dimension) - 1][x_ind] = int(entry["read"])/int(counter[key]["read"])
+            read_data[math.floor(key/dimension)][x_ind] = int(entry["read"])/int(counter[key]["read"])
         if entry["write"] != 0:
-            write_data[math.ceil(key/dimension) - 1][x_ind] = int(entry["write"])/int(counter[key]["write"])
+            write_data[math.floor(key/dimension)][x_ind] = int(entry["write"])/int(counter[key]["write"])
 
     ax = sns.heatmap(read_data, linewidth=0.5, xticklabels=False, cmap="rocket_r", cbar_kws={'format': '%d LBAs'})
     plt.ylim(0, dimension + remainder)
@@ -300,8 +298,8 @@ if __name__ == "__main__":
                     elif "z_data_map" in line:
                         line = line[11:]
                         line = line.split(",")
-                        # index zone starting with 1 not 0 for later plotting
-                        zone_index = math.floor(int(line[0])/ZONE_SIZE) + 1
+                        # index zone starting with 1 not 0
+                        zone_index = math.floor(int(line[0])/ZONE_SIZE)
                         if zone_index not in data["z_data_map"]:
                             data["z_data_map"][zone_index] = dict()
                             # Initialize if they are never used
@@ -320,7 +318,7 @@ if __name__ == "__main__":
                     elif "z_rw_ctr_map" in line:
                         line = line[13:]
                         line = line.split(",")
-                        zone_index = math.floor(int(line[0])/ZONE_SIZE) + 1
+                        zone_index = math.floor(int(line[0])/ZONE_SIZE)
                         if zone_index not in data["z_rw_ctr_map"]:
                             data["z_rw_ctr_map"][zone_index] = dict()
                             # Initialize if they are never used
@@ -339,12 +337,12 @@ if __name__ == "__main__":
                     elif "z_reset_ctr_map" in line:
                         line = line[16:]
                         line = line.split(",")
-                        zone_index = math.floor(int(line[0].split("]")[0])/ZONE_SIZE) + 1
+                        zone_index = math.floor(int(line[0].split("]")[0])/ZONE_SIZE)
                         data["z_reset_ctr_map"][zone_index] = line[0].split(" ")[1].strip()
                     elif "z_reset_lat_map" in line:
                         line = line[16:]
                         line = line.split(",")
-                        zone_index = math.floor(int(line[0].split("]")[0])/ZONE_SIZE) + 1
+                        zone_index = math.floor(int(line[0].split("]")[0])/ZONE_SIZE)
                         if zone_index not in data["z_reset_lat_map"]:
                             data["z_reset_lat_map"][zone_index] = dict()
 
