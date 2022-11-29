@@ -109,10 +109,12 @@ static void write_file(struct workload workload) {
     if (ctrl.excl_streams) {
         if (fcntl(out, F_SET_EXCLUSIVE_DATA_STREAM) < 0) {
             if (errno == EINVAL) {
-                ERR_MSG("Job %d: F_SET_EXCLUSIVE_DATA_STREAM not supported\n", workload.id);
+                ERR_MSG("Job %d: F_SET_EXCLUSIVE_DATA_STREAM not supported\n",
+                        workload.id);
             }
 
-            ERR_MSG("Job %d: Failed setting exclusive data stream\n", workload.id);
+            ERR_MSG("Job %d: Failed setting exclusive data stream\n",
+                    workload.id);
         }
     }
 
@@ -132,10 +134,13 @@ static void write_file(struct workload workload) {
     if (ctrl.excl_streams) {
         if (fcntl(out, F_UNSET_EXCLUSIVE_DATA_STREAM) < 0) {
             if (errno == EINVAL) {
-                ERR_MSG("Job %d: F_UNSET_EXCLUSIVE_DATA_STREAM not supported\n", workload.id);
+                ERR_MSG("Job %d: F_UNSET_EXCLUSIVE_DATA_STREAM not supported\n",
+                        workload.id);
             }
 
-            ERR_MSG("Job %d: Failed unsetting exclusive data stream. Delete file to release stream.\n", workload.id);
+            ERR_MSG("Job %d: Failed unsetting exclusive data stream. Delete "
+                    "file to release stream.\n",
+                    workload.id);
         }
     }
 
@@ -433,7 +438,8 @@ int main(int argc, char *argv[]) {
             break;
         case 'e':
 #ifndef HAVE_MULTI_STREAMS
-            ERR_MSG("Exclusive Streams not enabled. Reconfigure with --enable-multi-streams\n");
+            ERR_MSG("Exclusive Streams not enabled. Reconfigure with "
+                    "--enable-multi-streams\n");
 #endif
             ctrl.excl_streams = 1;
             break;
