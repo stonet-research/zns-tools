@@ -58,6 +58,13 @@ AC_CHECK_HEADERS(m4_flatten([
     sys/wait.h
 ]))
 
+AC_ARG_ENABLE([multi_streams],
+              AS_HELP_STRING([--enable-multi-streams],[Enable multi-streams support.]))
+if test "x$enable_multi_streams" == "xyes"; then
+    AC_MSG_NOTICE([Building with Multi Streams])
+    AC_DEFINE(HAVE_MULTI_STREAMS, 1, [includes multi stream f2fs])
+fi
+
 # Checks blkzoned is valid for ZNS with 5.12+ Kernel
 AC_CHECK_MEMBER([struct blk_zone.capacity],
 		[AC_DEFINE(HAVE_BLK_ZONE_REP_V2, [1],

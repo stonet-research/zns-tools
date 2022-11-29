@@ -22,6 +22,7 @@ static void show_help() {
     MSG("-n \t\tNumber of jobs to concurrently execute the benchmark\n");
     MSG("-c \t\tCall fsync() after each block written\n");
     MSG("-d \t\tUse O_DIRECT for file writes\n");
+    MSG("-e \t\tUse exclusive data streams per workload\n");
 
     exit(0);
 }
@@ -105,6 +106,16 @@ static void write_file(struct workload workload) {
 
     INFO(1, "Job %d: Verifying write hint %lu for file\n", workload.id, hint);
 
+    if (ctrl.excl_streams) {
+        if (fcntl(out, F_SET_EXCLUSIVE_DATA_STREAM) < 0) {
+            if (errno == EINVAL) {
+                ERR_MSG("Job %d: F_SET_EXCLUSIVE_DATA_STREAM not supported\n", workload.id);
+            }
+
+            ERR_MSG("Job %d: Failed setting exclusive data stream\n", workload.id);
+        }
+    }
+
     for (uint64_t i = 0; i < workload.fsize; i += workload.bsize) {
         lseek(out, i, SEEK_SET);
         w = write(out, wl_man.buf, workload.bsize);
@@ -117,6 +128,17 @@ static void write_file(struct workload workload) {
     if (!ctrl.const_fsync) {
         fsync(out);
     }
+
+    if (ctrl.excl_streams) {
+        if (fcntl(out, F_UNSET_EXCLUSIVE_DATA_STREAM) < 0) {
+            if (errno == EINVAL) {
+                ERR_MSG("Job %d: F_UNSET_EXCLUSIVE_DATA_STREAM not supported\n", workload.id);
+            }
+
+            ERR_MSG("Job %d: Failed unsetting exclusive data stream. Delete file to release stream.\n", workload.id);
+        }
+    }
+
     close(out);
 }
 
@@ -370,7 +392,7 @@ int main(int argc, char *argv[]) {
     wl_man.wl[0].bsize = BLOCK_SZ;
     wl_man.wl[0].fsize = BLOCK_SZ;
 
-    while ((c = getopt(argc, argv, "b:f:dl:hn:s:w:c")) != -1) {
+    while ((c = getopt(argc, argv, "b:f:dl:hn:s:w:ce")) != -1) {
         switch (c) {
         case 'h':
             show_help();
@@ -408,6 +430,12 @@ int main(int argc, char *argv[]) {
             ERR_MSG("O_DIRECT requires GNU_SOURCE\n");
 #endif
             ctrl.o_direct = 1;
+            break;
+        case 'e':
+#ifndef HAVE_MULTI_STREAMS
+            ERR_MSG("Exclusive Streams not enabled. Reconfigure with --enable-multi-streams\n");
+#endif
+            ctrl.excl_streams = 1;
             break;
         default:
             show_help();
