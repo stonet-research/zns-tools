@@ -106,6 +106,7 @@ static void write_file(struct workload workload) {
 
     INFO(1, "Job %d: Verifying write hint %lu for file\n", workload.id, hint);
 
+#ifdef HAVE_MULTI_STREAMS
     if (ctrl.excl_streams) {
         if (fcntl(out, F_SET_EXCLUSIVE_DATA_STREAM) < 0) {
             if (errno == EINVAL) {
@@ -117,6 +118,7 @@ static void write_file(struct workload workload) {
                     workload.id);
         }
     }
+#endif
 
     for (uint64_t i = 0; i < workload.fsize; i += workload.bsize) {
         lseek(out, i, SEEK_SET);
@@ -131,6 +133,7 @@ static void write_file(struct workload workload) {
         fsync(out);
     }
 
+#ifdef HAVE_MULTI_STREAMS
     if (ctrl.excl_streams) {
         if (fcntl(out, F_UNSET_EXCLUSIVE_DATA_STREAM) < 0) {
             if (errno == EINVAL) {
@@ -143,6 +146,7 @@ static void write_file(struct workload workload) {
                     workload.id);
         }
     }
+#endif
 
     close(out);
 }
