@@ -15,6 +15,8 @@ make
 sudo make install
 ```
 
+Note, `zns.fpbench` has the possibility to run with multi-streams, which requires our F2FS Kernel build with multi-streams to be installed (see more [here](https://github.com/nicktehrany/f2fs)). By default this support is disabled in the tools, to enabled it run `./configure --enable-multi-streams` instead.
+
 ## Examples
 
 In the `examples/` directory we provide an execution for each of the tools, and detail what the output will look like. For more detail on running and understanding output, consult the respective manuals in `man` (or using man `zns.<tool_name>` if installed on system).

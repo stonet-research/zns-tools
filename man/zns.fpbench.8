@@ -39,6 +39,10 @@ zns.fpbench \- benchmark F2FS data placement by generating workloads that pass w
 .B \-d 
 .I use \fIO_DIRECT\fP for file writes
 ]
+[
+.B \-e 
+.I use an Exclusive Data Streams per workload
+]
 
 
 .SH DESCRIPTION
@@ -97,6 +101,10 @@ If enabled, after each block (specified with the given block size), fsync() is c
 .B \-d 
 .I use \fIO_DIRECT\fP for file writes
 Use direct I/O for all file writes, opening the file(s) with \fIO_DIRECT\fP
+.TP
+.B \-e 
+.I use an Exclusive Data Streams per workload
+Uses an exclusive data stream per workload. Requires F2FS Kernel build with Multi-Stream support and fpbench to be build with multi-streams enabled. To build with multi-streams call \fIconfigure --enable-multi-streams\fP
 
 .SH AUTHORS
 The code was written by Nick Tehrany <nicktehrany1@gmail.com>.

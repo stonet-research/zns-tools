@@ -22,6 +22,11 @@
 #define RWH_WRITE_LIFE_EXTREME 5
 #endif
 
+#if __linux__ && defined HAVE_MULTI_STREAMS
+#define F_SET_EXCLUSIVE_DATA_STREAM (F_LINUX_SPECIFIC_BASE + 15)
+#define F_UNSET_EXCLUSIVE_DATA_STREAM (F_LINUX_SPECIFIC_BASE + 16)
+#endif
+
 struct workload {
     char *filename;  /* file name to write */
     uint8_t rw_hint; /* read/write hint for the file in this workload */
