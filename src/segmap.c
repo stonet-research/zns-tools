@@ -331,8 +331,7 @@ static void show_consecutive_segments(uint64_t i, uint64_t segment_start) {
         REP(ctrl.show_only_stats,
             "***** EXTENT:  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
             "  SIZE: %#-10" PRIx64 "  FILE: %50s  EXTID:  %d/%-5d\n",
-            glob_extent_map->extent[i].phy_blk,
-            segment_end << ctrl.segment_shift,
+            segment_start, segment_end << ctrl.segment_shift,
             (unsigned long)ctrl.f2fs_segment_sectors,
             glob_extent_map->extent[i].file,
             glob_extent_map->extent[i].ext_nr + 1,
