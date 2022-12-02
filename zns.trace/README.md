@@ -1,6 +1,8 @@
 # zns.trace
 
-This directory contains the tools for tracing a particular ZNS device, and generating heatmaps for various access aspects for each zone. For an example output, see the figures in `example`.
+This directory contains the tools for tracing a particular ZNS device, and generating heatmaps for various access aspects for each zone. The below figure illustrates the tracing of the number of individual zone reset commands issued during a workload with F2FS and RocksDB.
+
+[example-fig](example/figs/nvme0n2-2022_09_07_10_20_AM.dat/z_reset_ctr_map-heatmap.png)
 
 ## Running
 
