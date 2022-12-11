@@ -57,8 +57,9 @@ static void write_file(struct workload workload) {
     uint64_t hint = 99;
     int flags = 0;
 #ifdef HAVE_MULTI_STREAMS
-    unsigned long *streammap = calloc(sizeof(unsigned long), sizeof(char *));
-    ;
+    unsigned long *streammap = 0;
+    if (ctrl.fpbench_streammap_set)
+        streammap = calloc(sizeof(unsigned long), sizeof(char *));
 #endif
 
     MSG("Starting job for file %s with pid %d\n", workload.filename, getpid());
@@ -112,15 +113,18 @@ static void write_file(struct workload workload) {
     INFO(1, "Job %d: Verifying write hint %lu for file\n", workload.id, hint);
 
 #ifdef HAVE_MULTI_STREAMS
-    *streammap |= (1 << ctrl.fpbench_streammap);
+    if (ctrl.fpbench_streammap_set) {
+        *streammap |= (1 << ctrl.fpbench_streammap);
 
-    if (fcntl(out, F_SET_DATA_STREAM_MAP, streammap) < 0) {
-        if (errno == EINVAL) {
-            ERR_MSG("Job %d: F_SET_DATA_STREAM_MAP Invalid Argument\n",
-                    workload.id);
+        if (fcntl(out, F_SET_DATA_STREAM_MAP, streammap) < 0) {
+            if (errno == EINVAL) {
+                ERR_MSG("Job %d: F_SET_DATA_STREAM_MAP Invalid Argument\n",
+                        workload.id);
+            }
+
+            ERR_MSG("Job %d: Failed setting data stream map\n", workload.id);
         }
-
-        ERR_MSG("Job %d: Failed setting data stream map\n", workload.id);
+        free(streammap);
     }
 #endif
 
@@ -449,17 +453,20 @@ int main(int argc, char *argv[]) {
 #ifndef HAVE_MULTI_STREAMS
             ERR_MSG("Exclusive Streams not enabled. Reconfigure with "
                     "--enable-multi-streams\n");
-            if (set_exclusive_or_stream)
-                ERR_MSG("Cannot set -e with -m");
 #endif
+            if (set_exclusive_or_stream)
+                ERR_MSG("Cannot set -e with -m\n");
             ctrl.excl_streams = 1;
+            set_exclusive_or_stream = true;
             break;
         case 'm':
             if (set_exclusive_or_stream)
-                ERR_MSG("Cannot set -e with -m");
+                ERR_MSG("Cannot set -e with -m\n");
             if (atoi(optarg) > MAX_ACTIVE_LOGS)
                 ERR_MSG("Stream to map file to cannot be larger than 16\n");
             ctrl.fpbench_streammap = atoi(optarg);
+            set_exclusive_or_stream = true;
+            ctrl.fpbench_streammap_set = true;
             break;
         default:
             show_help();
