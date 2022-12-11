@@ -92,8 +92,10 @@ struct control {
                                 mappints */
     uint8_t const_fsync;     /* zns.fpbench fsync after each written bock */
     uint8_t o_direct;        /* zns.fpbench use direct I/O */
-    uint64_t inlined_extent_ctr; /* track the number of inlined extents */
-    uint8_t excl_streams;        /* zns.fpbench use exclusive streams */
+    uint64_t inlined_extent_ctr;   /* track the number of inlined extents */
+    uint8_t excl_streams;          /* zns.fpbench use exclusive streams */
+    uint8_t fpbench_streammap;     /* zns.fpbench stream to map file to */
+    uint8_t fpbench_streammap_set; /* zns.fpbench indicate if streammap set */
 };
 
 struct extent {
