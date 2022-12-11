@@ -23,6 +23,7 @@ static void show_help() {
     MSG("-c \t\tCall fsync() after each block written\n");
     MSG("-d \t\tUse O_DIRECT for file writes\n");
     MSG("-e \t\tUse exclusive data streams per workload\n");
+    MSG("-m \t\tMap the file to a particular stream\n");
 
     exit(0);
 }
@@ -55,6 +56,10 @@ static void write_file(struct workload workload) {
     int out, w, ret;
     uint64_t hint = 99;
     int flags = 0;
+#ifdef HAVE_MULTI_STREAMS
+    unsigned long *streammap = calloc(sizeof(unsigned long), sizeof(char *));
+    ;
+#endif
 
     MSG("Starting job for file %s with pid %d\n", workload.filename, getpid());
 
@@ -107,16 +112,15 @@ static void write_file(struct workload workload) {
     INFO(1, "Job %d: Verifying write hint %lu for file\n", workload.id, hint);
 
 #ifdef HAVE_MULTI_STREAMS
-    if (ctrl.excl_streams) {
-        if (fcntl(out, F_SET_EXCLUSIVE_DATA_STREAM) < 0) {
-            if (errno == EINVAL) {
-                ERR_MSG("Job %d: F_SET_EXCLUSIVE_DATA_STREAM not supported\n",
-                        workload.id);
-            }
+    *streammap |= (1 << ctrl.fpbench_streammap);
 
-            ERR_MSG("Job %d: Failed setting exclusive data stream\n",
+    if (fcntl(out, F_SET_DATA_STREAM_MAP, streammap) < 0) {
+        if (errno == EINVAL) {
+            ERR_MSG("Job %d: F_SET_DATA_STREAM_MAP Invalid Argument\n",
                     workload.id);
         }
+
+        ERR_MSG("Job %d: Failed setting data stream map\n", workload.id);
     }
 #endif
 
@@ -396,12 +400,13 @@ int main(int argc, char *argv[]) {
     int c;
     char *root_dir;
     uint64_t size = 0;
+    uint8_t set_exclusive_or_stream = false;
 
     wl_man.wl = calloc(sizeof(struct workload), 1);
     wl_man.wl[0].bsize = BLOCK_SZ;
     wl_man.wl[0].fsize = BLOCK_SZ;
 
-    while ((c = getopt(argc, argv, "b:f:dl:hn:s:w:ce")) != -1) {
+    while ((c = getopt(argc, argv, "b:f:dl:hn:s:w:cem:")) != -1) {
         switch (c) {
         case 'h':
             show_help();
@@ -444,8 +449,17 @@ int main(int argc, char *argv[]) {
 #ifndef HAVE_MULTI_STREAMS
             ERR_MSG("Exclusive Streams not enabled. Reconfigure with "
                     "--enable-multi-streams\n");
+            if (set_exclusive_or_stream)
+                ERR_MSG("Cannot set -e with -m");
 #endif
             ctrl.excl_streams = 1;
+            break;
+        case 'm':
+            if (set_exclusive_or_stream)
+                ERR_MSG("Cannot set -e with -m");
+            if (atoi(optarg) > MAX_ACTIVE_LOGS)
+                ERR_MSG("Stream to map file to cannot be larger than 16\n");
+            ctrl.fpbench_streammap = atoi(optarg);
             break;
         default:
             show_help();

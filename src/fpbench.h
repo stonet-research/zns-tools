@@ -4,6 +4,7 @@
 #include "zns-tools.h"
 #include <errno.h>
 #include <fcntl.h>
+#include <stdbool.h>
 #include <sys/wait.h>
 
 #define F_LINUX_SPECIFIC_BASE 1024
@@ -25,6 +26,7 @@
 #if __linux__ && defined HAVE_MULTI_STREAMS
 #define F_SET_EXCLUSIVE_DATA_STREAM (F_LINUX_SPECIFIC_BASE + 15)
 #define F_UNSET_EXCLUSIVE_DATA_STREAM (F_LINUX_SPECIFIC_BASE + 16)
+#define F_SET_DATA_STREAM_MAP (F_LINUX_SPECIFIC_BASE + 17)
 #endif
 
 struct workload {
