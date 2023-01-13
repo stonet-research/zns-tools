@@ -21,10 +21,6 @@ Note, `zns.fpbench` has the possibility to run with multi-streams, which require
 
 In the `examples/` directory we provide an execution for each of the tools, and detail what the output will look like. For more detail on running and understanding output, consult the respective manuals in `man` (or using man `zns.<tool_name>` if installed on system).
 
-## Workloads
-
- We additionally run several workloads on F2FS, for which we then use the `zns-tools` present here to understand the file mappings of the workloads. These workloads include `fio` and `rocksdb` + `db_bench` runs. All workloads are provided in the [f2fs-zns-workloads](https://github.com/nicktehrany/f2fs-zns-workloads) repo, where respective Readmes provide further detail.
-
 ## File Mapping Tools
 
 The `src/` directory contains several tools for identifying and mapping out F2FS file allocation.
@@ -128,4 +124,6 @@ The benchmark is simple and is meant for only testing the adherence of F2FS with
 
 ## zns.trace
 
-In the `zns.trace/` directory, we provide a framework to trace activity on zns devices across its different zones using BPF, collecting information on number of read/write operations to each zone, amount of data read/written in each zone, and reset statistics, including reset latency per zone. After collecting tracing statistics, zns.trace automatically generates heatmaps for each collected statistic, depicting the information for each zone in a comprehensible manner.
+In the `zns.trace/` directory, we provide a framework to trace activity on zns devices across its different zones using BPF, collecting information on number of read/write operations to each zone, amount of data read/written in each zone, and reset statistics, including reset latency per zone. After collecting tracing statistics, zns.trace automatically generates heatmaps for each collected statistic, depicting the information for each zone in a comprehensible manner. The below figure illustrates the number of zone reset commands issued to the respective zones on the ZNS device.
+
+![example-fig](zns.trace/example/figs/nvme0n2-2022_09_07_10_20_AM.dat/z_reset_ctr_map-heatmap.png)
