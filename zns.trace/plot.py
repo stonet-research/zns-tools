@@ -81,7 +81,6 @@ def plot_z_op_map(data, type):
     plt.ylim(0, dimension)
     plt.xlim(0, dimension)
 
-    plt.yticks(rotation=0)
     plt.savefig(f"{file_path}/figs/{file_name}/read-{type}-heatmap.pdf", bbox_inches="tight")
     plt.title(f"{type} read")
     plt.savefig(f"{file_path}/figs/{file_name}/read-{type}-heatmap.png", bbox_inches="tight")
@@ -96,7 +95,6 @@ def plot_z_op_map(data, type):
     plt.ylim(0, dimension)
     plt.xlim(0, dimension)
 
-    plt.yticks(rotation=0)
     plt.savefig(f"{file_path}/figs/{file_name}/write-{type}-heatmap.pdf", bbox_inches="tight")
     plt.title(f"{type} write")
     plt.savefig(f"{file_path}/figs/{file_name}/write-{type}-heatmap.png", bbox_inches="tight")
@@ -129,7 +127,6 @@ def plot_z_reset_ctr_map(data):
     plt.ylim(0, dimension)
     plt.xlim(0, dimension)
 
-    plt.yticks(rotation=0)
     plt.savefig(f"{file_path}/figs/{file_name}/z_reset_ctr_map-heatmap.pdf", bbox_inches="tight")
     plt.title("z_reset_ctr_map")
     plt.savefig(f"{file_path}/figs/{file_name}/z_reset_ctr_map-heatmap.png", bbox_inches="tight")
@@ -141,10 +138,13 @@ def plot_z_reset_lat_map(data):
     
     if remainder == 0:
         plt_data = np.zeros(shape=(dimension, dimension))
-        perfect_square = True
+        plt_data[plt_data == 0] = -1
     else:
-        plt_data = np.zeros(shape=(dimension + 1, dimension))
-        perfect_square = False
+        dimension += 1
+        plt_data = np.zeros(shape=(dimension, dimension))
+        plt_data[plt_data == 0] = -1
+
+        difference = abs(NR_ZONES - dimension ** 2)
 
         for val in range(dimension - remainder):
             plt_data[-1, -1 - val] = None
@@ -162,23 +162,18 @@ def plot_z_reset_lat_map(data):
         elif LAT_CONV == 10**6:
             plt_data[math.floor(key/dimension)][x_ind] = total/counter/10**6 # convert to msec
 
+    cmap = sns.color_palette('rocket_r', as_cmap=True).copy()
+    cmap.set_under('#88CCEE')
+
     if LAT_CONV == 10**3:
-        ax = sns.heatmap(plt_data, linewidth=0.5, xticklabels=False, cmap="rocket_r", cbar_kws={'format': '%d μsec'})
+        ax = sns.heatmap(plt_data, linewidth=0.1, xticklabels=False, cmap=cmap, mask=(plt_data == None), yticklabels=False, clip_on=False, cbar_kws={'shrink': 0.8, 'extend': 'min', 'extendrect': True, 'format': '%d μsec'}, square=True, cbar=True, vmin=0)
     else:
-        ax = sns.heatmap(plt_data, linewidth=0.5, xticklabels=False, cmap="rocket_r", cbar_kws={'format': '%d msec'})
-    plt.ylim(0, dimension + remainder)
+        ax = sns.heatmap(plt_data, linewidth=0.1, xticklabels=False, cmap=cmap, mask=(plt_data == None), yticklabels=False, clip_on=False, cbar_kws={'shrink': 0.8, 'extend': 'min', 'extendrect': True, 'format': '%d msec'}, square=True, cbar=True, vmin=0)
+
+    ax.set_facecolor("white")
+    plt.ylim(0, dimension)
     plt.xlim(0, dimension)
 
-    ticks = np.arange(0, dimension)
-    ax.set_yticks(np.arange(0.5, dimension))
-
-    ticks = [f"zones {tick*dimension+1}-{(tick+1)*dimension}" for tick in ticks]
-
-    # if perfect_square == False:
-        # ticks[-1] = f"zones {dimension*(dimension-1)+1}-{(dimension**2-((dimension**2)%NR_ZONES))}"
-
-    ax.set_yticklabels(ticks)
-    plt.yticks(rotation=0)
     plt.savefig(f"{file_path}/figs/{file_name}/z_reset_lat_map-heatmap.pdf", bbox_inches="tight")
     plt.title("z_reset_ctr_map")
     plt.savefig(f"{file_path}/figs/{file_name}/z_reset_lat_map-heatmap.png", bbox_inches="tight")
@@ -195,13 +190,18 @@ def plot_avg_io_size(data, counter):
     if remainder == 0:
         read_data = np.zeros(shape=(dimension, dimension))
         write_data = np.zeros(shape=(dimension, dimension))
-        perfect_square = True
+        read_data[read_data == 0] = -1
+        write_data[write_data == 0] = -1
     else:
-        read_data = np.zeros(shape=(dimension + 1, dimension))
-        write_data = np.zeros(shape=(dimension + 1, dimension))
-        perfect_square = False
+        dimension += 1
+        read_data = np.zeros(shape=(dimension, dimension))
+        write_data = np.zeros(shape=(dimension, dimension))
+        read_data[read_data == 0] = -1
+        write_data[write_data == 0] = -1
 
-        for val in range(dimension - remainder):
+        difference = abs(NR_ZONES - dimension ** 2)
+
+        for val in range(difference):
             read_data[-1, -1 - val] = None
             write_data[-1, -1 - val] = None
 
@@ -212,39 +212,23 @@ def plot_avg_io_size(data, counter):
         if entry["write"] != 0:
             write_data[math.floor(key/dimension)][x_ind] = int(entry["write"])/int(counter[key]["write"])
 
-    ax = sns.heatmap(read_data, linewidth=0.5, xticklabels=False, cmap="rocket_r", cbar_kws={'format': '%d LBAs'})
-    plt.ylim(0, dimension + remainder)
+    cmap = sns.color_palette('rocket_r', as_cmap=True).copy()
+    cmap.set_under('#88CCEE')
+
+    ax = sns.heatmap(read_data, linewidth=0.1, xticklabels=False, cmap=cmap, mask=(read_data == None), yticklabels=False, clip_on=False, cbar_kws={'shrink': 0.8, 'extend': 'min', 'extendrect': True, 'format': '%d LBAs'}, square=True, cbar=True, vmin=0)
+
+    plt.ylim(0, dimension)
     plt.xlim(0, dimension)
 
-    ticks = np.arange(0, dimension)
-    ax.set_yticks(np.arange(0.5, dimension))
-
-    ticks = [f"zones {tick*dimension+1}-{(tick+1)*dimension}" for tick in ticks]
-
-    # if perfect_square == False:
-    #     ticks[-1] = f"zones {dimension*(dimension-1)+1}-{(dimension**2-((dimension**2)%NR_ZONES))}"
-
-    ax.set_yticklabels(ticks)
-    plt.yticks(rotation=0)
     plt.savefig(f"{file_path}/figs/{file_name}/read-avg_io_size-heatmap.pdf", bbox_inches="tight")
     plt.title(f"avg I/O size read")
     plt.savefig(f"{file_path}/figs/{file_name}/read-avg_io_size-heatmap.png", bbox_inches="tight")
     plt.clf()
 
-    ax = sns.heatmap(write_data, linewidth=0.5, xticklabels=False, cmap="rocket_r", cbar_kws={'format': '%d LBAs'})
-    plt.ylim(0, dimension + remainder)
+    ax = sns.heatmap(write_data, linewidth=0.1, xticklabels=False, cmap=cmap, mask=(write_data == None), yticklabels=False, clip_on=False, cbar_kws={'shrink': 0.8, 'extend': 'min', 'extendrect': True, 'format': '%d LBAs'}, square=True, cbar=True, vmin=0)
+    plt.ylim(0, dimension)
     plt.xlim(0, dimension)
 
-    ticks = np.arange(0, dimension)
-    ax.set_yticks(np.arange(0.5, dimension))
-
-    ticks = [f"zones {tick*dimension+1}-{(tick+1)*dimension}" for tick in ticks]
-
-    # if perfect_square == False:
-    #     ticks[-1] = f"zones {dimension*(dimension-1)+1}-{(dimension**2-((dimension**2)%NR_ZONES))}"
-
-    ax.set_yticklabels(ticks)
-    plt.yticks(rotation=0)
     plt.savefig(f"{file_path}/figs/{file_name}/write-avg_io_size-heatmap.pdf", bbox_inches="tight")
     plt.title(f"avg I/O size write")
     plt.savefig(f"{file_path}/figs/{file_name}/write-avg_io_size-heatmap.png", bbox_inches="tight")
@@ -341,7 +325,7 @@ if __name__ == "__main__":
             plot_z_op_map(data["z_data_map"], "z_data_map")
             plot_z_op_map(data["z_rw_ctr_map"], "z_rw_ctr_map")
             plot_z_reset_ctr_map(data["z_reset_ctr_map"])
-            # plot_z_reset_lat_map(data["z_reset_lat_map"])
-            # plot_avg_io_size(data["z_data_map"], data["z_rw_ctr_map"])
+            plot_z_reset_lat_map(data["z_reset_lat_map"])
+            plot_avg_io_size(data["z_data_map"], data["z_rw_ctr_map"])
 
-            print(f"{file} total zone resets: {z_counter}")
+            print(f"{file} Total zone resets: {z_counter}")
