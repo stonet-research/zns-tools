@@ -65,9 +65,12 @@ def plot_z_op_map(data, type):
             write_data[-1, -1 - val] = None
 
     for key, entry in data.items():
-        x_ind = key % dimension 
-        read_data[math.floor(key/dimension)][x_ind] = entry["read"]
-        write_data[math.floor(key/dimension)][x_ind] = entry["write"]
+        if key >= dimension ** 2:
+            pass
+        else:
+            x_ind = key % dimension 
+            read_data[math.floor(key/dimension)][x_ind] = entry["read"]
+            write_data[math.floor(key/dimension)][x_ind] = entry["write"]
  
     cmap = sns.color_palette('rocket_r', as_cmap=True).copy()
     cmap.set_under('#88CCEE')
@@ -117,8 +120,11 @@ def plot_z_reset_ctr_map(data):
             plt_data[-1, -1 - val] = None
     
     for key, entry in data.items():
-        x_ind = key % dimension 
-        plt_data[math.floor(key/dimension)][x_ind] = entry
+        if key >= dimension ** 2:
+            pass
+        else:
+            x_ind = key % dimension 
+            plt_data[math.floor(key/dimension)][x_ind] = entry
 
     cmap = sns.color_palette('rocket_r', as_cmap=True).copy()
     cmap.set_under('#88CCEE')
@@ -150,17 +156,20 @@ def plot_z_reset_lat_map(data):
             plt_data[-1, -1 - val] = None
     
     for key, entry in data.items():
-        total = 0
-        counter = 0
-        for k, val in entry.items():
-            total += val
-            counter += 1
+        if key >= dimension ** 2:
+            pass
+        else:
+            total = 0
+            counter = 0
+            for k, val in entry.items():
+                total += val
+                counter += 1
 
-        x_ind = key % dimension 
-        if LAT_CONV == 10**3:
-            plt_data[math.floor(key/dimension)][x_ind] = total/counter/10**3 # convert to μsec
-        elif LAT_CONV == 10**6:
-            plt_data[math.floor(key/dimension)][x_ind] = total/counter/10**6 # convert to msec
+            x_ind = key % dimension 
+            if LAT_CONV == 10**3:
+                plt_data[math.floor(key/dimension)][x_ind] = total/counter/10**3 # convert to μsec
+            elif LAT_CONV == 10**6:
+                plt_data[math.floor(key/dimension)][x_ind] = total/counter/10**6 # convert to msec
 
     cmap = sns.color_palette('rocket_r', as_cmap=True).copy()
     cmap.set_under('#88CCEE')
@@ -206,11 +215,14 @@ def plot_avg_io_size(data, counter):
             write_data[-1, -1 - val] = None
 
     for key, entry in data.items():
-        x_ind = key % dimension 
-        if entry["read"] != 0:
-            read_data[math.floor(key/dimension)][x_ind] = int(entry["read"])/int(counter[key]["read"])
-        if entry["write"] != 0:
-            write_data[math.floor(key/dimension)][x_ind] = int(entry["write"])/int(counter[key]["write"])
+        if key >= dimension ** 2:
+            pass
+        else:
+            x_ind = key % dimension 
+            if entry["read"] != 0:
+                read_data[math.floor(key/dimension)][x_ind] = int(entry["read"])/int(counter[key]["read"])
+            if entry["write"] != 0:
+                write_data[math.floor(key/dimension)][x_ind] = int(entry["write"])/int(counter[key]["write"])
 
     cmap = sns.color_palette('rocket_r', as_cmap=True).copy()
     cmap.set_under('#88CCEE')
