@@ -18,6 +18,7 @@ plt.rc('legend', fontsize=12)    # legend fontsize
 ZONE_SIZE = 0
 NR_ZONES = 0
 LAT_CONV=10**3 # Latency is stored in nsec, convert to μsec (change to 10**6 for msec)
+z_counter = 0
 
 def main(argv):
     try:
@@ -44,43 +45,42 @@ def plot_z_op_map(data, type):
 
     dimension = math.floor(NR_ZONES ** 0.5)
     remainder = NR_ZONES - (dimension ** 2)
-    
+
     if remainder == 0:
         read_data = np.zeros(shape=(dimension, dimension))
         write_data = np.zeros(shape=(dimension, dimension))
-        perfect_square = True
+        read_data[read_data == 0] = -1
+        write_data[read_data == 0] = -1
     else:
-        read_data = np.zeros(shape=(dimension + 1, dimension))
-        write_data = np.zeros(shape=(dimension + 1, dimension))
-        perfect_square = False
+        dimension += 1
+        read_data = np.zeros(shape=(dimension, dimension))
+        write_data = np.zeros(shape=(dimension, dimension))
+        read_data[read_data == 0] = -1
+        write_data[read_data == 0] = -1
 
-        for val in range(dimension - remainder):
+        difference = abs(NR_ZONES - dimension ** 2)
+
+        for val in range(difference):
             read_data[-1, -1 - val] = None
             write_data[-1, -1 - val] = None
-    
+
     for key, entry in data.items():
         x_ind = key % dimension 
         read_data[math.floor(key/dimension)][x_ind] = entry["read"]
         write_data[math.floor(key/dimension)][x_ind] = entry["write"]
  
+    cmap = sns.color_palette('rocket_r', as_cmap=True).copy()
+    cmap.set_under('#88CCEE')
+
     if type == "z_data_map":
-        ax = sns.heatmap(read_data, linewidth=0.5, xticklabels=False, cmap="rocket_r", cbar_kws={'format': '%d Blocks (512B)'})
+        ax = sns.heatmap(read_data, linewidth=0.1, xticklabels=False, cmap=cmap, mask=(read_data == None), yticklabels=False, clip_on=False, cbar_kws={'shrink': 0.8, 'extend': 'min', 'extendrect': True, 'format': '%d Blocks (512B)'}, square=True, cbar=True, vmin=0)
     else:
-        ax = sns.heatmap(read_data, linewidth=0.5, xticklabels=False, cmap="rocket_r")
-    plt.ylim(0, dimension + remainder)
+        ax = sns.heatmap(read_data, linewidth=0.1, xticklabels=False, cmap=cmap, mask=(read_data == None), yticklabels=False, clip_on=False, cbar_kws={'shrink': 0.8, 'extend': 'min', 'extendrect': True}, square=True, cbar=True, vmin=0)
+
+    ax.set_facecolor("white")
+    plt.ylim(0, dimension)
     plt.xlim(0, dimension)
 
-    ticks = np.arange(0, dimension)
-    ax.set_yticks(np.arange(0.5, dimension))
-
-    ticks = [f"zones {tick*dimension+1}-{(tick+1)*dimension}" for tick in ticks]
-
-    # fix last tick labe if NR_ZONES is not perfect square
-    # e.g. if 32 zones, dimension will be 6x6=36 but last tick should say zones 30-32
-    # if perfect_square == False:
-    #     ticks[-1] = f"zones {dimension*(dimension-1)+1}-{(dimension**2-((dimension**2)%NR_ZONES))}"
-
-    ax.set_yticklabels(ticks)
     plt.yticks(rotation=0)
     plt.savefig(f"{file_path}/figs/{file_name}/read-{type}-heatmap.pdf", bbox_inches="tight")
     plt.title(f"{type} read")
@@ -88,21 +88,14 @@ def plot_z_op_map(data, type):
     plt.clf()
 
     if type == "z_data_map":
-        ax = sns.heatmap(write_data, linewidth=0.5, xticklabels=False, cmap="rocket_r", cbar_kws={'format': '%d LBAs'})
+        ax = sns.heatmap(write_data, linewidth=0.1, xticklabels=False, cmap=cmap, mask=(write_data == None), yticklabels=False, clip_on=False, cbar_kws={'shrink': 0.8, 'extend': 'min', 'extendrect': True, 'format': '%d LBAs'}, square=True, cbar=True, vmin=0)
     else:
-        ax = sns.heatmap(write_data, linewidth=0.5, xticklabels=False, cmap="rocket_r")
-    plt.ylim(0, dimension + remainder)
+        ax = sns.heatmap(write_data, linewidth=0.1, xticklabels=False, cmap=cmap, mask=(write_data == None), yticklabels=False, clip_on=False, cbar_kws={'shrink': 0.8, 'extend': 'min', 'extendrect': True}, square=True, cbar=True, vmin=0)
+
+    ax.set_facecolor("white")
+    plt.ylim(0, dimension)
     plt.xlim(0, dimension)
 
-    ticks = np.arange(0, dimension)
-    ax.set_yticks(np.arange(0.5, dimension))
-
-    ticks = [f"zones {tick*dimension+1}-{(tick+1)*dimension}" for tick in ticks]
-
-    # if perfect_square == False:
-        # ticks[-1] = f"zones {dimension*(dimension-1)+1}-{(dimension**2-((dimension**2)%NR_ZONES))}"
-
-    ax.set_yticklabels(ticks)
     plt.yticks(rotation=0)
     plt.savefig(f"{file_path}/figs/{file_name}/write-{type}-heatmap.pdf", bbox_inches="tight")
     plt.title(f"{type} write")
@@ -115,12 +108,11 @@ def plot_z_reset_ctr_map(data):
     
     if remainder == 0:
         plt_data = np.zeros(shape=(dimension, dimension))
-        # perfect_square = True
+        plt_data[plt_data == 0] = -1
     else:
         dimension += 1
         plt_data = np.zeros(shape=(dimension, dimension))
         plt_data[plt_data == 0] = -1
-        # perfect_square = False
         difference = abs(NR_ZONES - dimension ** 2)
 
         for val in range(difference):
@@ -130,8 +122,6 @@ def plot_z_reset_ctr_map(data):
         x_ind = key % dimension 
         plt_data[math.floor(key/dimension)][x_ind] = entry
 
-    print(plt_data)
-    
     cmap = sns.color_palette('rocket_r', as_cmap=True).copy()
     cmap.set_under('#88CCEE')
     ax = sns.heatmap(plt_data, linewidth=0.1, xticklabels=False, cmap=cmap, mask=(plt_data == None), yticklabels=False, clip_on=False, cbar_kws={'shrink': 0.8, 'extend': 'min', 'extendrect': True}, square=True, cbar=True, vmin=0)
@@ -139,15 +129,6 @@ def plot_z_reset_ctr_map(data):
     plt.ylim(0, dimension)
     plt.xlim(0, dimension)
 
-    # ticks = np.arange(0, dimension)
-    # ax.set_yticks(np.arange(0.5, dimension))
-
-    # ticks = [f"zones {tick*dimension+1}-{(tick+1)*dimension}" for tick in ticks]
-
-    # if perfect_square == False:
-    #     ticks[-1] = f"zones {dimension*(dimension-1)+1}-{(dimension**2-((dimension**2)%NR_ZONES))}"
-
-    # ax.set_yticklabels(ticks)
     plt.yticks(rotation=0)
     plt.savefig(f"{file_path}/figs/{file_name}/z_reset_ctr_map-heatmap.pdf", bbox_inches="tight")
     plt.title("z_reset_ctr_map")
@@ -283,10 +264,6 @@ if __name__ == "__main__":
     for file in glob.glob(f"{file_path}/data/*"):
         file_name = file.split('/')[-1]
 
-        # Don't replot existing figures
-        # if os.path.isdir(f"{file_path}/figs/{file_name}/"):
-        #     # pass
-        # else:
         os.makedirs(f"{file_path}/figs/{file_name}", exist_ok=True)
         with open(f"{file_path}/data/{file_name}") as data_file:
             # bpftrace sorts based on the value in ascending order, 
@@ -347,6 +324,7 @@ if __name__ == "__main__":
                     line = line.split(",")
                     zone_index = math.floor(int(line[0].split("]")[0])/ZONE_SIZE)
                     data["z_reset_ctr_map"][zone_index] = line[0].split(" ")[1].strip()
+                    z_counter += int(line[0].split(" ")[1].strip())
                 elif "z_reset_lat_map" in line:
                     line = line[16:]
                     line = line.split(",")
@@ -360,8 +338,10 @@ if __name__ == "__main__":
                     lat = int(line[1].split(":")[1].strip())
                     data["z_reset_lat_map"][zone_index][reset_cnt] = lat
 
-            # plot_z_op_map(data["z_data_map"], "z_data_map")
-            # plot_z_op_map(data["z_rw_ctr_map"], "z_rw_ctr_map")
+            plot_z_op_map(data["z_data_map"], "z_data_map")
+            plot_z_op_map(data["z_rw_ctr_map"], "z_rw_ctr_map")
             plot_z_reset_ctr_map(data["z_reset_ctr_map"])
             # plot_z_reset_lat_map(data["z_reset_lat_map"])
             # plot_avg_io_size(data["z_data_map"], data["z_rw_ctr_map"])
+
+            print(f"{file} total zone resets: {z_counter}")
