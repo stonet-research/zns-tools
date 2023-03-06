@@ -18,7 +18,6 @@ plt.rc('legend', fontsize=12)    # legend fontsize
 ZONE_SIZE = 0
 NR_ZONES = 0
 LAT_CONV=10**3 # Latency is stored in nsec, convert to μsec (change to 10**6 for msec)
-z_counter = 0
 
 def main(argv):
     try:
@@ -50,13 +49,13 @@ def plot_z_op_map(data, type):
         read_data = np.zeros(shape=(dimension, dimension))
         write_data = np.zeros(shape=(dimension, dimension))
         read_data[read_data == 0] = -1
-        write_data[read_data == 0] = -1
+        write_data[write_data == 0] = -1
     else:
         dimension += 1
         read_data = np.zeros(shape=(dimension, dimension))
         write_data = np.zeros(shape=(dimension, dimension))
         read_data[read_data == 0] = -1
-        write_data[read_data == 0] = -1
+        write_data[write_data == 0] = -1
 
         difference = abs(NR_ZONES - dimension ** 2)
 
@@ -88,6 +87,9 @@ def plot_z_op_map(data, type):
     plt.title(f"{type} read")
     plt.savefig(f"{file_path}/figs/{file_name}/read-{type}-heatmap.png", bbox_inches="tight")
     plt.clf()
+
+    cmap = sns.color_palette('rocket_r', as_cmap=True).copy()
+    cmap.set_under('#88CCEE')
 
     if type == "z_data_map":
         ax = sns.heatmap(write_data, linewidth=0.1, xticklabels=False, cmap=cmap, mask=(write_data == None), yticklabels=False, clip_on=False, cbar_kws={'shrink': 0.8, 'extend': 'min', 'extendrect': True, 'format': '%d LBAs'}, square=True, cbar=True, vmin=0)
@@ -152,7 +154,7 @@ def plot_z_reset_lat_map(data):
 
         difference = abs(NR_ZONES - dimension ** 2)
 
-        for val in range(dimension - remainder):
+        for val in range(difference):
             plt_data[-1, -1 - val] = None
     
     for key, entry in data.items():
@@ -258,6 +260,7 @@ if __name__ == "__main__":
         sys.exit()
 
     for file in glob.glob(f"{file_path}/data/*"):
+        z_counter = 0
         file_name = file.split('/')[-1]
 
         os.makedirs(f"{file_path}/figs/{file_name}", exist_ok=True)
@@ -341,3 +344,4 @@ if __name__ == "__main__":
             plot_avg_io_size(data["z_data_map"], data["z_rw_ctr_map"])
 
             print(f"{file} Total zone resets: {z_counter}")
+            data.clear()
