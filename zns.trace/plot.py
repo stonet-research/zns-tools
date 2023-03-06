@@ -18,7 +18,6 @@ plt.rc('legend', fontsize=12)    # legend fontsize
 ZONE_SIZE = 0
 NR_ZONES = 0
 LAT_CONV=10**3 # Latency is stored in nsec, convert to μsec (change to 10**6 for msec)
-z_counter = 0
 
 def main(argv):
     try:
@@ -261,6 +260,7 @@ if __name__ == "__main__":
         sys.exit()
 
     for file in glob.glob(f"{file_path}/data/*"):
+        z_counter = 0
         file_name = file.split('/')[-1]
 
         os.makedirs(f"{file_path}/figs/{file_name}", exist_ok=True)
