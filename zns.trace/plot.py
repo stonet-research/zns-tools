@@ -344,3 +344,4 @@ if __name__ == "__main__":
             plot_avg_io_size(data["z_data_map"], data["z_rw_ctr_map"])
 
             print(f"{file} Total zone resets: {z_counter}")
+            data.clear()
