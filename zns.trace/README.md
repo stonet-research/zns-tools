@@ -14,48 +14,7 @@ To run the tracing, simply provide the script with a ZNS device to trace, and pr
 
 The python plotting script will directly be called, however if for some reason you have data that has not been plotted you can run the python script itself with `python3 plot.py`. **Note** however, that it takes the zone size and number of zones as arguments, and therefore attempts to create figures for all data with these values. If a figure for a particular data file already exists, this data will be skipped an no new figure is generated. Therefore, in the case there are multiple data files without figures, and with different ZNS devices, simply move the files from different devices to a temporary directory and plot only data for one device at a time. Since it does not regenerate existing figures, this way you can iteratively generate figures for all data files. Or move generated data and files to different directories, we do not have an effective way to integrate this for everyone, therefore this part involves individual configuration.
 
-**NOTE,** the script has the sector size hardcoded to 512B, for 4K sector size change the define to `SECTOR_SHIFT 12`.
-
-## BPF Errors
-
-If the following error about the `REQ_OP_MASK` show up, change all usages of it to `0x99`.
-
-```bash
-./trace.bt:23:52-63: ERROR: Macro recursion limit reached: REQ_OP_MASK, ((1<<REQ_OP_BITS)-1)
-$cmd = (((struct request *)arg1)->cmd_flags & REQ_OP_MASK);
-~~~~~~~~~~~
-./trace.bt:23:52-63: ERROR: syntax error, unexpected end of file
-$cmd = (((struct request *)arg1)->cmd_flags & REQ_OP_MASK);
-~~~~~~~~~~~
-```
-
-The changes are:
-
-```bash
-user@stosys:~/src/zns-tools/zns.trace$ git diff trace.bt
-diff --git a/zns.trace/trace.bt b/zns.trace/trace.bt
-index 120f356..bd69f4b 100644
---- a/zns.trace/trace.bt
-+++ b/zns.trace/trace.bt
-@@ -20,7 +20,7 @@ BEGIN {
-
- k:nvme_setup_cmd / ((struct request *)arg1)->q->disk->disk_name == str($1) / {
-     $nvme_cmd = (struct nvme_command *)*(arg1+sizeof(struct request));
--    $cmd = (((struct request *)arg1)->cmd_flags & REQ_OP_MASK);
-+    $cmd = (((struct request *)arg1)->cmd_flags & 0x99);
-     $opcode = (uint8)$nvme_cmd->rw.opcode;
-
-     $secnum = ((struct request *)arg1)->__sector;
-@@ -88,7 +88,7 @@ k:nvme_setup_cmd / ((struct request *)arg1)->q->disk->disk_name == str($1) / {
- k:nvme_complete_rq / ((struct request *)arg0)->q->disk->disk_name == str($1) / {
-     $nvme_cmd = (struct nvme_command *)*(arg0+sizeof(struct request));
-     $opcode = (uint8)$nvme_cmd->rw.opcode;
--    $cmd = (((struct request *)arg0)->cmd_flags & REQ_OP_MASK);
-+    $cmd = (((struct request *)arg0)->cmd_flags & 0x99);
-
-     if($cmd == REQ_OP_ZONE_RESET || (($cmd == REQ_OP_DRV_OUT && $opcode == nvme_cmd_zone_mgmt_send) && $nvme_cmd->zms.zsa == NVME_ZONE_RESET)) {
-         $cmdid = ((struct request *)arg0)->tag;
-```
+**NOTE,** the script has the sector size hardcoded to 512B, for 4K sector size change the define to `SECTOR_SHIFT 12` and update the labels in `plot.py` to depict 512B (only heatmap labels must be updated).
 
 ## Requirements
 
@@ -105,3 +64,7 @@ In addition to counting the zone reset operations, we measure the zone reset lat
 ```bash
 reset_lat_map[$zlbas, @z_reset_ctr_map[$zlbas]] = int64 (in nsecs)
 ```
+
+## Known Issues
+
+- A known issue is that not all zone reset latencies are traced, where the heatmap for the zone reset latencies is missing zones that were reset, as shown by the zone reset counter heatpmaps.
