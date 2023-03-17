@@ -27,14 +27,14 @@ The `src/` directory contains several tools for identifying and mapping out F2FS
 
 ### zns.fiemap
 
-`zns.fiemap` is a tool that uses the `ioctl()` call to extract mappings for a file, and map these to the zones on a ZNS device. Since current ZNS support in file systems relies on LFS, with F2FS, this tools aims at showcasing the data placement of files and their fragmentation. With `FIEMAP`, a single contiguous extent, which physically has consecutive addresses, is returned. We use this to find all extents of a file, and show their location. Extents can, especially over time as they are updated and the file system runs GC, end up spread across multiple zones, be in random order in zones, and be split it up into a large number of smaller extents. We provide an example output for a small run to locate data on a ZNS, located in the `examples/zns.fiemap.md`. For more details see the manual in `zns.fiemap.8`
+`zns.fiemap` is a tool that uses the `ioctl()` call to extract mappings for a file, and map these to the zones on a ZNS device. Since current ZNS support in file systems relies on LFS, with F2FS, this tools aims at showcasing the data placement of files and their fragmentation. With `FIEMAP`, a single contiguous extent, which physically has consecutive addresses, is returned. It is used find all extents of a file and show their location. Extents can, especially over time as they are updated and the file system runs GC, end up spread across multiple zones, be in random order in zones, and be split it up into a large number of smaller extents. We provide an example output for a small run to locate data on a ZNS, located in the `examples/zns.fiemap.md`. For more details see the manual in `zns.fiemap.8`
 
 ```bash
 # Run: zns.fiemap -f [file path to locate]
 sudo ./zns.fiemap -f /mnt/f2fs/file_to_locate
 ```
 
-We need to run with `sudo` since the program is required to open file descriptors on devices (which can only be done with privileges). The possible flags for `zns.fiemap` are
+It needs to run with `sudo`, since the program is required to open file descriptors on devices (which can only be done with privileges). The possible flags for `zns.fiemap` are
 
 ```bash
 sudo ./zns.fiemap [flags]
@@ -45,6 +45,8 @@ sudo ./zns.fiemap [flags]
 -l:             Set the logging level [1-2] (Default 0)
 -i:             Show info prints with the results
 ```
+
+**Note**, with F2FS if there is space on the conventional device, after the metadata (NAT,SIT,SSA,CP), it places file data onto the conventional device. Such extents cannot be mapped to zones and are therefore ignored. If the output shows `No extents found on device`, while you were expecting extents to be mapped, verify that these are not on the conventional device. Run with `-l 2` (higher log level) to show all extent mappings, it will say on which device these are found, if the extent is being ignored, and check with `zns.imap -s` the information in the superblock for the `main_blkaddr`, which is where F2FS starts writing data from.
 
 ### zns.segmap
 
