@@ -239,6 +239,8 @@ int main(int argc, char *argv[]) {
 
     if (!extent_map) {
         ERR_MSG("retrieving extents for %s\n", ctrl.filename);
+    } else if (extent_map->ext_ctr == 0) {
+        ERR_MSG("No extents found on device\n");
     }
 
     sort_extents(extent_map);
