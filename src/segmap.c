@@ -558,8 +558,8 @@ static void show_segment_report() {
             // last (in case the last is only partially used by the segment)
             // - checks if there are more than 1 segments after the start
             uint64_t segment_end = ((glob_extent_map->extent[i].phy_blk +
-                        glob_extent_map->extent[i].len) &
-                    ctrl.f2fs_segment_mask);
+                                     glob_extent_map->extent[i].len) &
+                                    ctrl.f2fs_segment_mask);
             if ((segment_end - segment_start) >> ctrl.segment_shift > 1)
                 show_consecutive_segments(i, segment_id);
 
