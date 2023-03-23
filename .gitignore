@@ -36,3 +36,5 @@ man/Makefile.in
 compile_commands.json
 .cache/
 *.o
+
+*.swp
