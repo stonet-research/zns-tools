@@ -528,8 +528,7 @@ uint32_t get_file_counter(char *file) {
  * */
 static void increase_file_extent_counter(char *file) {
     for (uint32_t i = 0; i < file_counter_map->cur_ctr; i++) {
-        if (strncmp(file_counter_map->file[i].file, file,
-                    strlen(file_counter_map->file[i].file)) == 0) {
+        if (strcmp(file_counter_map->file[i].file, file) == 0) {
             file_counter_map->file[i].ext_ctr++;
             return;
         }
@@ -683,12 +682,11 @@ void set_super_block_info(struct f2fs_super_block f2fs_sb) {
  * check the magic value of the file being checked and
  * store it in the control
  * */
-void set_file_system_magic() {
+void set_fs_magic(char *name) {
     struct statfs s;
 
-    if (statfs(ctrl.filename, &s)) {
-        ERR_MSG("failed getting file system magic value for file %s\n",
-                ctrl.filename);
+    if (statfs(name, &s)) {
+        ERR_MSG("failed getting file system magic value for file %s\n", name);
         return;
     }
 
@@ -714,7 +712,7 @@ void init_ctrl() {
         ERR_MSG("Failed stat on file %s\n", ctrl.filename);
     }
 
-    set_file_system_magic();
+    set_fs_magic(ctrl.filename);
 
     if (ctrl.fs_magic == F2FS_MAGIC) {
         init_dev(ctrl.stats);
@@ -726,12 +724,10 @@ void init_ctrl() {
         ctrl.offset = get_dev_size(ctrl.bdev.dev_path);
         ctrl.znsdev.zone_size = get_zone_size();
         ctrl.znsdev.nr_zones = get_nr_zones();
-    }
-
-    if (ctrl.fs_magic == BTRFS_MAGIC) {
+    } else if (ctrl.fs_magic == BTRFS_MAGIC) {
         WARN("%s is registered as being on BTRFS which can occupy multiple "
              "devices.\nEnter the"
-             " assocaited ZNS device name: ",
+             " associated ZNS device name: ",
              ctrl.filename);
 
         int ret = scanf("%s", ctrl.znsdev.dev_name);

@@ -3,7 +3,6 @@
 /*
  * Print the report summary of extent_map.
  *
- * @ctrl: struct control * of the control
  * @extent_map: struct extent_map * to the extent maps
  *
  * */

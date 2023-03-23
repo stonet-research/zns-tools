@@ -172,6 +172,7 @@ extern void set_file_extent_counters(struct extent_map *);
 extern void increase_file_segment_counter(char *, unsigned int, unsigned int,
                                           enum type, uint64_t);
 extern void set_super_block_info(struct f2fs_super_block);
+extern void set_fs_magic(char *);
 extern void init_ctrl();
 
 #define INFO(n, fmt, ...)                                                      \
