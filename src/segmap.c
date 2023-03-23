@@ -106,7 +106,13 @@ static void collect_extents(char *path) {
             fsync(ctrl.fd);
 
             if (ctrl.fd < 0) {
-                ERR_MSG("failed opening file %s\n", ctrl.filename);
+                // The file could have been deleted in the meantime.
+                if (access(ctrl.filename, F_OK) != 0) {
+                    INFO(1, "File no longer exists: %s", ctrl.filename);
+                    continue;
+                } else {
+                    ERR_MSG("failed opening file %s\n", ctrl.filename);
+                }
             }
 
             if (fstat(ctrl.fd, ctrl.stats) < 0) {
