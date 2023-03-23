@@ -78,7 +78,7 @@ static void check_dir() {
     if (ctrl.fs_magic == F2FS_MAGIC) {
         init_dev(&stats);
     } else if (ctrl.fs_magic == BTRFS_MAGIC) {
-        WARN("%s is registered as being on BTRFS which can occupy multiple "
+        WARN("%s is registered as being on Btrfs which can occupy multiple "
              "devices.\nEnter the"
              " associated ZNS device name: ",
              segmap_man.dir);
@@ -601,10 +601,9 @@ static void show_segment_report() {
 }
 
 /*
- * Print the report summary of glob_extent_map for BTRFS.
- *
- * TODO: This is simply copied from fiemap.c we can probably combine
- * them or see what different things we need
+ * Print the report summary of glob_extent_map for Btrfs.
+ * Report is same as fiemap.c for multiple files, therefore
+ * includes file names.
  *
  * */
 static void print_filemap_report() {

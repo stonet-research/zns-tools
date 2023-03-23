@@ -725,7 +725,7 @@ void init_ctrl() {
         ctrl.znsdev.zone_size = get_zone_size();
         ctrl.znsdev.nr_zones = get_nr_zones();
     } else if (ctrl.fs_magic == BTRFS_MAGIC) {
-        WARN("%s is registered as being on BTRFS which can occupy multiple "
+        WARN("%s is registered as being on Btrfs which can occupy multiple "
              "devices.\nEnter the"
              " associated ZNS device name: ",
              ctrl.filename);
