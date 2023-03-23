@@ -47,6 +47,7 @@ static void show_help() {
     MSG("-e [uint]\tSet the ending zone to map. Default last zone.\n");
     MSG("-c\t\tShow segment statistics (requires -p to be enabled).\n");
     MSG("-o\t\tShow only segment statistics (automatically enables -s).\n");
+    MSG("-n\t\tDon't show holes between extents (only for Btrfs).\n");
 
     show_info();
     exit(0);
@@ -139,6 +140,7 @@ static void collect_extents(char *path) {
                 INFO(1, "No extents found for file: %s\n", ctrl.filename);
             } else {
                 glob_extent_map->ext_ctr += temp_map->ext_ctr;
+                glob_extent_map->cum_extent_size += temp_map->cum_extent_size;
                 glob_extent_map = realloc(
                     glob_extent_map,
                     sizeof(struct extent_map) +
@@ -628,6 +630,8 @@ static void print_filemap_report() {
             glob_extent_map->zone_ctr++;
             print_zone_info(current_zone);
             MSG("\n");
+            UNDERSCORE_FORMATTER_SHORT
+            FORMATTER_SHORT
         }
 
         // Track holes in between extents in the same zone
@@ -646,13 +650,13 @@ static void print_filemap_report() {
                 hole_cum_size += hole_size;
                 hole_ctr++;
 
-                HOLE_FORMATTER;
-                MSG("--- HOLE:    PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
+                HOLE_FORMATTER
+                MSG(">>>>> HOLE:    PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
                     "  SIZE: %#-10" PRIx64 "\n",
                     glob_extent_map->extent[i - 1].phy_blk +
                         glob_extent_map->extent[i - 1].len,
                     glob_extent_map->extent[i].phy_blk, hole_size);
-                HOLE_FORMATTER;
+                HOLE_FORMATTER
             }
         }
         if (ctrl.show_holes && i > 0 && i < glob_extent_map->ext_ctr - 1 &&
@@ -667,12 +671,12 @@ static void print_filemap_report() {
             hole_cum_size += hole_size;
             hole_ctr++;
 
-            HOLE_FORMATTER;
-            MSG("---- HOLE:    PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
+            HOLE_FORMATTER
+            MSG(">>>>> HOLE:    PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
                 "  SIZE: %#-10" PRIx64 "\n",
                 glob_extent_map->extent[i].zone_lbas,
                 glob_extent_map->extent[i].phy_blk, hole_size);
-            HOLE_FORMATTER;
+            HOLE_FORMATTER
         }
 
         MSG("***** EXTENT:  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
@@ -711,21 +715,27 @@ static void print_filemap_report() {
             hole_cum_size += hole_size;
             hole_ctr++;
 
-            HOLE_FORMATTER;
-            MSG("--- HOLE:    PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
+            HOLE_FORMATTER
+            MSG(">>>>> HOLE:    PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
                 "  SIZE: %#-10" PRIx64 "\n",
                 glob_extent_map->extent[i].phy_blk +
                     glob_extent_map->extent[i].len,
                 hole_end, hole_size);
-            HOLE_FORMATTER;
+            HOLE_FORMATTER
+        }
+
+        if (glob_extent_map->ext_ctr >= i &&
+            glob_extent_map->extent[i + 1].zone != current_zone) {
+            UNDERSCORE_FORMATTER_SHORT
+            FORMATTER_SHORT
         }
     }
 
     MSG("\n\n==============================================================="
-        "=====\n");
-    MSG("\t\t\tSTATS SUMMARY\n");
+        "===========\n");
+    MSG("\t\t\t STATS SUMMARY\n");
     MSG("==================================================================="
-        "=\n");
+        "=======\n");
     MSG("\nNOE: %-4u  TES: %#-10" PRIx64 "  AES: %#-10" PRIx64 "  EAES: %-10f"
         "  NOZ: %-4u\n",
         glob_extent_map->ext_ctr, glob_extent_map->cum_extent_size,
@@ -755,8 +765,9 @@ int main(int argc, char *argv[]) {
     memset(&ctrl, 0, sizeof(struct control));
     memset(&segmap_man, 0, sizeof(struct segmap_manager));
     ctrl.exclude_flags = FIEMAP_EXTENT_DATA_INLINE;
+    ctrl.show_holes = 1; /* holes only apply to Btrfs */
 
-    while ((c = getopt(argc, argv, "d:hil:ws:e:pz:co")) != -1) {
+    while ((c = getopt(argc, argv, "d:hil:ws:e:pz:con")) != -1) {
         switch (c) {
         case 'h':
             show_help();
@@ -796,6 +807,9 @@ int main(int argc, char *argv[]) {
         case 'o':
             ctrl.show_only_stats = 1;
             ctrl.show_class_stats = 1;
+            break;
+        case 'n':
+            ctrl.show_holes = 0;
             break;
         default:
             show_help();
