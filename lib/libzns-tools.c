@@ -680,6 +680,22 @@ void set_super_block_info(struct f2fs_super_block f2fs_sb) {
 }
 
 /*
+ * check the magic value of the file being checked and
+ * store it in the control
+ * */
+void set_file_system_magic() {
+    struct statfs s;
+
+    if (statfs(ctrl.filename, &s)) {
+        ERR_MSG("failed getting file system magic value for file %s\n",
+                ctrl.filename);
+        return;
+    }
+
+    ctrl.fs_magic = s.f_type;
+}
+
+/*
  * init the control struct for zns.fiemap and zns.inode
  *
  *
@@ -698,13 +714,38 @@ void init_ctrl() {
         ERR_MSG("Failed stat on file %s\n", ctrl.filename);
     }
 
-    init_dev(ctrl.stats);
+    set_file_system_magic();
 
-    f2fs_read_super_block(ctrl.bdev.dev_path);
-    set_super_block_info(f2fs_sb);
+    if (ctrl.fs_magic == F2FS_MAGIC) {
+        init_dev(ctrl.stats);
 
-    ctrl.multi_dev = 1;
-    ctrl.offset = get_dev_size(ctrl.bdev.dev_path);
-    ctrl.znsdev.zone_size = get_zone_size();
-    ctrl.znsdev.nr_zones = get_nr_zones();
+        f2fs_read_super_block(ctrl.bdev.dev_path);
+        set_super_block_info(f2fs_sb);
+
+        ctrl.multi_dev = 1;
+        ctrl.offset = get_dev_size(ctrl.bdev.dev_path);
+        ctrl.znsdev.zone_size = get_zone_size();
+        ctrl.znsdev.nr_zones = get_nr_zones();
+    }
+
+    if (ctrl.fs_magic == BTRFS_MAGIC) {
+        WARN("%s is registered as being on BTRFS which can occupy multiple "
+             "devices.\nEnter the"
+             " assocaited ZNS device name: ",
+             ctrl.filename);
+
+        int ret = scanf("%s", ctrl.znsdev.dev_name);
+        if (!ret) {
+            ERR_MSG("reading input\n");
+        }
+
+        if (!init_znsdev()) {
+            ERR_MSG("Failed initializing %s\n", ctrl.znsdev.dev_path);
+        }
+
+        ctrl.multi_dev = 0;
+        ctrl.offset = 0;
+        ctrl.znsdev.zone_size = get_zone_size();
+        ctrl.znsdev.nr_zones = get_nr_zones();
+    }
 }

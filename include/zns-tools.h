@@ -12,6 +12,7 @@
 #include <sys/ioctl.h>
 #include <sys/stat.h>
 #include <sys/sysmacros.h>
+#include <sys/vfs.h>
 #include <unistd.h>
 
 #include <linux/fiemap.h>
@@ -32,6 +33,9 @@
 
 #define ZNS_TOOLS_MAX_DEVS 2
 #define F2FS_SECS_PER_BLOCK 9
+
+#define BTRFS_MAGIC 0x9123683E
+#define F2FS_MAGIC 0xF2F52010
 
 struct bdev {
     char dev_name[MAX_DEV_NAME];  /* char * to device name (e.g., nvme0n2) */
@@ -54,6 +58,7 @@ struct control {
     uint8_t show_holes; /* cmd_line flag to show holes */
     uint8_t show_flags; /* cmd_line flag to show extent flags */
     uint8_t info;       /* cmd_line flag to show info */
+    uint64_t fs_magic;  /* store the file system magic value */
 
     unsigned int sector_size;  /* Size of sectors on the ZNS device */
     unsigned int sector_shift; /* bit shift for sector conversion */
