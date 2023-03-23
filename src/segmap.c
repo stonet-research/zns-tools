@@ -576,14 +576,16 @@ static void show_segment_report() {
 
             // part 2: all in between segments after the 1st segment and the
             // last (in case the last is only partially used by the segment)
-            show_consecutive_segments(i, segment_id);
+            // - checks if there are more than 1 segments after the start
+            uint64_t segment_end = ((glob_extent_map->extent[i].phy_blk +
+                                     glob_extent_map->extent[i].len) &
+                                    ctrl.f2fs_segment_mask);
+            if ((segment_end - segment_start) >> ctrl.segment_shift > 1)
+                show_consecutive_segments(i, segment_id);
 
             // part 3: any remaining parts of the last segment, which do not
             // fill the entire last segment only if the segment actually has a
             // remaining fragment
-            uint64_t segment_end = ((glob_extent_map->extent[i].phy_blk +
-                                     glob_extent_map->extent[i].len) &
-                                    ctrl.f2fs_segment_mask);
             if (segment_end != glob_extent_map->extent[i].phy_blk +
                                    glob_extent_map->extent[i].len) {
                 show_remainder_segment(i);
