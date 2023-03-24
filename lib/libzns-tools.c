@@ -71,6 +71,10 @@ static unsigned int get_sector_size(char *dev_path) {
 
     INFO(1, "Device %s has sector size %lu\n", dev_path, sector_size);
 
+    if (sector_size == 4096) {
+        ctrl.zns_sector_shift = 3;
+    }
+
     return sector_size;
 }
 
@@ -182,7 +186,8 @@ uint64_t get_zone_size() {
 
     close(fd);
 
-    return zone_size;
+    /* ZNS always reports in 512B, so shift it if 4KiB LBAF */
+    return zone_size >> ctrl.zns_sector_shift;
 }
 
 /*
@@ -243,7 +248,7 @@ void print_zone_info(uint32_t zone) {
     struct blk_zone_report *hdr = NULL;
     uint32_t zone_mask;
 
-    start_sector = ctrl.znsdev.zone_size * zone - ctrl.znsdev.zone_size;
+    start_sector = (ctrl.znsdev.zone_size << ctrl.zns_sector_shift) * zone - (ctrl.znsdev.zone_size << ctrl.zns_sector_shift);
 
     int fd = open(ctrl.znsdev.dev_path, O_RDONLY);
     if (fd < 0) {
@@ -261,11 +266,12 @@ void print_zone_info(uint32_t zone) {
 
     zone_mask = ~(ctrl.znsdev.zone_size - 1);
     MSG("\n============ ZONE %d ============\n", zone);
+
     MSG("LBAS: 0x%06llx  LBAE: 0x%06llx  CAP: 0x%06llx  WP: 0x%06llx  SIZE: "
-        "0x%06llx  STATE: %#-4x  MASK: 0x%06" PRIx32 "\n",
-        hdr->zones[0].start, hdr->zones[0].start + hdr->zones[0].capacity,
-        hdr->zones[0].capacity, hdr->zones[0].wp, hdr->zones[0].len,
-        hdr->zones[0].cond << 4, zone_mask);
+            "0x%06llx  STATE: %#-4x  MASK: 0x%06" PRIx32 "\n",
+            hdr->zones[0].start >> ctrl.zns_sector_shift, (hdr->zones[0].start >> ctrl.zns_sector_shift) + (hdr->zones[0].capacity >> ctrl.zns_sector_shift),
+            hdr->zones[0].capacity >> ctrl.zns_sector_shift, hdr->zones[0].wp >> ctrl.zns_sector_shift, hdr->zones[0].len >> ctrl.zns_sector_shift,
+            hdr->zones[0].cond << 4, zone_mask);
 
     close(fd);
 
@@ -283,7 +289,7 @@ static void get_zone_info(struct extent *extent) {
     struct blk_zone_report *hdr = NULL;
     uint64_t start_sector;
 
-    start_sector = extent->zone_size * extent->zone - extent->zone_size;
+    start_sector = (ctrl.znsdev.zone_size << ctrl.zns_sector_shift) * extent->zone - (ctrl.znsdev.zone_size << ctrl.zns_sector_shift);
 
     int fd = open(ctrl.znsdev.dev_path, O_RDONLY);
     if (fd < 0) {
@@ -299,10 +305,10 @@ static void get_zone_info(struct extent *extent) {
         return;
     }
 
-    extent->zone_wp = hdr->zones[0].wp;
-    extent->zone_lbae = hdr->zones[0].start + hdr->zones[0].capacity;
-    extent->zone_cap = hdr->zones[0].capacity;
-    extent->zone_lbas = hdr->zones[0].start;
+    extent->zone_wp = hdr->zones[0].wp >> ctrl.zns_sector_shift;
+    extent->zone_lbae = (hdr->zones[0].start >> ctrl.zns_sector_shift) + (hdr->zones[0].capacity >> ctrl.zns_sector_shift);
+    extent->zone_cap = hdr->zones[0].capacity >> ctrl.zns_sector_shift;
+    extent->zone_lbas = hdr->zones[0].start >> ctrl.zns_sector_shift;
 
     close(fd);
 
@@ -378,6 +384,7 @@ struct extent_map *get_extents() {
     fiemap->fm_extent_count = 1; // get extents individually
     fiemap->fm_length = (ctrl.stats->st_blocks << ctrl.sector_shift);
     extent_map->ext_ctr = 0;
+    DBG("shift %d %d\n", ctrl.sector_shift, ctrl.zns_sector_shift);
 
     do {
         if (extent_map->ext_ctr > 0) {
@@ -447,8 +454,7 @@ struct extent_map *get_extents() {
                 extent_map->extent[extent_map->ext_ctr].len;
 
             extent_map->extent[extent_map->ext_ctr].zone = get_zone_number(
-                ((fiemap->fm_extents[0].fe_physical - ctrl.offset) >>
-                 ctrl.sector_shift));
+                (extent_map->extent[0].phy_blk));
             extent_map->extent[extent_map->ext_ctr].file =
                 calloc(1, sizeof(char) * MAX_FILE_LENGTH);
             memcpy(extent_map->extent[extent_map->ext_ctr].file, ctrl.filename,
