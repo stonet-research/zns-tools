@@ -47,6 +47,7 @@ static void show_help() {
     MSG("-e [uint]\tSet the ending zone to map. Default last zone.\n");
     MSG("-c\t\tShow segment statistics (requires -p to be enabled).\n");
     MSG("-o\t\tShow only segment statistics (automatically enables -s).\n");
+    MSG("-n\t\tDon't show holes between extents (only for Btrfs).\n");
 
     show_info();
     exit(0);
@@ -73,7 +74,21 @@ static void check_dir() {
         INFO(1, "%s is a file\n", segmap_man.dir);
     }
 
-    init_dev(&stats);
+    set_fs_magic(segmap_man.dir);
+
+    if (ctrl.fs_magic == F2FS_MAGIC) {
+        init_dev(&stats);
+    } else if (ctrl.fs_magic == BTRFS_MAGIC) {
+        WARN("%s is registered as being on Btrfs which can occupy multiple "
+             "devices.\nEnter the"
+             " associated ZNS device name: ",
+             segmap_man.dir);
+
+        int ret = scanf("%s", ctrl.znsdev.dev_name);
+        if (!ret) {
+            ERR_MSG("reading input\n");
+        }
+    }
 }
 
 /*
@@ -125,6 +140,7 @@ static void collect_extents(char *path) {
                 INFO(1, "No extents found for file: %s\n", ctrl.filename);
             } else {
                 glob_extent_map->ext_ctr += temp_map->ext_ctr;
+                glob_extent_map->cum_extent_size += temp_map->cum_extent_size;
                 glob_extent_map = realloc(
                     glob_extent_map,
                     sizeof(struct extent_map) +
@@ -588,6 +604,156 @@ static void show_segment_report() {
     }
 }
 
+/*
+ * Print the report summary of glob_extent_map for Btrfs.
+ * Report is same as fiemap.c for multiple files, therefore
+ * includes file names.
+ *
+ * */
+static void print_filemap_report() {
+    uint32_t current_zone = 0;
+    uint32_t hole_ctr = 0;
+    uint64_t hole_cum_size = 0;
+    uint64_t hole_size = 0;
+    uint64_t hole_end = 0;
+    uint64_t pbae = 0;
+
+    MSG("================================================================="
+        "===\n");
+    MSG("\t\t\tEXTENT MAPPINGS\n");
+    MSG("==================================================================="
+        "=\n");
+
+    for (uint32_t i = 0; i < glob_extent_map->ext_ctr; i++) {
+        if (current_zone != glob_extent_map->extent[i].zone) {
+            current_zone = glob_extent_map->extent[i].zone;
+            glob_extent_map->zone_ctr++;
+            print_zone_info(current_zone);
+            MSG("\n");
+            UNDERSCORE_FORMATTER_SHORT
+            FORMATTER_SHORT
+        }
+
+        // Track holes in between extents in the same zone
+        if (ctrl.show_holes && i > 0 &&
+            (glob_extent_map->extent[i - 1].phy_blk +
+                 glob_extent_map->extent[i - 1].len !=
+             glob_extent_map->extent[i].phy_blk)) {
+
+            if (glob_extent_map->extent[i - 1].zone ==
+                glob_extent_map->extent[i].zone) {
+                // Hole in the same zone between segments
+
+                hole_size = glob_extent_map->extent[i].phy_blk -
+                            (glob_extent_map->extent[i - 1].phy_blk +
+                             glob_extent_map->extent[i - 1].len);
+                hole_cum_size += hole_size;
+                hole_ctr++;
+
+                HOLE_FORMATTER
+                MSG(">>>>> HOLE:    PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
+                    "  SIZE: %#-10" PRIx64 "\n",
+                    glob_extent_map->extent[i - 1].phy_blk +
+                        glob_extent_map->extent[i - 1].len,
+                    glob_extent_map->extent[i].phy_blk, hole_size);
+                HOLE_FORMATTER
+            }
+        }
+        if (ctrl.show_holes && i > 0 && i < glob_extent_map->ext_ctr - 1 &&
+            glob_extent_map->extent[i].zone_lbas !=
+                glob_extent_map->extent[i].phy_blk &&
+            glob_extent_map->extent[i - 1].zone !=
+                glob_extent_map->extent[i].zone) {
+            // Hole between LBAS of zone and PBAS of the extent
+
+            hole_size = glob_extent_map->extent[i].phy_blk -
+                        glob_extent_map->extent[i].zone_lbas;
+            hole_cum_size += hole_size;
+            hole_ctr++;
+
+            HOLE_FORMATTER
+            MSG(">>>>> HOLE:    PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
+                "  SIZE: %#-10" PRIx64 "\n",
+                glob_extent_map->extent[i].zone_lbas,
+                glob_extent_map->extent[i].phy_blk, hole_size);
+            HOLE_FORMATTER
+        }
+
+        MSG("***** EXTENT:  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
+            "  SIZE: %#-10" PRIx64 "  FILE: %50s  EXTID:  %d/%-5d\n",
+            glob_extent_map->extent[i].phy_blk,
+            (glob_extent_map->extent[i].phy_blk +
+             glob_extent_map->extent[i].len),
+            glob_extent_map->extent[i].len, glob_extent_map->extent[i].file,
+            glob_extent_map->extent[i].ext_nr + 1,
+            get_file_counter(glob_extent_map->extent[i].file));
+
+        if (glob_extent_map->extent[i].flags != 0 && ctrl.show_flags) {
+            show_extent_flags(glob_extent_map->extent[i].flags);
+        }
+
+        pbae =
+            glob_extent_map->extent[i].phy_blk + glob_extent_map->extent[i].len;
+        if (ctrl.show_holes && i > 0 && i < glob_extent_map->ext_ctr &&
+            pbae != glob_extent_map->extent[i].zone_lbae &&
+            glob_extent_map->extent[i].zone_wp > pbae &&
+            glob_extent_map->extent[i].zone !=
+                glob_extent_map->extent[i + 1].zone) {
+            // Hole between PBAE of the extent and the zone LBAE (since WP can
+            // be next zone LBAS if full) e.g. extent ends before the write
+            // pointer of its zone but the next extent is in a different zone
+            // (hence hole between PBAE and WP)
+
+            if (glob_extent_map->extent[i].zone_wp <
+                glob_extent_map->extent[i].zone_lbae) {
+                hole_end = glob_extent_map->extent[i].zone_wp;
+            } else {
+                hole_end = glob_extent_map->extent[i].zone_lbae;
+            }
+
+            hole_size = hole_end - pbae;
+            hole_cum_size += hole_size;
+            hole_ctr++;
+
+            HOLE_FORMATTER
+            MSG(">>>>> HOLE:    PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
+                "  SIZE: %#-10" PRIx64 "\n",
+                glob_extent_map->extent[i].phy_blk +
+                    glob_extent_map->extent[i].len,
+                hole_end, hole_size);
+            HOLE_FORMATTER
+        }
+
+        if (glob_extent_map->ext_ctr >= i &&
+            glob_extent_map->extent[i + 1].zone != current_zone) {
+            UNDERSCORE_FORMATTER_SHORT
+            FORMATTER_SHORT
+        }
+    }
+
+    MSG("\n\n==============================================================="
+        "===========\n");
+    MSG("\t\t\t STATS SUMMARY\n");
+    MSG("==================================================================="
+        "=======\n");
+    MSG("\nNOE: %-4u  TES: %#-10" PRIx64 "  AES: %#-10" PRIx64 "  EAES: %-10f"
+        "  NOZ: %-4u\n",
+        glob_extent_map->ext_ctr, glob_extent_map->cum_extent_size,
+        glob_extent_map->cum_extent_size / (glob_extent_map->ext_ctr),
+        (double)glob_extent_map->cum_extent_size /
+            (double)(glob_extent_map->ext_ctr),
+        glob_extent_map->zone_ctr);
+
+    if (ctrl.show_holes && hole_ctr > 0) {
+        MSG("NOH: %-4u  THS: %#-10" PRIx64 "  AHS: %#-10" PRIx64
+            "  EAHS: %-10f\n",
+            hole_ctr, hole_cum_size, hole_cum_size / hole_ctr,
+            (double)hole_cum_size / (double)hole_ctr);
+    } else if (ctrl.show_holes && hole_ctr == 0) {
+        MSG("NOH: 0\n");
+    }
+}
+
 int main(int argc, char *argv[]) {
     int c;
     uint8_t set_zone = 0;
@@ -599,8 +765,9 @@ int main(int argc, char *argv[]) {
     memset(&ctrl, 0, sizeof(struct control));
     memset(&segmap_man, 0, sizeof(struct segmap_manager));
     ctrl.exclude_flags = FIEMAP_EXTENT_DATA_INLINE;
+    ctrl.show_holes = 1; /* holes only apply to Btrfs */
 
-    while ((c = getopt(argc, argv, "d:hil:ws:e:pz:co")) != -1) {
+    while ((c = getopt(argc, argv, "d:hil:ws:e:pz:con")) != -1) {
         switch (c) {
         case 'h':
             show_help();
@@ -641,6 +808,9 @@ int main(int argc, char *argv[]) {
             ctrl.show_only_stats = 1;
             ctrl.show_class_stats = 1;
             break;
+        case 'n':
+            ctrl.show_holes = 0;
+            break;
         default:
             show_help();
             abort();
@@ -666,11 +836,20 @@ int main(int argc, char *argv[]) {
 
     check_dir();
 
-    f2fs_read_super_block(ctrl.bdev.dev_path);
-    set_super_block_info(f2fs_sb);
+    if (ctrl.fs_magic == F2FS_MAGIC) {
+        f2fs_read_super_block(ctrl.bdev.dev_path);
+        set_super_block_info(f2fs_sb);
+        ctrl.multi_dev = 1;
+        ctrl.offset = get_dev_size(ctrl.bdev.dev_path);
+    } else if (ctrl.fs_magic == BTRFS_MAGIC) {
+        ctrl.multi_dev = 0;
+        ctrl.offset = 0;
 
-    ctrl.multi_dev = 1;
-    ctrl.offset = get_dev_size(ctrl.bdev.dev_path);
+        if (!init_znsdev()) {
+            ERR_MSG("Failed initializing %s\n", ctrl.znsdev.dev_path);
+        }
+    }
+
     ctrl.znsdev.zone_size = get_zone_size();
     ctrl.znsdev.zone_mask = ~(ctrl.znsdev.zone_size - 1);
     ctrl.znsdev.nr_zones = get_nr_zones();
@@ -709,32 +888,40 @@ int main(int argc, char *argv[]) {
 
     sort_extents(glob_extent_map);
 
-    highest_segment =
-        ((glob_extent_map->extent[glob_extent_map->ext_ctr - 1].phy_blk +
-          glob_extent_map->extent[glob_extent_map->ext_ctr - 1].len) &
-         ctrl.f2fs_segment_mask) >>
-        ctrl.segment_shift;
-    if (ctrl.procfs) {
-        if (!get_procfs_segment_bits(ctrl.bdev.dev_name, highest_segment)) {
-            // Something failed, fallling back
-            ctrl.procfs = 0;
+    if (ctrl.fs_magic == F2FS_MAGIC) {
+        highest_segment =
+            ((glob_extent_map->extent[glob_extent_map->ext_ctr - 1].phy_blk +
+              glob_extent_map->extent[glob_extent_map->ext_ctr - 1].len) &
+             ctrl.f2fs_segment_mask) >>
+            ctrl.segment_shift;
+        if (ctrl.procfs) {
+            if (!get_procfs_segment_bits(ctrl.bdev.dev_name, highest_segment)) {
+                // Something failed, fallling back
+                ctrl.procfs = 0;
+            }
         }
-    }
 
-    set_file_extent_counters(glob_extent_map);
+        set_file_extent_counters(glob_extent_map);
 
-    show_segment_report();
+        show_segment_report();
 
-    free(file_counter_map->file);
-    free(file_counter_map);
-    if (ctrl.show_class_stats) {
-        free(segmap_man.fs);
-        for (uint32_t i = 0; i < segmap_man.ctr; i++) {
-            free(segmap_man.fs[i].filename);
+        free(file_counter_map->file);
+        free(file_counter_map);
+        if (ctrl.show_class_stats) {
+            free(segmap_man.fs);
+            for (uint32_t i = 0; i < segmap_man.ctr; i++) {
+                free(segmap_man.fs[i].filename);
+            }
         }
-    }
-    if (ctrl.procfs) {
-        free(segman.sm_info);
+        if (ctrl.procfs) {
+            free(segman.sm_info);
+        }
+    } else if (ctrl.fs_magic == BTRFS_MAGIC) {
+        set_file_extent_counters(glob_extent_map);
+        print_filemap_report(glob_extent_map);
+
+        free(file_counter_map->file);
+        free(file_counter_map);
     }
 
 cleanup:
