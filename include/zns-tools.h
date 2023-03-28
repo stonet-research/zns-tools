@@ -43,7 +43,8 @@ struct bdev {
     char link_name[MAX_PATH_LEN]; /* linkname from /dev/block/<major>:<minor> */
     uint8_t is_zoned;             /* flag if device is a zoned device */
     uint32_t nr_zones;            /* Number of zones on the ZNS device */
-    uint64_t zone_size;           /* the size of a zone on the device */
+    uint64_t zone_size;           /* the size of a zone on the device ZNS in 512B or 4KiB depending on LBAF*/
+    uint32_t zone_mask;   /* zone mask for bitwise AND */
 };
 
 struct control {
@@ -62,6 +63,7 @@ struct control {
 
     unsigned int sector_size;  /* Size of sectors on the ZNS device */
     unsigned int sector_shift; /* bit shift for sector conversion */
+    unsigned int zns_sector_shift; /* if using 4KiB LBAF, ZNS still reports values in 512B, so need to shift by 3 all values */
 
     uint64_t f2fs_segment_sectors; /* how many logical sectors a segment has,
                                       depending on device LBA size */

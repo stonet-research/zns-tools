@@ -851,6 +851,7 @@ int main(int argc, char *argv[]) {
     }
 
     ctrl.znsdev.zone_size = get_zone_size();
+    ctrl.znsdev.zone_mask = ~(ctrl.znsdev.zone_size - 1);
     ctrl.znsdev.nr_zones = get_nr_zones();
 
     if (ctrl.start_zone == 0 && !set_zone) {
