@@ -40,3 +40,4 @@ compile_commands.json
 *.swp
 
 timeline-gen/.ipynb_checkpoints/
+timeline-gen/*.pdf
