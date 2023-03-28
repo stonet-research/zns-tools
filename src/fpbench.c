@@ -497,6 +497,7 @@ int main(int argc, char *argv[]) {
     ctrl.multi_dev = 1;
     ctrl.offset = get_dev_size(ctrl.bdev.dev_path);
     ctrl.znsdev.zone_size = get_zone_size();
+    ctrl.znsdev.zone_mask = ~(ctrl.znsdev.zone_size - 1);
     ctrl.znsdev.nr_zones = get_nr_zones();
 
     if (wl_man.nr_jobs > 1) {

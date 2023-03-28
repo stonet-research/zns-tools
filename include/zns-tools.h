@@ -39,7 +39,8 @@ struct bdev {
     char link_name[MAX_PATH_LEN]; /* linkname from /dev/block/<major>:<minor> */
     uint8_t is_zoned;             /* flag if device is a zoned device */
     uint32_t nr_zones;            /* Number of zones on the ZNS device */
-    uint64_t zone_size;           /* the size of a zone on the device */
+    uint64_t zone_size;           /* the size of a zone on the device ZNS in 512B or 4KiB depending on LBAF*/
+    uint32_t zone_mask;   /* zone mask for bitwise AND */
 };
 
 struct control {

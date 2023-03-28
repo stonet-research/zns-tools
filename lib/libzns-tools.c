@@ -28,7 +28,7 @@ uint8_t is_zoned(char *dev_path) {
 
     hdr = calloc(1, sizeof(struct blk_zone_report) + nr_zones +
                         sizeof(struct blk_zone));
-    hdr->sector = start_sector;
+    hdr->sector = start_sector >> ctrl.zns_sector_shift;
     hdr->nr_zones = nr_zones;
 
     if (ioctl(fd, BLKREPORTZONE, hdr) < 0) {
@@ -186,7 +186,6 @@ uint64_t get_zone_size() {
 
     close(fd);
 
-    /* ZNS always reports in 512B, so shift it if 4KiB LBAF */
     return zone_size >> ctrl.zns_sector_shift;
 }
 
@@ -228,13 +227,12 @@ void cleanup_ctrl() { free(ctrl.stats); }
  *
  * */
 uint32_t get_zone_number(uint64_t lba) {
-    uint64_t zone_mask = 0;
     uint64_t slba = 0;
+    uint32_t zone_mask = ~((ctrl.znsdev.zone_size << ctrl.zns_sector_shift) - 1); 
 
-    zone_mask = ~(ctrl.znsdev.zone_size - 1);
     slba = (lba & zone_mask);
 
-    return slba == 0 ? 1 : (slba / ctrl.znsdev.zone_size + 1);
+    return slba == 0 ? 1 : (slba / (ctrl.znsdev.zone_size << ctrl.zns_sector_shift) + 1);
 }
 
 /*
@@ -246,7 +244,6 @@ uint32_t get_zone_number(uint64_t lba) {
 void print_zone_info(uint32_t zone) {
     unsigned long long start_sector = 0;
     struct blk_zone_report *hdr = NULL;
-    uint32_t zone_mask;
 
     start_sector = (ctrl.znsdev.zone_size << ctrl.zns_sector_shift) * zone - (ctrl.znsdev.zone_size << ctrl.zns_sector_shift);
 
@@ -264,14 +261,12 @@ void print_zone_info(uint32_t zone) {
         return;
     }
 
-    zone_mask = ~(ctrl.znsdev.zone_size - 1);
     MSG("\n============ ZONE %d ============\n", zone);
-
     MSG("LBAS: 0x%06llx  LBAE: 0x%06llx  CAP: 0x%06llx  WP: 0x%06llx  SIZE: "
             "0x%06llx  STATE: %#-4x  MASK: 0x%06" PRIx32 "\n",
             hdr->zones[0].start >> ctrl.zns_sector_shift, (hdr->zones[0].start >> ctrl.zns_sector_shift) + (hdr->zones[0].capacity >> ctrl.zns_sector_shift),
             hdr->zones[0].capacity >> ctrl.zns_sector_shift, hdr->zones[0].wp >> ctrl.zns_sector_shift, hdr->zones[0].len >> ctrl.zns_sector_shift,
-            hdr->zones[0].cond << 4, zone_mask);
+            hdr->zones[0].cond << 4, ctrl.znsdev.zone_mask);
 
     close(fd);
 
@@ -382,9 +377,8 @@ struct extent_map *get_extents() {
     fiemap->fm_flags = FIEMAP_FLAG_SYNC;
     fiemap->fm_start = 0;
     fiemap->fm_extent_count = 1; // get extents individually
-    fiemap->fm_length = (ctrl.stats->st_blocks << ctrl.sector_shift);
+    fiemap->fm_length = (ctrl.stats->st_blocks << 3); // st_blocks is always 512B units, shift to bytes
     extent_map->ext_ctr = 0;
-    DBG("shift %d %d\n", ctrl.sector_shift, ctrl.zns_sector_shift);
 
     do {
         if (extent_map->ext_ctr > 0) {
@@ -454,7 +448,7 @@ struct extent_map *get_extents() {
                 extent_map->extent[extent_map->ext_ctr].len;
 
             extent_map->extent[extent_map->ext_ctr].zone = get_zone_number(
-                (extent_map->extent[0].phy_blk));
+                (extent_map->extent[extent_map->ext_ctr].phy_blk << ctrl.zns_sector_shift));
             extent_map->extent[extent_map->ext_ctr].file =
                 calloc(1, sizeof(char) * MAX_FILE_LENGTH);
             memcpy(extent_map->extent[extent_map->ext_ctr].file, ctrl.filename,
@@ -603,7 +597,7 @@ found:
         }
     }
 
-    uint32_t zone = get_zone_number(cur_segment << ctrl.segment_shift);
+    uint32_t zone = get_zone_number(cur_segment << ctrl.segment_shift >> ctrl.zns_sector_shift);
     if (file_counter_map->file[i].last_zone != zone) {
         file_counter_map->file[i].zone_ctr +=
             (num_segments * F2FS_SEGMENT_BYTES >> ctrl.sector_shift) /
@@ -672,7 +666,7 @@ void set_super_block_info(struct f2fs_super_block f2fs_sb) {
     // info
     ctrl.bdev.is_zoned = is_zoned(ctrl.bdev.dev_path);
     ctrl.sector_size = get_sector_size(ctrl.bdev.dev_path);
-    ctrl.segment_shift = ctrl.sector_size == 512 ? 9 : 12;
+    ctrl.segment_shift = ctrl.sector_size == 512 ? 12 : 9;
 
     memcpy(ctrl.znsdev.dev_name, f2fs_sb.devs[1].path + 5, MAX_PATH_LEN);
 
@@ -712,5 +706,6 @@ void init_ctrl() {
     ctrl.multi_dev = 1;
     ctrl.offset = get_dev_size(ctrl.bdev.dev_path);
     ctrl.znsdev.zone_size = get_zone_size();
+    ctrl.znsdev.zone_mask = ~(ctrl.znsdev.zone_size - 1);
     ctrl.znsdev.nr_zones = get_nr_zones();
 }
