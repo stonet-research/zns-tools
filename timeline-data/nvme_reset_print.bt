@@ -1,0 +1,30 @@
+/*
+*
+* Get NVMe latency of all reset calls.
+*
+*/
+
+#include <linux/nvme.h>
+#include <linux/blkdev.h>
+#include <linux/blk-mq.h>
+
+// TODO: REQ_OP_MASK does not work on all versions of BPFtrace, for now use 0xFF
+
+kprobe:nvme_setup_cmd
+{
+    $nvme_cmd = (struct nvme_command *)*(arg1+sizeof(struct request));
+    $opcode = (uint8)$nvme_cmd->rw.opcode;
+
+    // Trace ZONE RESETS
+    $cmd = (((struct request *)arg1)->cmd_flags & 0xFF);
+
+    // If nvme device is in passthrough (e.g., qemu passthrough) Zone reset has flag REQ_OP_DRV_OUT
+    // therefore include more checks on nvme_zone_mgnt_action
+    if($cmd == REQ_OP_ZONE_RESET || (($cmd == REQ_OP_DRV_OUT && $opcode == nvme_cmd_zone_mgmt_send) && $nvme_cmd->zms.zsa == NVME_ZONE_RESET)) {
+    	$secnum = ((struct request *)arg1)->__sector;
+        printf("%s : %lu\n", strftime("%Y/%m/%d-%H:%M:%S:%f", nsecs), $secnum);
+    }
+}
+
+END {
+}
