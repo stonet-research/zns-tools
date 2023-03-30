@@ -12,6 +12,7 @@
 #include <sys/ioctl.h>
 #include <sys/stat.h>
 #include <sys/sysmacros.h>
+#include <sys/vfs.h>
 #include <unistd.h>
 
 #include <linux/fiemap.h>
@@ -33,13 +34,17 @@
 #define ZNS_TOOLS_MAX_DEVS 2
 #define F2FS_SECS_PER_BLOCK 9
 
+#define BTRFS_MAGIC 0x9123683E
+#define F2FS_MAGIC 0xF2F52010
+
 struct bdev {
     char dev_name[MAX_DEV_NAME];  /* char * to device name (e.g., nvme0n2) */
     char dev_path[MAX_PATH_LEN];  /* device path (e.g., /dev/nvme0n2) */
     char link_name[MAX_PATH_LEN]; /* linkname from /dev/block/<major>:<minor> */
     uint8_t is_zoned;             /* flag if device is a zoned device */
     uint32_t nr_zones;            /* Number of zones on the ZNS device */
-    uint64_t zone_size;           /* the size of a zone on the device */
+    uint64_t zone_size;           /* the size of a zone on the device ZNS in 512B or 4KiB depending on LBAF*/
+    uint32_t zone_mask;   /* zone mask for bitwise AND */
 };
 
 struct control {
@@ -54,9 +59,11 @@ struct control {
     uint8_t show_holes; /* cmd_line flag to show holes */
     uint8_t show_flags; /* cmd_line flag to show extent flags */
     uint8_t info;       /* cmd_line flag to show info */
+    uint64_t fs_magic;  /* store the file system magic value */
 
     unsigned int sector_size;  /* Size of sectors on the ZNS device */
     unsigned int sector_shift; /* bit shift for sector conversion */
+    unsigned int zns_sector_shift; /* if using 4KiB LBAF, ZNS still reports values in 512B, so need to shift by 3 all values */
 
     uint64_t f2fs_segment_sectors; /* how many logical sectors a segment has,
                                       depending on device LBA size */
@@ -167,6 +174,7 @@ extern void set_file_extent_counters(struct extent_map *);
 extern void increase_file_segment_counter(char *, unsigned int, unsigned int,
                                           enum type, uint64_t);
 extern void set_super_block_info(struct f2fs_super_block);
+extern void set_fs_magic(char *);
 extern void init_ctrl();
 
 #define INFO(n, fmt, ...)                                                      \

@@ -1,6 +1,6 @@
 # zns-tools
 
-This repository contains several tools for evaluating file system usage of ZNS devices. We provide an example for each of the tools in the `examples/` directory, showing how to run each tool and what information will be available in the output.
+This repository contains several tools for evaluating file system usage of ZNS devices. The tools generally apply to ZNS devices and file systems on ZNS (F2FS and Btrfs), we mention which applications/file systems apply for each tool. We provide an example for each of the tools in the `examples/` directory, showing how to run each tool and what information will be available in the output.
 
 ## Compiling and Running
 
@@ -27,7 +27,9 @@ The `src/` directory contains several tools for identifying and mapping out F2FS
 
 ### zns.fiemap
 
-`zns.fiemap` is a tool that uses the `ioctl()` call to extract mappings for a file, and map these to the zones on a ZNS device. Since current ZNS support in file systems relies on LFS, with F2FS, this tools aims at showcasing the data placement of files and their fragmentation. With `FIEMAP`, a single contiguous extent, which physically has consecutive addresses, is returned. It is used find all extents of a file and show their location. Extents can, especially over time as they are updated and the file system runs GC, end up spread across multiple zones, be in random order in zones, and be split it up into a large number of smaller extents. We provide an example output for a small run to locate data on a ZNS, located in the `examples/zns.fiemap.md`. For more details see the manual in `zns.fiemap.8`
+**Currently supported:** F2FS and Btrfs
+
+`zns.fiemap` is a tool that uses the `ioctl()` call to extract mappings for a file, and map these to the zones on a ZNS device. With `FIEMAP`, a single contiguous extent, which physically has consecutive addresses, is returned. It is used find all extents of a file and show their location. Extents can, especially over time as they are updated and the file system runs GC, end up spread across multiple zones, be in random order in zones, and be split it up into a large number of smaller extents. We provide an example output for a small run to locate data on a ZNS, located in the `examples/zns.fiemap.md`. For more details see the manual in `zns.fiemap.8`
 
 ```bash
 # Run: zns.fiemap -f [file path to locate]
@@ -50,7 +52,11 @@ sudo ./zns.fiemap [flags]
 
 ### zns.segmap
 
+**Currently supported:** F2FS and Btrfs
+
 `zns.segmap` similarly to `zns.fiemap`, takes extents of files and maps these to segments on the ZNS device. The aim being to locate data placement across segments, with fragmentation, as well as indicating good/bad hotness classification. The tool calls `fiemap` on all files in a directory and maps these in LBA order to the segments on the device. Since there are thousands of segments, we recommend analyzing zones individually, for which the tool provides the option for, or depicting zone ranges. The directory to be mapped is typically the mount location of the file system, however any subdirectory of it can also be mapped, e.g., if there is particular interest for locating WAL files only for a database, such as with RocksDB.
+
+As this tool relies on mapping to segments, for Btrfs it simply applies the `zns.fiemap` (mapping files to zones) for all files in the directory. Any segment flags is ignored for it.
 
 ```bash
 # Run: zns.fiemap -d [dir to map]
@@ -78,6 +84,8 @@ The `-i` flag is meant for very small files that have their data inlined into th
 
 ### zns.imap
 
+**Currently supported:** F2FS
+
 `zns.imap` is meant to get some information from the F2FS setup. It locates and prints the inode a file, and can furthermore print the contents of the F2FS superblock and checkpoint area. We recommend running this in the verbose logging to get more information, as this tool is merely meant for information on F2FS layout.
 
 ```bash
@@ -94,6 +102,8 @@ Possible flags are:
 ```
 
 ### zns.fpbench
+
+**Currently supported:** F2FS
 
 `zns.fpbench` is a benchmarking framework that is used for identifying the F2FS placement decisions based on the provided write hint from the benchmark. It writes the file with the specified size, in units of the specified block size, and sets the write hint with `fcntl()`. Concurrently repeating the workload is possible to run the same exact workload on different file names, hence allowing lockless concurrent writing. After writing, all files have extents located, the extents mapped to segments, and segment information retrieved, focusing on the heat classification that the segment was assigned.
 
@@ -122,9 +132,11 @@ Possible flags are:
 -m               Map the file to a particular stream
 ```
 
-The benchmark is simple and is meant for only testing the adherence of F2FS with write hints if I/O is buffered and an `fsync()` is called on each file. For more advanced benchmarks, with asynchronous I/O, different engines and more possible configuration, use `fio` (which also supports write hints with the `--write_hint=short` flag). We provide the workloads we run with `fio` in the [f2fs-zns-workloads](https://github.com/nicktehrany/f2fs-zns-workloads) repo.
+The benchmark is simple and is meant for only testing the adherence of F2FS with write hints if I/O is buffered and an `fsync()` is called on each file. For more advanced benchmarks, with asynchronous I/O, different engines and more possible configuration, use `fio` (which also supports write hints with the `--write_hint=short` flag).
 
 ## zns.trace
+
+**Currently supported:** Any application on ZNS with Linux kernel and BPF support
 
 In the `zns.trace/` directory, we provide a framework to trace activity on zns devices across its different zones using BPF, collecting information on number of read/write operations to each zone, amount of data read/written in each zone, and reset statistics, including reset latency per zone. After collecting tracing statistics, zns.trace automatically generates heatmaps for each collected statistic, depicting the information for each zone in a comprehensible manner. The below figure illustrates the number of zone reset commands issued to the respective zones on the ZNS device.
 
