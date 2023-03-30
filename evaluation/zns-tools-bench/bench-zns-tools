@@ -1,0 +1,65 @@
+#! /bin/bash
+
+set -e
+
+if [ $# != 1 ]; then
+    echo "Usage: $0 <ZNS device (e.g., nvme0n2)>"
+    exit 1
+fi
+
+setup_f2fs() {
+    ZNS=$1
+    MOUNT="/mnt/f2fs"
+
+    DEV=$(sudo ./nullblk_create 512 19456) 
+    export DEV
+    export ZNS
+
+    sudo nvme zns reset-zone /dev/${ZNS} -a
+    echo mq-deadline | sudo tee /sys/block/${ZNS}/queue/scheduler > /dev/null
+    sudo env "PATH=${PATH}" mkfs.f2fs -f -m -c /dev/${ZNS} /dev/${DEV}
+    sudo mkdir -p /mnt/f2fs
+    sudo mount -t f2fs /dev/${DEV} ${MOUNT}
+    sudo chown -R ${USER} /mnt/f2fs
+}
+
+cleanup() {
+    sudo sync # avoid errors on busy unmount
+    sudo umount /dev/${DEV}
+    DEV_ID=$(echo "${DEV: -1}")
+    sudo ./nullblk_delete $DEV_ID
+}
+
+ZNS=$1
+
+setup_f2fs ${ZNS}
+SIZE=$(echo "scale=0;10^2 * 4096" | bc)
+FILES=$(echo "scale=0;10^2" | bc)
+sudo env "NRFILES=${FILES}" "SIZE=${SIZE}" ${FIO_HOME}/fio job.fio
+command time -v -o time-100_files.dat sudo zns.segmap -d /mnt/f2fs -p -i > /dev/null 2>&1
+sudo sync
+cleanup
+
+setup_f2fs ${ZNS}
+SIZE=$(echo "scale=0;10^3 * 4096" | bc)
+FILES=$(echo "scale=0;10^3" | bc)
+sudo env "NRFILES=${FILES}" "SIZE=${SIZE}" ${FIO_HOME}/fio job.fio
+command time -v -o time-1K_files.dat sudo zns.segmap -d /mnt/f2fs -p -i > /dev/null 2>&1
+sudo sync
+cleanup
+
+setup_f2fs ${ZNS}
+SIZE=$(echo "scale=0;10^4 * 4096" | bc)
+FILES=$(echo "scale=0;10^4" | bc)
+sudo env "NRFILES=${FILES}" "SIZE=${SIZE}" ${FIO_HOME}/fio job.fio
+sudo sync
+command time -v -o time-10K_files.dat sudo zns.segmap -d /mnt/f2fs -p -i > /dev/null 2>&1
+cleanup
+
+setup_f2fs ${ZNS}
+SIZE=$(echo "scale=0;25000 * 4096" | bc)
+FILES=$(echo "scale=0;25000" | bc)
+sudo env "NRFILES=${FILES}" "SIZE=${SIZE}" ${FIO_HOME}/fio job.fio
+command time -v -o time-25K_files.dat sudo zns.segmap -d /mnt/f2fs -p -i > /dev/null 2>&1
+sudo sync
+cleanup
