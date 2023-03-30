@@ -38,3 +38,6 @@ compile_commands.json
 *.o
 
 *.swp
+
+timeline-gen/.ipynb_checkpoints/
+timeline-gen/*.pdf
