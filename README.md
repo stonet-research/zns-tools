@@ -50,6 +50,42 @@ sudo ./zns.fiemap [flags]
 
 **Note**, with F2FS if there is space on the conventional device, after the metadata (NAT,SIT,SSA,CP), it places file data onto the conventional device. Such extents cannot be mapped to zones and are therefore ignored. If the output shows `No extents found on device`, while you were expecting extents to be mapped, verify that these are not on the conventional device. Run with `-l 2` (higher log level) to show all extent mappings, it will say on which device these are found, if the extent is being ignored, and check with `zns.imap -s` the information in the superblock for the `main_blkaddr`, which is where F2FS starts writing data from.
 
+#### Example Output
+
+Below is an example output of running `zns.fiemap`. For illustrative purposes the output is shortened.
+
+```bash
+user@stosys:~/src/zns-tools/src$ sudo ./zns.fiemap -f /mnt/f2fs/db0/LOG -s
+====================================================================
+                        EXTENT MAPPINGS
+====================================================================
+
+**** ZONE 13 ****
+LBAS: 0x3000000  LBAE: 0x321a800  CAP: 0x21a800  WP: 0x3400000  SIZE: 0x400000  STATE: 0xe0  MASK: 0xffc00000
+
+EXTID: 33    PBAS: 0x30e2938   PBAE: 0x30e2980   SIZE: 0x48
+--- HOLE:    PBAS: 0x30e2980   PBAE: 0x30ebe00   SIZE: 0x9480
+EXTID: 34    PBAS: 0x30ebe00   PBAE: 0x30ebe10   SIZE: 0x10
+--- HOLE:    PBAS: 0x30ebe10   PBAE: 0x3181e28   SIZE: 0x96018
+EXTID: 35    PBAS: 0x3181e28   PBAE: 0x3181e30   SIZE: 0x8
+--- HOLE:    PBAS: 0x3181e30   PBAE: 0x31d1d80   SIZE: 0x4ff50
+EXTID: 36    PBAS: 0x31d1d80   PBAE: 0x31d1da8   SIZE: 0x28
+--- HOLE:    PBAS: 0x31d1da8   PBAE: 0x321a800   SIZE: 0x48a58
+
+**** ZONE 16 ****
+LBAS: 0x3c00000  LBAE: 0x3e1a800  CAP: 0x21a800  WP: 0x4000000  SIZE: 0x400000  STATE: 0xe0  MASK: 0xffc00000
+
+--- HOLE:    PBAS: 0x3c00000   PBAE: 0x3c26890   SIZE: 0x26890
+EXTID: 70    PBAS: 0x3c26890   PBAE: 0x3c268a8   SIZE: 0x18
+.
+====================================================================
+                        STATS SUMMARY
+====================================================================
+
+NOE: 76    TES: 0xef8       AES: 0x31        EAES: 49.766234   NOZ: 17
+NOH: 92    THS: 0x2230d60   AHS: 0x5f23b     EAHS: 389691.478261
+```
+
 ### zns.segmap
 
 **Currently supported:** F2FS and Btrfs
@@ -82,6 +118,52 @@ Again, it requires to be run with root privileges. Possible flags are:
 The `-i` flag is meant for very small files that have their data inlined into the inode. If this flag is enabled, extents will show up with a `SIZE: 0`, indicating the data is inlined in the inode.
 **Note,** running this on large files (several GB) can take several minutes to run, as it collects each individual extent, which at that point can be hundreds of thousands, and then needs to map these to zones by sorting the extents and collecting statistics. These are very resource heavy, therefore we recommend using this for smaller setups to understand initial mappings of file data.
 
+#### Example Output
+
+Below is an example output of running the `zns.segmap` tool. For illustrative purposes the output is shortened.
+
+```bash
+user@stosys:~/src/zns-tools$ sudo ./src/zns.segmap -d /mnt/f2fs/ -p -i -s 7 -e 9
+====================================================================
+                        SEGMENT MAPPINGS
+====================================================================
+
+============ ZONE 14 ============
+LBAS: 0x3400000  LBAE: 0x361a800  CAP: 0x21a800  WP: 0x35f79e8  SIZE: 0x400000  STATE: 0x20  MASK: 0xffc00000
+
+_____________________________________________________________________________________________________________
+-------------------------------------------------------------------------------------------------------------
+SEGMENT: 13342  PBAS: 0x341e000   PBAE: 0x341f000   SIZE: 0x1000    
++++++ TYPE: CURSEG_HOT_DATA  VALID BLOCKS:  80
+-------------------------------------------------------------------------------------------------------------
+***** EXTENT:   PBAS: 0x341e800   PBAE: 0x341e848   SIZE: 0x48  FILE: /mnt/f2fs//db0/LOG         EXTID:   2/7    
+***** EXTENT:   PBAS: 0x341e850   PBAE: 0x341e858   SIZE: 0x8   FILE: /mnt/f2fs//db0/000038.sst  EXTID:   3/3    
+
+_____________________________________________________________________________________________________________
+-------------------------------------------------------------------------------------------------------------
+SEGMENT: 13468  PBAS: 0x349c000   PBAE: 0x349d000   SIZE: 0x1000    
++++++ TYPE: CURSEG_HOT_DATA  VALID BLOCKS:  32
+-------------------------------------------------------------------------------------------------------------
+***** EXTENT:  PBAS: 0x349c868   PBAE: 0x349c870    SIZE: 0x8   FILE: /mnt/f2fs//db0/000042.sst  EXTID: 38/38   
+***** EXTENT:  PBAS: 0x349c870   PBAE: 0x349c880    SIZE: 0x10  FILE: /mnt/f2fs//db0/LOG         EXTID:   3/7    
+***** EXTENT:  PBAS: 0x349c888   PBAE: 0x349c890    SIZE: 0x8   FILE: /mnt/f2fs//db0/000043.sst  EXTID:   3/3
+.
+====================================================================
+                        SEGMENT STATS
+====================================================================
+-----------------------------------------------------------------------------------------------------------
+Dir/File Name   | # Extents | # Segments | # Occupying Zones | Cold Segments | Warm Segments | Hot Segments
+-----------------------------------------------------------------------------------------------------------
+/mnt/f2fs/      | 179       | 2621       | 6                 | 2002          | 532           | 87
+___________________________________________________________________________________________________________
+-----------------------------------------------------------------------------------------------------------
+db0/LOG         | 7         | 1          | 1                 | 0             | 0             | 1
+db0/000042.sst  | 38        | 146        | 3                 | 145           | 0             | 1
+db0/000044.sst  | 5         | 113        | 3                 | 112           | 0             | 1
+db0/000047.sst  | 5         | 113        | 3                 | 112           | 0             | 1
+.
+```
+
 ### zns.imap
 
 **Currently supported:** F2FS
@@ -99,6 +181,55 @@ Possible flags are:
 -l [Int, 0-1]:   Log Level to print (Default 0)
 -s:              Show the superblock
 -c:              Show the checkpoint
+```
+
+#### Example Output
+
+Below is an example output of running the `zns.imap` tool. For illustrative purposes the output is shortened.
+
+```bash
+user@stosys:~/src/zns-tools$ sudo ./src/zns.imap -f /mnt/f2fs/LOG -l 1 -s -c
+=================================================================
+                        SUPERBLOCK
+=================================================================
+Note: Sizes and Addresses are in 4KiB units (F2FS Block Size)
+magic:                  0xf2f52010
+major_version:          1
+minor_version:          15
+log_sectorsize:         9
+log_sectors_per_block:  3
+log_blocksize:          12
+log_blocks_per_seg:     9
+segs_per_sec:           1024
+secs_per_zone:          1
+.
+=================================================================
+                        CHECKPOINT
+=================================================================
+checkpoint_ver:                 747629827
+user_block_count:               17883136
+valid_block_count:              550951
+rsvd_segment_count:             15092
+overprov_segment_count:         18972
+free_segment_count:             52921
+.
+=================================================================
+                        INODE
+=================================================================
+
+File /mnt/f2fs/LOG with inode 4 is located in zone 2
+
+============ ZONE 2 ============
+LBAS: 0x400000  LBAE: 0x61a800  CAP: 0x21a800  WP: 0x405730  SIZE: 0x400000  STATE: 0x20  MASK: 0xffc00000
+
+***** INODE:  PBAS: 0x4000f8    PBAE: 0x400101    SIZE: 0x9         FILE: /mnt/f2fs/LOG
+
+>>>>> NODE FOOTER:
+nid:                    4
+ino:                    4
+flag:                   3
+next_blkaddr:           1572896
+.
 ```
 
 ### zns.fpbench
