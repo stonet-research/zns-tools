@@ -272,3 +272,27 @@ The benchmark is simple and is meant for only testing the adherence of F2FS with
 In the `zns.trace/` directory, we provide a framework to trace activity on zns devices across its different zones using BPF, collecting information on number of read/write operations to each zone, amount of data read/written in each zone, and reset statistics, including reset latency per zone. After collecting tracing statistics, zns.trace automatically generates heatmaps for each collected statistic, depicting the information for each zone in a comprehensible manner. The below figure illustrates the number of zone reset commands issued to the respective zones on the ZNS device.
 
 ![example-fig](zns.trace/example/figs/nvme0n2-2022_09_07_10_20_AM.dat/z_reset_ctr_map-heatmap.png)
+
+## Evaluation
+
+In the `evaluation/` directory we provide a benchmarking setup for evaluating the performance of the zns-tools, and an end-to-end visualization framework for RocksDB to analyze and visualize the data movement of flush/compaction operations, as well as F2FS Zone management operations. 
+
+### Setup
+
+The end-to-end mapping tool requires minor modifications to RocksDB (commit `ccaa3225b`), and the zns-tools (commit `673f665`). The zns-tools patch provides json output instead of terminal output, for the post-processing visualization. We provide respective patches for both, which can be applied with
+
+```bash
+# RocksDB patch
+patch -p1 < rocksdb.ccaa3225b.patch
+patch -p1 < zns-tools.673f665.patch
+```
+
+### Running
+
+To run the RocksDB workload, a script is provided that executes all necessary tools, scripts, and data transformation.
+
+```
+sh ./timeline_data_rocksdb_gen.sh
+```
+
+To then visualize the data, copy it to the `../timeline-gen/` directory and execute the cells in the `plot.ipynb` notebook (`jupyter notebook` to start the notebook).
