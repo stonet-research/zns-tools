@@ -2,6 +2,10 @@
 
 This repository contains several tools for evaluating file system usage of ZNS devices. The tools generally apply to ZNS devices and file systems on ZNS (F2FS and Btrfs), we mention which applications/file systems apply for each tool. We provide an example for each of the tools in the `examples/` directory, showing how to run each tool and what information will be available in the output.
 
+The blow figures visualizes the organization of the `zns-tools`, with the interaction of the various components and the
+F2FS file system, Linux kernel, and the ZNS device.
+![zns-tools-visual](meta/zns-tools.png)
+
 ## Compiling and Running
 
 Compiling will check system requirements and notify of any missing/unsupported header files.
