@@ -886,7 +886,9 @@ int main(int argc, char *argv[]) {
         close(ctrl.fd);
     }
 
-    sort_extents(glob_extent_map);
+    map_extents(glob_extent_map);
+    // TODO: after this point update the segment mapping and so forth
+    /* sort_extents(glob_extent_map); */
 
     if (ctrl.fs_magic == F2FS_MAGIC) {
         highest_segment =

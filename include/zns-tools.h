@@ -47,6 +47,54 @@ struct bdev {
     uint32_t zone_mask;   /* zone mask for bitwise AND */
 };
 
+struct extent {
+    uint32_t zone;   /* zone index of the extent */
+    uint32_t flags;  /* Flags given by ioctl() FIEMAP call */
+    uint32_t ext_nr; /* Extent number as returned in the order by ioctl */
+    uint32_t
+        fileID; /* Unique ID of the file to simplify statistics collection */
+    uint64_t logical_blk; /* LBA starting address of the extent */
+    uint64_t phy_blk;     /* PBA starting address of the extent */
+    uint64_t zone_lbas;   /* LBAS of the zone the extent is in */
+    uint64_t zone_cap;    /* Zone capacity */
+    uint64_t len;         /* Length of the extent in 512B sectors */
+    uint64_t zone_size;   /* Size of the zone the extent is in */
+    uint64_t zone_wp;     /* Write Pointer of this current zone */
+    uint64_t zone_lbae;   /* LBA that can be written up to (LBAS + ZONE CAP) */
+    char *file;           /* file path to which the extent belongs */
+};
+
+struct extent_map {
+    uint32_t ext_ctr;  /* Number of extents in struct extent[] */
+    uint32_t zone_ctr; /* Number of zones in which extents are */
+    uint64_t
+        cum_extent_size;    /* Cumulative size of all extents in 512B sectors */
+    struct extent extent[]; /* Array of struct extent for each extent */
+};
+
+struct node {
+    struct extent *extent;
+    struct node* left;
+    struct node* right;
+};
+
+struct zone {
+    uint32_t zone_number; /* number of the zone */ 
+    uint64_t start; /* PBAS of the zone */
+    uint64_t end; /* PBAE of the zone */
+    uint64_t capacity; /* capacity of the zone */
+    uint64_t wp; /* write pointer of the zone */
+    uint8_t state; /* capacity of the zone */
+    uint32_t mask; /* mask of the zone */
+    /* struct extent *extents; /1* array of extents in the zone *1/  TODO remove*/
+    struct node *btree; /* binary tree of the extents in the zone */
+    uint32_t extent_ctr; /* number of extents in the zone */
+};
+
+struct zone_map {
+    struct zone *zones;
+};
+
 struct control {
     char *filename;     /* full file name and path to map */
     int fd;             /* file descriptor of the file to be mapped */
@@ -103,31 +151,8 @@ struct control {
     uint8_t excl_streams;          /* zns.fpbench use exclusive streams */
     uint8_t fpbench_streammap;     /* zns.fpbench stream to map file to */
     uint8_t fpbench_streammap_set; /* zns.fpbench indicate if streammap set */
-};
 
-struct extent {
-    uint32_t zone;   /* zone index (starting with 1) of the extent */
-    uint32_t flags;  /* Flags given by ioctl() FIEMAP call */
-    uint32_t ext_nr; /* Extent number as returned in the order by ioctl */
-    uint32_t
-        fileID; /* Unique ID of the file to simplify statistics collection */
-    uint64_t logical_blk; /* LBA starting address of the extent */
-    uint64_t phy_blk;     /* PBA starting address of the extent */
-    uint64_t zone_lbas;   /* LBAS of the zone the extent is in */
-    uint64_t zone_cap;    /* Zone capacity */
-    uint64_t len;         /* Length of the extent in 512B sectors */
-    uint64_t zone_size;   /* Size of the zone the extent is in */
-    uint64_t zone_wp;     /* Write Pointer of this current zone */
-    uint64_t zone_lbae;   /* LBA that can be written up to (LBAS + ZONE CAP) */
-    char *file;           /* file path to which the extent belongs */
-};
-
-struct extent_map {
-    uint32_t ext_ctr;  /* Number of extents in struct extent[] */
-    uint32_t zone_ctr; /* Number of zones in which extents are */
-    uint64_t
-        cum_extent_size;    /* Cumulative size of all extents in 512B sectors */
-    struct extent extent[]; /* Array of struct extent for each extent */
+    struct zone_map zonemap; /* track extents in zones with zone information */
 };
 
 // count for each file the number of extents
@@ -165,9 +190,10 @@ extern uint32_t get_nr_zones();
 extern uint32_t get_zone_number(uint64_t);
 extern void cleanup_ctrl();
 extern void print_zone_info(uint32_t);
-extern struct extent_map *get_extents();
+extern int get_extents();
 extern int contains_element(uint32_t[], uint32_t, uint32_t);
-extern void sort_extents(struct extent_map *);
+extern void sort_extents(struct extent_map *); // TODO: delete
+extern void map_extents(struct extent_map *);
 extern void show_extent_flags(uint32_t);
 extern uint32_t get_file_counter(char *);
 extern void set_file_extent_counters(struct extent_map *);

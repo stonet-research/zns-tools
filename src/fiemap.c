@@ -234,7 +234,8 @@ int main(int argc, char *argv[]) {
     init_ctrl();
     fsync(ctrl.fd);
 
-    extent_map = (struct extent_map *)get_extents();
+    /* extent_map = (struct extent_map *)get_extents(); */
+    get_extents();
 
     if (!extent_map) {
         ERR_MSG("retrieving extents for %s\n", ctrl.filename);
