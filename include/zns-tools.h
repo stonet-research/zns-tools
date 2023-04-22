@@ -106,6 +106,8 @@ struct control {
     uint8_t log_level;  /* Logging level */
     uint8_t show_holes; /* cmd_line flag to show holes */
     uint8_t show_flags; /* cmd_line flag to show extent flags */
+    uint8_t json_dump; /* dump collected data as json */
+    char *json_file; /* json file name to output data to */
     uint8_t info;       /* cmd_line flag to show info */
     uint64_t fs_magic;  /* store the file system magic value */
 
@@ -147,6 +149,7 @@ struct control {
                                 mappints */
     uint8_t const_fsync;     /* zns.fpbench fsync after each written bock */
     uint8_t o_direct;        /* zns.fpbench use direct I/O */
+    uint64_t extent_ctr; /* counter for total number of extents */
     uint64_t inlined_extent_ctr;   /* track the number of inlined extents */
     uint8_t excl_streams;          /* zns.fpbench use exclusive streams */
     uint8_t fpbench_streammap;     /* zns.fpbench stream to map file to */

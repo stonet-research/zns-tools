@@ -1,4 +1,5 @@
 #include "segmap.h"
+#include <stdlib.h>
 
 struct segmap_manager segmap_man;
 struct extent_map *glob_extent_map;
@@ -845,7 +846,7 @@ int main(int argc, char *argv[]) {
         ctrl.multi_dev = 0;
         ctrl.offset = 0;
 
-        if (!init_znsdev()) {
+        if (init_znsdev() == EXIT_FAILURE) {
             ERR_MSG("Failed initializing %s\n", ctrl.znsdev.dev_path);
         }
     }

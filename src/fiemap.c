@@ -1,136 +1,270 @@
 #include "fiemap.h"
 
 /*
+ * TODO update description
  * Print the report summary of extent_map.
  *
  * @extent_map: struct extent_map * to the extent maps
  *
  * */
-static void print_filemap_report(struct extent_map *extent_map) {
-    uint32_t current_zone = 0;
-    uint32_t hole_ctr = 0;
-    uint64_t hole_cum_size = 0;
-    uint64_t hole_size = 0;
-    uint64_t hole_end = 0;
-    uint64_t pbae = 0;
+/* static void print_filemap_report() { */
+/*     uint32_t current_zone = 0; */
+/*     uint32_t hole_ctr = 0; */
+/*     uint64_t hole_cum_size = 0; */
+/*     uint64_t hole_size = 0; */
+/*     uint64_t hole_end = 0; */
+/*     uint64_t pbae = 0; */
 
-    MSG("================================================================="
-        "===\n");
-    MSG("\t\t\tEXTENT MAPPINGS\n");
-    MSG("==================================================================="
-        "=\n");
+/*     MSG("=================================================================" */
+/*         "===\n"); */
+/*     MSG("\t\t\tEXTENT MAPPINGS\n"); */
+/*     MSG("===================================================================" */
+/*         "=\n"); */
 
-    for (uint32_t i = 0; i < extent_map->ext_ctr; i++) {
-        if (current_zone != extent_map->extent[i].zone) {
-            current_zone = extent_map->extent[i].zone;
-            extent_map->zone_ctr++;
-            print_zone_info(current_zone);
-            MSG("\n");
-        }
+/*     for (uint32_t i = 0; i < extent_map->ext_ctr; i++) { */
+/*         if (current_zone != extent_map->extent[i].zone) { */
+/*             current_zone = extent_map->extent[i].zone; */
+/*             extent_map->zone_ctr++; */
+/*             print_zone_info(current_zone); */
+/*             MSG("\n"); */
+/*         } */
 
-        // Track holes in between extents in the same zone
-        if (ctrl.show_holes && i > 0 &&
-            (extent_map->extent[i - 1].phy_blk +
-                 extent_map->extent[i - 1].len !=
-             extent_map->extent[i].phy_blk)) {
+/*         // Track holes in between extents in the same zone */
+/*         if (ctrl.show_holes && i > 0 && */
+/*             (extent_map->extent[i - 1].phy_blk + */
+/*                  extent_map->extent[i - 1].len != */
+/*              extent_map->extent[i].phy_blk)) { */
 
-            if (extent_map->extent[i - 1].zone == extent_map->extent[i].zone) {
-                // Hole in the same zone between segments
+/*             if (extent_map->extent[i - 1].zone == extent_map->extent[i].zone) { */
+/*                 // Hole in the same zone between segments */
 
-                hole_size = extent_map->extent[i].phy_blk -
-                            (extent_map->extent[i - 1].phy_blk +
-                             extent_map->extent[i - 1].len);
-                hole_cum_size += hole_size;
-                hole_ctr++;
+/*                 hole_size = extent_map->extent[i].phy_blk - */
+/*                             (extent_map->extent[i - 1].phy_blk + */
+/*                              extent_map->extent[i - 1].len); */
+/*                 hole_cum_size += hole_size; */
+/*                 hole_ctr++; */
 
-                HOLE_FORMATTER;
-                MSG("--- HOLE:    PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
-                    "  SIZE: %#-10" PRIx64 "\n",
-                    extent_map->extent[i - 1].phy_blk +
-                        extent_map->extent[i - 1].len,
-                    extent_map->extent[i].phy_blk, hole_size);
-                HOLE_FORMATTER;
-            }
-        }
-        if (ctrl.show_holes && i > 0 && i < extent_map->ext_ctr - 1 &&
-            extent_map->extent[i].zone_lbas != extent_map->extent[i].phy_blk &&
-            extent_map->extent[i - 1].zone != extent_map->extent[i].zone) {
-            // Hole between LBAS of zone and PBAS of the extent
+/*                 HOLE_FORMATTER; */
+/*                 MSG("--- HOLE:    PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64 */
+/*                     "  SIZE: %#-10" PRIx64 "\n", */
+/*                     extent_map->extent[i - 1].phy_blk + */
+/*                         extent_map->extent[i - 1].len, */
+/*                     extent_map->extent[i].phy_blk, hole_size); */
+/*                 HOLE_FORMATTER; */
+/*             } */
+/*         } */
+/*         if (ctrl.show_holes && i > 0 && i < extent_map->ext_ctr - 1 && */
+/*             extent_map->extent[i].zone_lbas != extent_map->extent[i].phy_blk && */
+/*             extent_map->extent[i - 1].zone != extent_map->extent[i].zone) { */
+/*             // Hole between LBAS of zone and PBAS of the extent */
 
-            hole_size =
-                extent_map->extent[i].phy_blk - extent_map->extent[i].zone_lbas;
-            hole_cum_size += hole_size;
-            hole_ctr++;
+/*             hole_size = */
+/*                 extent_map->extent[i].phy_blk - extent_map->extent[i].zone_lbas; */
+/*             hole_cum_size += hole_size; */
+/*             hole_ctr++; */
 
-            HOLE_FORMATTER;
-            MSG("---- HOLE:    PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
-                "  SIZE: %#-10" PRIx64 "\n",
-                extent_map->extent[i].zone_lbas, extent_map->extent[i].phy_blk,
-                hole_size);
-            HOLE_FORMATTER;
-        }
+/*             HOLE_FORMATTER; */
+/*             MSG("---- HOLE:    PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64 */
+/*                 "  SIZE: %#-10" PRIx64 "\n", */
+/*                 extent_map->extent[i].zone_lbas, extent_map->extent[i].phy_blk, */
+/*                 hole_size); */
+/*             HOLE_FORMATTER; */
+/*         } */
 
-        MSG("EXTID: %-4d  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
-            "  SIZE: %#-10" PRIx64 "\n",
-            extent_map->extent[i].ext_nr + 1, extent_map->extent[i].phy_blk,
-            (extent_map->extent[i].phy_blk + extent_map->extent[i].len),
-            extent_map->extent[i].len);
+/*         MSG("EXTID: %-4d  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64 */
+/*             "  SIZE: %#-10" PRIx64 "\n", */
+/*             extent_map->extent[i].ext_nr + 1, extent_map->extent[i].phy_blk, */
+/*             (extent_map->extent[i].phy_blk + extent_map->extent[i].len), */
+/*             extent_map->extent[i].len); */
 
-        if (extent_map->extent[i].flags != 0 && ctrl.show_flags) {
-            show_extent_flags(extent_map->extent[i].flags);
-        }
+/*         if (extent_map->extent[i].flags != 0 && ctrl.show_flags) { */
+/*             show_extent_flags(extent_map->extent[i].flags); */
+/*         } */
 
-        pbae = extent_map->extent[i].phy_blk + extent_map->extent[i].len;
-        if (ctrl.show_holes && i > 0 && i < extent_map->ext_ctr &&
-            pbae != extent_map->extent[i].zone_lbae &&
-            extent_map->extent[i].zone_wp > pbae &&
-            extent_map->extent[i].zone != extent_map->extent[i + 1].zone) {
-            // Hole between PBAE of the extent and the zone LBAE (since WP can
-            // be next zone LBAS if full) e.g. extent ends before the write
-            // pointer of its zone but the next extent is in a different zone
-            // (hence hole between PBAE and WP)
+/*         pbae = extent_map->extent[i].phy_blk + extent_map->extent[i].len; */
+/*         if (ctrl.show_holes && i > 0 && i < extent_map->ext_ctr && */
+/*             pbae != extent_map->extent[i].zone_lbae && */
+/*             extent_map->extent[i].zone_wp > pbae && */
+/*             extent_map->extent[i].zone != extent_map->extent[i + 1].zone) { */
+/*             // Hole between PBAE of the extent and the zone LBAE (since WP can */
+/*             // be next zone LBAS if full) e.g. extent ends before the write */
+/*             // pointer of its zone but the next extent is in a different zone */
+/*             // (hence hole between PBAE and WP) */
 
-            if (extent_map->extent[i].zone_wp <
-                extent_map->extent[i].zone_lbae) {
-                hole_end = extent_map->extent[i].zone_wp;
-            } else {
-                hole_end = extent_map->extent[i].zone_lbae;
-            }
+/*             if (extent_map->extent[i].zone_wp < */
+/*                 extent_map->extent[i].zone_lbae) { */
+/*                 hole_end = extent_map->extent[i].zone_wp; */
+/*             } else { */
+/*                 hole_end = extent_map->extent[i].zone_lbae; */
+/*             } */
 
-            hole_size = hole_end - pbae;
-            hole_cum_size += hole_size;
-            hole_ctr++;
+/*             hole_size = hole_end - pbae; */
+/*             hole_cum_size += hole_size; */
+/*             hole_ctr++; */
 
-            HOLE_FORMATTER;
-            MSG("--- HOLE:    PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
-                "  SIZE: %#-10" PRIx64 "\n",
-                extent_map->extent[i].phy_blk + extent_map->extent[i].len,
-                hole_end, hole_size);
-            HOLE_FORMATTER;
-        }
-    }
+/*             HOLE_FORMATTER; */
+/*             MSG("--- HOLE:    PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64 */
+/*                 "  SIZE: %#-10" PRIx64 "\n", */
+/*                 extent_map->extent[i].phy_blk + extent_map->extent[i].len, */
+/*                 hole_end, hole_size); */
+/*             HOLE_FORMATTER; */
+/*         } */
+/*     } */
 
-    MSG("\n\n==============================================================="
-        "=====\n");
-    MSG("\t\t\tSTATS SUMMARY\n");
-    MSG("==================================================================="
-        "=\n");
-    MSG("\nNOE: %-4u  TES: %#-10" PRIx64 "  AES: %#-10" PRIx64 "  EAES: %-10f"
-        "  NOZ: %-4u\n",
-        extent_map->ext_ctr, extent_map->cum_extent_size,
-        extent_map->cum_extent_size / (extent_map->ext_ctr),
-        (double)extent_map->cum_extent_size / (double)(extent_map->ext_ctr),
-        extent_map->zone_ctr);
+/*     MSG("\n\n===============================================================" */
+/*         "=====\n"); */
+/*     MSG("\t\t\tSTATS SUMMARY\n"); */
+/*     MSG("===================================================================" */
+/*         "=\n"); */
+/*     MSG("\nNOE: %-4u  TES: %#-10" PRIx64 "  AES: %#-10" PRIx64 "  EAES: %-10f" */
+/*         "  NOZ: %-4u\n", */
+/*         extent_map->ext_ctr, extent_map->cum_extent_size, */
+/*         extent_map->cum_extent_size / (extent_map->ext_ctr), */
+/*         (double)extent_map->cum_extent_size / (double)(extent_map->ext_ctr), */
+/*         extent_map->zone_ctr); */
 
-    if (ctrl.show_holes && hole_ctr > 0) {
-        MSG("NOH: %-4u  THS: %#-10" PRIx64 "  AHS: %#-10" PRIx64
-            "  EAHS: %-10f\n",
-            hole_ctr, hole_cum_size, hole_cum_size / hole_ctr,
-            (double)hole_cum_size / (double)hole_ctr);
-    } else if (ctrl.show_holes && hole_ctr == 0) {
-        MSG("NOH: 0\n");
-    }
-}
+/*     if (ctrl.show_holes && hole_ctr > 0) { */
+/*         MSG("NOH: %-4u  THS: %#-10" PRIx64 "  AHS: %#-10" PRIx64 */
+/*             "  EAHS: %-10f\n", */
+/*             hole_ctr, hole_cum_size, hole_cum_size / hole_ctr, */
+/*             (double)hole_cum_size / (double)hole_ctr); */
+/*     } else if (ctrl.show_holes && hole_ctr == 0) { */
+/*         MSG("NOH: 0\n"); */
+/*     } */
+/* } */
+
+/*
+ * TODO update description
+ * Print the report summary of extent_map.
+ *
+ * @extent_map: struct extent_map * to the extent maps
+ *
+ * */
+/* static void print_filemap_report() { */
+/*     uint32_t current_zone = 0; */
+/*     uint32_t hole_ctr = 0; */
+/*     uint64_t hole_cum_size = 0; */
+/*     uint64_t hole_size = 0; */
+/*     uint64_t hole_end = 0; */
+/*     uint64_t pbae = 0; */
+
+/*     MSG("=================================================================" */
+/*         "===\n"); */
+/*     MSG("\t\t\tEXTENT MAPPINGS\n"); */
+/*     MSG("===================================================================" */
+/*         "=\n"); */
+
+/*     for (uint32_t i = 0; i < extent_map->ext_ctr; i++) { */
+/*         if (current_zone != extent_map->extent[i].zone) { */
+/*             current_zone = extent_map->extent[i].zone; */
+/*             extent_map->zone_ctr++; */
+/*             print_zone_info(current_zone); */
+/*             MSG("\n"); */
+/*         } */
+
+/*         // Track holes in between extents in the same zone */
+/*         if (ctrl.show_holes && i > 0 && */
+/*             (extent_map->extent[i - 1].phy_blk + */
+/*                  extent_map->extent[i - 1].len != */
+/*              extent_map->extent[i].phy_blk)) { */
+
+/*             if (extent_map->extent[i - 1].zone == extent_map->extent[i].zone) { */
+/*                 // Hole in the same zone between segments */
+
+/*                 hole_size = extent_map->extent[i].phy_blk - */
+/*                             (extent_map->extent[i - 1].phy_blk + */
+/*                              extent_map->extent[i - 1].len); */
+/*                 hole_cum_size += hole_size; */
+/*                 hole_ctr++; */
+
+/*                 HOLE_FORMATTER; */
+/*                 MSG("--- HOLE:    PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64 */
+/*                     "  SIZE: %#-10" PRIx64 "\n", */
+/*                     extent_map->extent[i - 1].phy_blk + */
+/*                         extent_map->extent[i - 1].len, */
+/*                     extent_map->extent[i].phy_blk, hole_size); */
+/*                 HOLE_FORMATTER; */
+/*             } */
+/*         } */
+/*         if (ctrl.show_holes && i > 0 && i < extent_map->ext_ctr - 1 && */
+/*             extent_map->extent[i].zone_lbas != extent_map->extent[i].phy_blk && */
+/*             extent_map->extent[i - 1].zone != extent_map->extent[i].zone) { */
+/*             // Hole between LBAS of zone and PBAS of the extent */
+
+/*             hole_size = */
+/*                 extent_map->extent[i].phy_blk - extent_map->extent[i].zone_lbas; */
+/*             hole_cum_size += hole_size; */
+/*             hole_ctr++; */
+
+/*             HOLE_FORMATTER; */
+/*             MSG("---- HOLE:    PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64 */
+/*                 "  SIZE: %#-10" PRIx64 "\n", */
+/*                 extent_map->extent[i].zone_lbas, extent_map->extent[i].phy_blk, */
+/*                 hole_size); */
+/*             HOLE_FORMATTER; */
+/*         } */
+
+/*         MSG("EXTID: %-4d  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64 */
+/*             "  SIZE: %#-10" PRIx64 "\n", */
+/*             extent_map->extent[i].ext_nr + 1, extent_map->extent[i].phy_blk, */
+/*             (extent_map->extent[i].phy_blk + extent_map->extent[i].len), */
+/*             extent_map->extent[i].len); */
+
+/*         if (extent_map->extent[i].flags != 0 && ctrl.show_flags) { */
+/*             show_extent_flags(extent_map->extent[i].flags); */
+/*         } */
+
+/*         pbae = extent_map->extent[i].phy_blk + extent_map->extent[i].len; */
+/*         if (ctrl.show_holes && i > 0 && i < extent_map->ext_ctr && */
+/*             pbae != extent_map->extent[i].zone_lbae && */
+/*             extent_map->extent[i].zone_wp > pbae && */
+/*             extent_map->extent[i].zone != extent_map->extent[i + 1].zone) { */
+/*             // Hole between PBAE of the extent and the zone LBAE (since WP can */
+/*             // be next zone LBAS if full) e.g. extent ends before the write */
+/*             // pointer of its zone but the next extent is in a different zone */
+/*             // (hence hole between PBAE and WP) */
+
+/*             if (extent_map->extent[i].zone_wp < */
+/*                 extent_map->extent[i].zone_lbae) { */
+/*                 hole_end = extent_map->extent[i].zone_wp; */
+/*             } else { */
+/*                 hole_end = extent_map->extent[i].zone_lbae; */
+/*             } */
+
+/*             hole_size = hole_end - pbae; */
+/*             hole_cum_size += hole_size; */
+/*             hole_ctr++; */
+
+/*             HOLE_FORMATTER; */
+/*             MSG("--- HOLE:    PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64 */
+/*                 "  SIZE: %#-10" PRIx64 "\n", */
+/*                 extent_map->extent[i].phy_blk + extent_map->extent[i].len, */
+/*                 hole_end, hole_size); */
+/*             HOLE_FORMATTER; */
+/*         } */
+/*     } */
+
+/*     MSG("\n\n===============================================================" */
+/*         "=====\n"); */
+/*     MSG("\t\t\tSTATS SUMMARY\n"); */
+/*     MSG("===================================================================" */
+/*         "=\n"); */
+/*     MSG("\nNOE: %-4u  TES: %#-10" PRIx64 "  AES: %#-10" PRIx64 "  EAES: %-10f" */
+/*         "  NOZ: %-4u\n", */
+/*         extent_map->ext_ctr, extent_map->cum_extent_size, */
+/*         extent_map->cum_extent_size / (extent_map->ext_ctr), */
+/*         (double)extent_map->cum_extent_size / (double)(extent_map->ext_ctr), */
+/*         extent_map->zone_ctr); */
+
+/*     if (ctrl.show_holes && hole_ctr > 0) { */
+/*         MSG("NOH: %-4u  THS: %#-10" PRIx64 "  AHS: %#-10" PRIx64 */
+/*             "  EAHS: %-10f\n", */
+/*             hole_ctr, hole_cum_size, hole_cum_size / hole_ctr, */
+/*             (double)hole_cum_size / (double)hole_ctr); */
+/*     } else if (ctrl.show_holes && hole_ctr == 0) { */
+/*         MSG("NOH: 0\n"); */
+/*     } */
+/* } */
 
 /*
  * Show the acronym information
@@ -188,6 +322,7 @@ static void show_help() {
     MSG("-f [file]\tInput file to map [Required]\n");
     MSG("-h\t\tShow this help\n");
     MSG("-w\t\tShow Extent FLAGS\n");
+    MSG("-s\t\tShow file holes\n");
     MSG("-l [Int]\tLog Level to print\n");
     MSG("-s\t\tShow file holes\n");
 
@@ -196,13 +331,12 @@ static void show_help() {
 }
 
 int main(int argc, char *argv[]) {
-    int c;
+    int c, ret = 0;
     uint8_t set_file = 0;
-    struct extent_map *extent_map;
 
     memset(&ctrl, 0, sizeof(struct control));
 
-    while ((c = getopt(argc, argv, "f:hil:sw")) != -1) {
+    while ((c = getopt(argc, argv, "f:hil:swj:")) != -1) {
         switch (c) {
         case 'h':
             show_help();
@@ -220,6 +354,10 @@ int main(int argc, char *argv[]) {
         case 's':
             ctrl.show_holes = 1;
             break;
+        case 'j':
+            ctrl.json_dump = 1;
+            ctrl.json_file = optarg;
+            break;
         default:
             show_help();
             abort();
@@ -234,20 +372,32 @@ int main(int argc, char *argv[]) {
     init_ctrl();
     fsync(ctrl.fd);
 
-    /* extent_map = (struct extent_map *)get_extents(); */
-    get_extents();
+    ret = get_extents();
 
-    if (!extent_map) {
+    if (ret == EXIT_FAILURE) {
         ERR_MSG("retrieving extents for %s\n", ctrl.filename);
-    } else if (extent_map->ext_ctr == 0) {
+    } else if (ctrl.extent_ctr == 0) {
         ERR_MSG("No extents found on device\n");
     }
 
-    sort_extents(extent_map);
-    print_filemap_report(extent_map);
+    if (ctrl.json_dump) {
+        // TODO: when should we collect hole information? 
+        // skip it for json dump and only show in report?
+        // or one function that is called before that assigns a struct with this info
+        //
+        //
+        // TODO: when do we assign zone states? (WP, etc.)
+        json_dump_zonemap();
+    } else {
+        DBG("TODO: print report to terminal\n");
+        /* print_filemap_report(); */
+    }
 
     close(ctrl.fd);
-    free(extent_map);
+
+    // TODO cleanup tree and all data structs (also control and everything)
+    // make on cleanup function
+    /* free(extent_map); */
 
     return 0;
 }

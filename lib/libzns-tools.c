@@ -1,4 +1,5 @@
 #include "zns-tools.h"
+#include <stdlib.h>
 
 struct control ctrl;
 struct file_counter_map *file_counter_map;
@@ -154,7 +155,7 @@ static void init_zone_map() {
  *
  * @znsdev: struct bdev * to initialize
  *
- * returns: 1 on Success, else 0
+ * returns: 0 on Success
  *
  * */
 uint8_t init_znsdev() {
@@ -165,7 +166,7 @@ uint8_t init_znsdev() {
     fd = open(ctrl.znsdev.dev_path, O_RDONLY);
     if (fd < 0) {
         ERR_MSG("opening device fd for %s\n", ctrl.znsdev.dev_path);
-        return 0;
+        return EXIT_FAILURE;
     }
 
     ctrl.znsdev.is_zoned = is_zoned(ctrl.znsdev.dev_path);
@@ -184,7 +185,7 @@ uint8_t init_znsdev() {
 
     init_zone_map();
 
-    return 1;
+    return EXIT_SUCCESS;
 }
 
 /*
@@ -285,14 +286,12 @@ static void insert_zone_btree_node(struct node *root, struct node *node) {
         if (root->left) {
             insert_zone_btree_node(root->left, node);
         } else {
-            DBG("INSERTED LEFT %d\n", node->extent->ext_nr);
             root->left = node;
         }
     } else {
         if (root->right) {
             insert_zone_btree_node(root->left, node);
         } else {
-            DBG("INSERTED RIGHT %d\n", node->extent->ext_nr);
             root->left = node;
         }
     }
@@ -303,12 +302,7 @@ static void insert_zone_btree_node(struct node *root, struct node *node) {
 static void add_extent_to_zone_btree(struct extent *extent) {
     struct node *node = create_zone_btree_node(extent);
 
-    DBG("NOW ZONE %d\n", extent->zone);
-    DBG("AT PBAS: %#-10" PRIx64 "\n", extent->phy_blk);
-    /* ERR_MSG("ADDING ANOTHER %d\n", ctrl.zonemap.zones[extent->zone].btree->extent->ext_nr); */
-
     if (!ctrl.zonemap.zones[extent->zone].btree) {
-        DBG("here first %d\n", extent->zone);
         ctrl.zonemap.zones[extent->zone].btree = node;
     } else {
         insert_zone_btree_node(ctrl.zonemap.zones[extent->zone].btree, node);
@@ -586,13 +580,12 @@ void show_extent_flags(uint32_t flags) {
 
 /*
  * TODO: description
- * return 1 on success, else failure
+ * return 0 on success, else failure
  *
  * */
 int get_extents() {
     struct fiemap *fiemap;
     struct extent *extent;
-    uint extent_ctr = 0;
     uint8_t last_ext = 0;
 
     fiemap = (struct fiemap *)calloc(sizeof(struct fiemap), sizeof(char *));
@@ -604,12 +597,12 @@ int get_extents() {
 
     do {
         if (ioctl(ctrl.fd, FS_IOC_FIEMAP, fiemap) < 0) {
-            return 0;
+            return EXIT_FAILURE;
         }
 
         if (fiemap->fm_mapped_extents == 0) {
             ERR_MSG("no extents are mapped\n");
-            return 0;
+            return EXIT_FAILURE;
         }
 
         // If data is on the bdev (empty files that have space allocated but
@@ -651,7 +644,7 @@ int get_extents() {
             extent->logical_blk = fiemap->fm_extents[0].fe_logical >> ctrl.sector_shift;
             extent->len = fiemap->fm_extents[0].fe_length >> ctrl.sector_shift;
             extent->zone_size = ctrl.znsdev.zone_size; // TODO: don't need this probably
-            extent->ext_nr = extent_ctr;
+            extent->ext_nr = ctrl.extent_ctr;
             extent->flags = fiemap->fm_extents[0].fe_flags;
 
             // TODO: still need this? or per file counter?
@@ -669,8 +662,7 @@ int get_extents() {
 
             add_extent_to_zone_btree(extent);
 
-            // TODO: extent counter per zone and a global one?
-            extent_ctr++;
+            ctrl.extent_ctr++;
         }
 
         if (fiemap->fm_extents[0].fe_flags & FIEMAP_EXTENT_DATA_INLINE) {
@@ -692,7 +684,7 @@ int get_extents() {
     free(fiemap);
     fiemap = NULL;
 
-    return 1;
+    return EXIT_SUCCESS;
 }
 
 /*
@@ -907,7 +899,7 @@ void set_super_block_info(struct f2fs_super_block f2fs_sb) {
 
     memcpy(ctrl.znsdev.dev_name, f2fs_sb.devs[1].path + 5, MAX_PATH_LEN);
 
-    if (!init_znsdev()) {
+    if (init_znsdev() == EXIT_FAILURE) {
         ERR_MSG("Failed initializing %s\n", ctrl.znsdev.dev_path);
     }
 
@@ -974,7 +966,7 @@ void init_ctrl() {
             ERR_MSG("reading input\n");
         }
 
-        if (!init_znsdev()) {
+        if (init_znsdev() == EXIT_FAILURE) {
             ERR_MSG("Failed initializing %s\n", ctrl.znsdev.dev_path);
         }
 
