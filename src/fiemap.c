@@ -25,32 +25,34 @@ static void print_filemap_report() {
         }
 
         ctrl.zonemap.zone_ctr++;
-        print_zone_info(i); 
+        print_zone_info(i);
         MSG("\n");
 
         current = &ctrl.zonemap.zones[i].extents[0];
 
         while (current) {
             /* Track holes in between extents in the same zone */
-            if (ctrl.show_holes && prev != NULL && (prev->extent->phy_blk + prev->extent->len != current->extent->phy_blk)) {
+            if (ctrl.show_holes && prev != NULL &&
+                (prev->extent->phy_blk + prev->extent->len !=
+                 current->extent->phy_blk)) {
                 if (prev->extent->zone == current->extent->zone) {
                     hole_size = current->extent->phy_blk -
-                        (prev->extent->phy_blk + prev->extent->len);
+                                (prev->extent->phy_blk + prev->extent->len);
                     hole_cum_size += hole_size;
                     hole_ctr++;
 
                     HOLE_FORMATTER;
                     MSG("--- HOLE:    PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
-                            "  SIZE: %#-10" PRIx64 "\n",
-                            prev->extent->phy_blk + prev->extent->len,
-                            current->extent->phy_blk, hole_size);
+                        "  SIZE: %#-10" PRIx64 "\n",
+                        prev->extent->phy_blk + prev->extent->len,
+                        current->extent->phy_blk, hole_size);
                     HOLE_FORMATTER;
                 }
             }
             /* Hole between LBAS of zone and PBAS of the extent */
-            if (ctrl.show_holes && current->next != NULL && prev != NULL && 
-                    current->extent->zone_lbas != current->extent->phy_blk &&
-                    prev->extent->zone != current->extent->zone) {
+            if (ctrl.show_holes && current->next != NULL && prev != NULL &&
+                current->extent->zone_lbas != current->extent->phy_blk &&
+                prev->extent->zone != current->extent->zone) {
 
                 hole_size =
                     current->extent->phy_blk - current->extent->zone_lbas;
@@ -59,28 +61,33 @@ static void print_filemap_report() {
 
                 HOLE_FORMATTER;
                 MSG("---- HOLE:    PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
-                        "  SIZE: %#-10" PRIx64 "\n",
-                        current->extent->zone_lbas, current->extent->phy_blk,
-                        hole_size);
+                    "  SIZE: %#-10" PRIx64 "\n",
+                    current->extent->zone_lbas, current->extent->phy_blk,
+                    hole_size);
                 HOLE_FORMATTER;
             }
 
             MSG("EXTID: %-4d  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
-                    "  SIZE: %#-10" PRIx64 "\n",
-                    current->extent->ext_nr + 1, current->extent->phy_blk, 
-                    (current->extent->phy_blk + current->extent->len),
-                    current->extent->len);
+                "  SIZE: %#-10" PRIx64 "\n",
+                current->extent->ext_nr + 1, current->extent->phy_blk,
+                (current->extent->phy_blk + current->extent->len),
+                current->extent->len);
 
             if (current->extent->flags != 0 && ctrl.show_flags) {
                 show_extent_flags(current->extent->flags);
             }
 
-            /* Hole between PBAE of the extent and the zone LBAE (since WP can be next zone LBAS if full) e.g. extent ends before the write pointer of its zone but the next extent is in a different zone (hence hole between PBAE and WP) */
+            /* Hole between PBAE of the extent and the zone LBAE (since WP can
+             * be next zone LBAS if full) e.g. extent ends before the write
+             * pointer of its zone but the next extent is in a different zone
+             * (hence hole between PBAE and WP) */
             pbae = current->extent->phy_blk + current->extent->len;
-            // TODO: only show hole after extents if  there is another extent (need to track extents per file to know this value) - add once file tracking is implemented
+            // TODO: only show hole after extents if  there is another extent
+            // (need to track extents per file to know this value) - add once
+            // file tracking is implemented
             if (ctrl.show_holes && current->next == NULL &&
-                    pbae != current->extent->zone_lbae &&
-                    current->extent->zone_wp > pbae) {
+                pbae != current->extent->zone_lbae &&
+                current->extent->zone_wp > pbae) {
 
                 if (current->extent->zone_wp < current->extent->zone_lbae) {
                     hole_end = current->extent->zone_wp;
@@ -94,9 +101,9 @@ static void print_filemap_report() {
 
                 HOLE_FORMATTER;
                 MSG("--- HOLE:    PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
-                        "  SIZE: %#-10" PRIx64 "\n",
-                        current->extent->phy_blk + current->extent->len,
-                        hole_end, hole_size);
+                    "  SIZE: %#-10" PRIx64 "\n",
+                    current->extent->phy_blk + current->extent->len, hole_end,
+                    hole_size);
                 HOLE_FORMATTER;
             }
 
@@ -106,26 +113,27 @@ static void print_filemap_report() {
                 prev = current;
                 current = current->next;
             }
-        } 
+        }
     }
 
     MSG("\n\n==============================================================="
-            "=====\n");
+        "=====\n");
     MSG("\t\t\tSTATS SUMMARY\n");
     MSG("==================================================================="
-            "=\n");
+        "=\n");
     MSG("\nNOE: %-4lu  TES: %#-10" PRIx64 "  AES: %#-10" PRIx64 "  EAES: %-10f"
-            "  NOZ: %-4u\n",
-            ctrl.zonemap.extent_ctr, ctrl.zonemap.cum_extent_size,
-            ctrl.zonemap.cum_extent_size / (ctrl.zonemap.extent_ctr),
-            (double)ctrl.zonemap.cum_extent_size / (double)(ctrl.zonemap.extent_ctr),
-            ctrl.zonemap.zone_ctr);
+        "  NOZ: %-4u\n",
+        ctrl.zonemap.extent_ctr, ctrl.zonemap.cum_extent_size,
+        ctrl.zonemap.cum_extent_size / (ctrl.zonemap.extent_ctr),
+        (double)ctrl.zonemap.cum_extent_size /
+            (double)(ctrl.zonemap.extent_ctr),
+        ctrl.zonemap.zone_ctr);
 
     if (ctrl.show_holes && hole_ctr > 0) {
         MSG("NOH: %-4u  THS: %#-10" PRIx64 "  AHS: %#-10" PRIx64
-                "  EAHS: %-10f\n",
-                hole_ctr, hole_cum_size, hole_cum_size / hole_ctr,
-                (double)hole_cum_size / (double)hole_ctr);
+            "  EAHS: %-10f\n",
+            hole_ctr, hole_cum_size, hole_cum_size / hole_ctr,
+            (double)hole_cum_size / (double)hole_ctr);
     } else if (ctrl.show_holes && hole_ctr == 0) {
         MSG("NOH: 0\n");
     }

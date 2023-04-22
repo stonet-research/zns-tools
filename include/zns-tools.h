@@ -43,8 +43,9 @@ struct bdev {
     char link_name[MAX_PATH_LEN]; /* linkname from /dev/block/<major>:<minor> */
     uint8_t is_zoned;             /* flag if device is a zoned device */
     uint32_t nr_zones;            /* Number of zones on the ZNS device */
-    uint64_t zone_size;           /* the size of a zone on the device ZNS in 512B or 4KiB depending on LBAF*/
-    uint32_t zone_mask;   /* zone mask for bitwise AND */
+    uint64_t zone_size; /* the size of a zone on the device ZNS in 512B or 4KiB
+                           depending on LBAF*/
+    uint32_t zone_mask; /* zone mask for bitwise AND */
 };
 
 struct extent {
@@ -74,30 +75,32 @@ struct extent_map {
 
 struct node {
     struct extent *extent;
-    struct node* next;
+    struct node *next;
 };
 
 struct zone {
-    uint32_t zone_number; /* number of the zone */ 
-    uint64_t start; /* PBAS of the zone */
-    uint64_t end; /* PBAE of the zone */
-    uint64_t capacity; /* capacity of the zone */
-    uint64_t wp; /* write pointer of the zone */
-    uint8_t state; /* capacity of the zone */
-    uint32_t mask; /* mask of the zone */
-    /* struct extent *extents; /1* array of extents in the zone *1/  TODO remove*/
+    uint32_t zone_number; /* number of the zone */
+    uint64_t start;       /* PBAS of the zone */
+    uint64_t end;         /* PBAE of the zone */
+    uint64_t capacity;    /* capacity of the zone */
+    uint64_t wp;          /* write pointer of the zone */
+    uint8_t state;        /* capacity of the zone */
+    uint32_t mask;        /* mask of the zone */
+    /* struct extent *extents; /1* array of extents in the zone *1/  TODO
+     * remove*/
     /* struct node *btree; /1* binary tree of the extents in the zone *1/ */
-    struct node *extents; /* sorted singly linked list of the extents in the zone */
+    struct node
+        *extents; /* sorted singly linked list of the extents in the zone */
     uint32_t extent_ctr; /* number of extents in the btree */
 };
 
 struct zone_map {
     struct zone *zones;
-    uint32_t nr_zones;  /* number of zones in struct zone *zones */
+    uint32_t nr_zones;   /* number of zones in struct zone *zones */
     uint64_t extent_ctr; /* counter for total number of extents */
     uint64_t
-        cum_extent_size;    /* Cumulative size of all extents in 512B sectors */
-    uint32_t zone_ctr; /* number of zones that hold extents */
+        cum_extent_size; /* Cumulative size of all extents in 512B sectors */
+    uint32_t zone_ctr;   /* number of zones that hold extents */
 };
 
 struct control {
@@ -111,14 +114,16 @@ struct control {
     uint8_t log_level;  /* Logging level */
     uint8_t show_holes; /* cmd_line flag to show holes */
     uint8_t show_flags; /* cmd_line flag to show extent flags */
-    uint8_t json_dump; /* dump collected data as json */
-    char *json_file; /* json file name to output data to */
+    uint8_t json_dump;  /* dump collected data as json */
+    char *json_file;    /* json file name to output data to */
     uint8_t info;       /* cmd_line flag to show info */
     uint64_t fs_magic;  /* store the file system magic value */
 
     unsigned int sector_size;  /* Size of sectors on the ZNS device */
     unsigned int sector_shift; /* bit shift for sector conversion */
-    unsigned int zns_sector_shift; /* if using 4KiB LBAF, ZNS still reports values in 512B, so need to shift by 3 all values */
+    unsigned int
+        zns_sector_shift; /* if using 4KiB LBAF, ZNS still reports values in
+                             512B, so need to shift by 3 all values */
 
     uint64_t f2fs_segment_sectors; /* how many logical sectors a segment has,
                                       depending on device LBA size */
