@@ -74,8 +74,7 @@ struct extent_map {
 
 struct node {
     struct extent *extent;
-    struct node* left;
-    struct node* right;
+    struct node* next;
 };
 
 struct zone {
@@ -87,12 +86,18 @@ struct zone {
     uint8_t state; /* capacity of the zone */
     uint32_t mask; /* mask of the zone */
     /* struct extent *extents; /1* array of extents in the zone *1/  TODO remove*/
-    struct node *btree; /* binary tree of the extents in the zone */
-    uint32_t extent_ctr; /* number of extents in the zone */
+    /* struct node *btree; /1* binary tree of the extents in the zone *1/ */
+    struct node *extents; /* sorted singly linked list of the extents in the zone */
+    uint32_t extent_ctr; /* number of extents in the btree */
 };
 
 struct zone_map {
     struct zone *zones;
+    uint32_t nr_zones;  /* number of zones in struct zone *zones */
+    uint64_t extent_ctr; /* counter for total number of extents */
+    uint64_t
+        cum_extent_size;    /* Cumulative size of all extents in 512B sectors */
+    uint32_t zone_ctr; /* number of zones that hold extents */
 };
 
 struct control {
@@ -149,7 +154,6 @@ struct control {
                                 mappints */
     uint8_t const_fsync;     /* zns.fpbench fsync after each written bock */
     uint8_t o_direct;        /* zns.fpbench use direct I/O */
-    uint64_t extent_ctr; /* counter for total number of extents */
     uint64_t inlined_extent_ctr;   /* track the number of inlined extents */
     uint8_t excl_streams;          /* zns.fpbench use exclusive streams */
     uint8_t fpbench_streammap;     /* zns.fpbench stream to map file to */
