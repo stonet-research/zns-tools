@@ -386,7 +386,7 @@ static void prepare_report() {
         extents = (struct extent_map *)get_extents();
         close(ctrl.fd);
 
-        sort_extents(extents);
+        /* sort_extents(extents); */
 
         print_report(wl_man.wl[i], extents);
 

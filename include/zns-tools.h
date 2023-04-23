@@ -201,10 +201,10 @@ extern uint64_t get_zone_size();
 extern uint32_t get_nr_zones();
 extern uint32_t get_zone_number(uint64_t);
 extern void cleanup_ctrl();
+extern void cleanup_zonemap();
 extern void print_zone_info(uint32_t);
 extern int get_extents();
 extern int contains_element(uint32_t[], uint32_t, uint32_t);
-extern void sort_extents(struct extent_map *); // TODO: delete
 extern void map_extents(struct extent_map *);
 extern void show_extent_flags(uint32_t);
 extern uint32_t get_file_counter(char *);
@@ -214,6 +214,7 @@ extern void increase_file_segment_counter(char *, unsigned int, unsigned int,
 extern void set_super_block_info(struct f2fs_super_block);
 extern void set_fs_magic(char *);
 extern void init_ctrl();
+extern void print_fiemap_report();
 
 #define INFO(n, fmt, ...)                                                      \
     do {                                                                       \
@@ -233,5 +234,10 @@ extern void init_ctrl();
     MSG("--------------------------------------------------------------------" \
         "--------------------------------------------------------------------" \
         "----------------------------------------\n");
+
+#define HOLE_FORMATTER                                                         \
+    MSG("-----------------------------------------"                            \
+        "--------------------------------------------------------"             \
+        "--------\n")
 
 #endif
