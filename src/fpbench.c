@@ -169,25 +169,25 @@ static void write_file(struct workload workload) {
  * 1, but for segment ranges this options allows different values.
  *
  * */
-static void set_segment_counters(uint32_t segment_id, uint32_t num_segments) {
-    wl_man.segment_ctr += num_segments;
-    get_procfs_single_segment_bits(ctrl.bdev.dev_name, segment_id);
+/* static void set_segment_counters(uint32_t segment_id, uint32_t num_segments) { */
+/*     wl_man.segment_ctr += num_segments; */
+/*     get_procfs_single_segment_bits(ctrl.bdev.dev_name, segment_id); */
 
-    switch (segman.sm_info[0].type) {
-    case CURSEG_COLD_DATA:
-        wl_man.cold_ctr += num_segments;
-        break;
-    case CURSEG_WARM_DATA:
-        wl_man.warm_ctr += num_segments;
-        break;
-    case CURSEG_HOT_DATA:
-        wl_man.hot_ctr += num_segments;
-        break;
-    default:
-        break;
-    }
-    free(segman.sm_info);
-}
+/*     switch (segman.sm_info[0].type) { */
+/*     case CURSEG_COLD_DATA: */
+/*         wl_man.cold_ctr += num_segments; */
+/*         break; */
+/*     case CURSEG_WARM_DATA: */
+/*         wl_man.warm_ctr += num_segments; */
+/*         break; */
+/*     case CURSEG_HOT_DATA: */
+/*         wl_man.hot_ctr += num_segments; */
+/*         break; */
+/*     default: */
+/*         break; */
+/*     } */
+/*     free(segman.sm_info); */
+/* } */
 
 /*
  * Print the benchmark report - code is similar to segmap.c, as segment
@@ -221,14 +221,14 @@ static void print_report(struct workload workload, struct extent_map *extents) {
                 ctrl.cur_segment = segment_id;
             }
 
-            set_segment_counters(segment_start >> ctrl.segment_shift, 1);
+            /* set_segment_counters(segment_start >> ctrl.segment_shift, 1); */
         } else {
             // Else the extent spans across multiple segments, so we need to
             // break it up
 
             // part 1: the beginning of extent to end of that single segment
             if (extents->extent[i].phy_blk != segment_start) {
-                set_segment_counters(segment_start >> ctrl.segment_shift, 1);
+                /* set_segment_counters(segment_start >> ctrl.segment_shift, 1); */
                 segment_id++;
             }
 
@@ -238,8 +238,8 @@ static void print_report(struct workload workload, struct extent_map *extents) {
                 (extents->extent[i].phy_blk + extents->extent[i].len) &
                 ctrl.f2fs_segment_mask;
             num_segments = (segment_end - segment_start) >> ctrl.segment_shift;
-            set_segment_counters(segment_start >> ctrl.segment_shift,
-                                 num_segments);
+            /* set_segment_counters(segment_start >> ctrl.segment_shift, */
+            /*                      num_segments); */
 
             // part 3: any remaining parts of the last segment, which do not
             // fill the entire last segment only if the segment actually has a
@@ -249,7 +249,7 @@ static void print_report(struct workload workload, struct extent_map *extents) {
                  ctrl.f2fs_segment_mask);
             if (segment_end !=
                 extents->extent[i].phy_blk + extents->extent[i].len) {
-                set_segment_counters(segment_end >> ctrl.segment_shift, 1);
+                /* set_segment_counters(segment_end >> ctrl.segment_shift, 1); */
             }
         }
     }

@@ -103,6 +103,8 @@ struct zone_map {
     uint32_t zone_ctr;   /* number of zones that hold extents */
 };
 
+typedef void (*fs_info_cleanup)();
+
 struct control {
     char *filename;     /* full file name and path to map */
     int fd;             /* file descriptor of the file to be mapped */
@@ -165,6 +167,9 @@ struct control {
     uint8_t fpbench_streammap_set; /* zns.fpbench indicate if streammap set */
 
     struct zone_map zonemap; /* track extents in zones with zone information */
+    void *fs_super_block; /* if parsed by the fs lib, can store the super block in the control */
+    void *fs_info; /* file system specific information */
+    fs_info_cleanup fs_info_cleanup; /* function pointer to cleanup the fs_info */
 };
 
 // count for each file the number of extents

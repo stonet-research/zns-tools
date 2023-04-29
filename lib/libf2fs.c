@@ -2,11 +2,10 @@
 #include <stdint.h>
 #include <string.h>
 
-struct f2fs_super_block f2fs_sb;
-struct f2fs_checkpoint f2fs_cp;
+struct f2fs_super_block f2fs_sb; // TODO move this to the void * to store the super block
+struct f2fs_checkpoint f2fs_cp; // TODO: the superblock can hold this info or we can union it
 uint32_t nat_block_offset = 0; /* tracking the nat block traversal */
 uint32_t nat_entry_offset = 0; /* tracking offset to start at in nat_blocks */
-struct segment_manager segman;
 
 /*
  * Read a block of specified size from the device
@@ -428,6 +427,7 @@ void f2fs_show_inode_info(struct f2fs_inode *inode) {
     MSG("i_nid[4] (2x indirect): %u\n", inode->i_nid[4]); /* double indirect */
 }
 
+
 /*
  * Get the segment data from /proc/fs/f2fs/<device>/segment_bits
  * for more information about segments. Only get up to the highest
@@ -435,11 +435,12 @@ void f2fs_show_inode_info(struct f2fs_inode *inode) {
  * memory consumption. It sets the global sm_info struct
  *
  * @dev_name: * to device name F2FS is registered on
- * @highest_segment: The largest segment to retrieve info up to (including this
  * number segment)
  *
+ * TODO: update docs
+ *
  * */
-int get_procfs_segment_bits(char *dev_name, uint32_t highest_segment) {
+static int init_procfs_segment_bits(char *dev_name, uint32_t highest_segment, struct segment_manager *segman) {
     FILE *fp;
     char path[50];
     char *device, *dev_string, *dev, *line;
@@ -460,14 +461,8 @@ int get_procfs_segment_bits(char *dev_name, uint32_t highest_segment) {
              "enabled.\nFalling back to disabling procfs segment resolving.\n",
              path);
         free(dev_string);
-        return 0;
+        return EXIT_FAILURE;
     }
-
-    // F2FS outputs in rows of 10, which we parse and initialize in the struct,
-    // and only stop if we are >= to the highest segment, which means we may
-    // have parsed at most 10 more entries
-    segman.sm_info =
-        calloc(sizeof(struct segment_info) * (highest_segment + 10), 1);
 
     while ((read = getline(&line, &len, fp)) != -1) {
         // Skip first 2 lines that show file format
@@ -486,118 +481,158 @@ int get_procfs_segment_bits(char *dev_name, uint32_t highest_segment) {
                     if (strcmp(split_string, "|") == 0) {
                         continue;
                     } else if (!set_first) {
-                        segman.sm_info[segman.nr_segments].type =
-                            atoi(split_string);
+                        segman->segments[segman->nr_segments].type = atoi(split_string);
                         set_first = 1;
                     } else {
-                        segman.sm_info[segman.nr_segments].valid_blocks =
+                        segman->segments[segman->nr_segments].valid_blocks =
                             atoi(split_string);
                     }
                 }
 
                 free(split_string);
-                segman.sm_info[segman.nr_segments].id = segman.nr_segments;
-                segman.nr_segments++;
+                segman->segments[segman->nr_segments].id = segman->nr_segments;
+                segman->nr_segments++;
             }
         }
 
         free(contents);
 
-        if (segman.nr_segments > highest_segment) {
-            fclose(fp);
-            free(dev_string);
-            return 1;
+        /* only going to max allocated, as specified in the F2FS superblock */
+        if (segman->nr_segments > highest_segment) {
+            goto finish;
         }
     }
 
+finish:
     fclose(fp);
     free(dev_string);
 
-    return 1;
+    return EXIT_SUCCESS;
 }
 
-/*
- * Get the segment data from /proc/fs/f2fs/<device>/segment_bits
- * for more information about a segment. Only for a single segment,
- * as opposed to get_procfs_segment_bits.
- * It sets the global sm_info struct
- *
- * @dev_name: * to device name F2FS is registered on
- * @segment_id: segment number to retrieve info for
+/* initialize the segment manager into the control struct
  *
  * */
-int get_procfs_single_segment_bits(char *dev_name, uint32_t segment_id) {
-    FILE *fp;
-    char path[50];
-    char *device, *dev_string, *dev, *line;
-    size_t len = 0;
-    uint32_t line_ctr = 0, row = 0, remainder = 0;
-    ssize_t read;
+void *init_fs_info(char *dev_name) {
+   struct segment_manager *segman;
 
-    dev_string = strdup(dev_name);
-    while ((device = strsep(&dev_string, "/")) != NULL) {
-        dev = device;
-    }
+   segman = calloc(sizeof(struct segment_manager), 1);
+   segman->segments = calloc(sizeof (struct segment_info) * f2fs_sb.segment_count_main, 1);
 
-    sprintf(path, "/proc/fs/f2fs/%s/segment_info", dev);
+   if (init_procfs_segment_bits(dev_name, f2fs_sb.segment_count_main, segman) == EXIT_FAILURE) {
+        goto cleanup;
+   }
 
-    fp = fopen(path, "r");
-    if (!fp) {
-        WARN("Failed opening %s\nEnsure Kernel is running with F2FS Debugging "
-             "enabled.\nFalling back to disabling procfs segment resolving.\n",
-             path);
-        free(dev_string);
-        return 0;
-    }
+   // TODO: set the function pointer in ctrl to cleanup fs info
 
-    segman.sm_info = calloc(sizeof(struct segment_info), 1);
+   return segman;
 
-    row = segment_id / 10;
-    remainder = segment_id % 10;
+cleanup:
+   free(segman->segments);
+   free(segman);
 
-    while ((read = getline(&line, &len, fp)) != -1) {
-        // Skip first 2 lines that show file format then go to row
-        if (line_ctr != row + 2) {
-            line_ctr++;
-            continue;
-        }
-
-        char *contents;
-        uint8_t ctr = 0;
-        while ((contents = strsep(&line, " \t"))) {
-            if (strchr(contents, '|')) {
-                if (ctr != remainder) {
-                    ctr++;
-                    continue;
-                }
-
-                char *split_string;
-                uint8_t set_first = 0;
-                // sscanf had issues, resort to manual work
-                while ((split_string = strsep(&contents, "|"))) {
-                    if (strcmp(split_string, "|") == 0) {
-                        continue;
-                    } else if (!set_first) {
-                        segman.sm_info[0].type = atoi(split_string);
-                        set_first = 1;
-                    } else {
-                        segman.sm_info[0].id = segment_id;
-                        segman.sm_info[0].valid_blocks = atoi(split_string);
-                    }
-                }
-
-                free(split_string);
-                segman.nr_segments++;
-                free(contents);
-                fclose(fp);
-                free(dev_string);
-                return 1;
-            }
-        }
-    }
-
-    fclose(fp);
-    free(dev_string);
-
-    return 1;
+   return NULL;
 }
+
+static void cleanup_fs_info(void *fs_info) {
+    struct segment_manager *segman;
+    if (fs_info == NULL) {
+        goto finish;
+    }
+
+    segman = (struct segment_manager *) fs_info;
+
+    free(segman->segments);
+    free(segman);
+
+finish:
+   return;
+}
+
+extern fs_info_cleanup set_fs_info_cleanup() { return &cleanup_fs_info;}
+
+/*/1* */
+/* * Get the segment data from /proc/fs/f2fs/<device>/segment_bits */
+/* * for more information about a segment. Only for a single segment, */
+/* * as opposed to get_procfs_segment_bits. */
+/* * It sets the global sm_info struct */
+/* * */
+/* * @dev_name: * to device name F2FS is registered on */
+/* * @segment_id: segment number to retrieve info for */
+/* * */
+/* * *1/ */
+/*int get_procfs_single_segment_bits(char *dev_name, uint32_t segment_id) { */
+/*    FILE *fp; */
+/*    char path[50]; */
+/*    char *device, *dev_string, *dev, *line; */
+/*    size_t len = 0; */
+/*    uint32_t line_ctr = 0, row = 0, remainder = 0; */
+/*    ssize_t read; */
+
+/*    dev_string = strdup(dev_name); */
+/*    while ((device = strsep(&dev_string, "/")) != NULL) { */
+/*        dev = device; */
+/*    } */
+
+/*    sprintf(path, "/proc/fs/f2fs/%s/segment_info", dev); */
+
+/*    fp = fopen(path, "r"); */
+/*    if (!fp) { */
+/*        WARN("Failed opening %s\nEnsure Kernel is running with F2FS Debugging " */
+/*             "enabled.\nFalling back to disabling procfs segment resolving.\n", */
+/*             path); */
+/*        free(dev_string); */
+/*        return 0; */
+/*    } */
+
+/*    segman.sm_info = calloc(sizeof(struct segment_info), 1); */
+
+/*    row = segment_id / 10; */
+/*    remainder = segment_id % 10; */
+
+/*    while ((read = getline(&line, &len, fp)) != -1) { */
+/*        // Skip first 2 lines that show file format then go to row */
+/*        if (line_ctr != row + 2) { */
+/*            line_ctr++; */
+/*            continue; */
+/*        } */
+
+/*        char *contents; */
+/*        uint8_t ctr = 0; */
+/*        while ((contents = strsep(&line, " \t"))) { */
+/*            if (strchr(contents, '|')) { */
+/*                if (ctr != remainder) { */
+/*                    ctr++; */
+/*                    continue; */
+/*                } */
+
+/*                char *split_string; */
+/*                uint8_t set_first = 0; */
+/*                // sscanf had issues, resort to manual work */
+/*                while ((split_string = strsep(&contents, "|"))) { */
+/*                    if (strcmp(split_string, "|") == 0) { */
+/*                        continue; */
+/*                    } else if (!set_first) { */
+/*                        segman.sm_info[0].type = atoi(split_string); */
+/*                        set_first = 1; */
+/*                    } else { */
+/*                        segman.sm_info[0].id = segment_id; */
+/*                        segman.sm_info[0].valid_blocks = atoi(split_string); */
+/*                    } */
+/*                } */
+
+/*                free(split_string); */
+/*                segman.nr_segments++; */
+/*                free(contents); */
+/*                fclose(fp); */
+/*                free(dev_string); */
+/*                return 1; */
+/*            } */
+/*        } */
+/*    } */
+
+/*    fclose(fp); */
+/*    free(dev_string); */
+
+/*    return 1; */
+/*} */

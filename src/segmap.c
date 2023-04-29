@@ -182,31 +182,31 @@ static void check_dir() {
  * @is_range: flag to show if SEGMENT RANGE is caller
  *
  * */
-static void show_segment_flags(uint32_t segment_id, uint8_t is_range) {
-    REP(ctrl.show_only_stats, "+++++ TYPE: ");
-    if (segman.sm_info[segment_id].type == CURSEG_HOT_DATA) {
-        REP(ctrl.show_only_stats, "CURSEG_HOT_DATA");
-    } else if (segman.sm_info[segment_id].type == CURSEG_WARM_DATA) {
-        REP(ctrl.show_only_stats, "CURSEG_WARM_DATA");
-    } else if (segman.sm_info[segment_id].type == CURSEG_COLD_DATA) {
-        REP(ctrl.show_only_stats, "CURSEG_COLD_DATA");
-    } else if (segman.sm_info[segment_id].type == CURSEG_HOT_NODE) {
-        REP(ctrl.show_only_stats, "CURSEG_HOT_NODE");
-    } else if (segman.sm_info[segment_id].type == CURSEG_WARM_NODE) {
-        REP(ctrl.show_only_stats, "CURSEG_WARM_NODE");
-    } else if (segman.sm_info[segment_id].type == CURSEG_COLD_NODE) {
-        REP(ctrl.show_only_stats, "CURSEG_COLD_NODE");
-    }
+/* static void show_segment_flags(uint32_t segment_id, uint8_t is_range) { */
+/*     REP(ctrl.show_only_stats, "+++++ TYPE: "); */
+/*     if (segman.sm_info[segment_id].type == CURSEG_HOT_DATA) { */
+/*         REP(ctrl.show_only_stats, "CURSEG_HOT_DATA"); */
+/*     } else if (segman.sm_info[segment_id].type == CURSEG_WARM_DATA) { */
+/*         REP(ctrl.show_only_stats, "CURSEG_WARM_DATA"); */
+/*     } else if (segman.sm_info[segment_id].type == CURSEG_COLD_DATA) { */
+/*         REP(ctrl.show_only_stats, "CURSEG_COLD_DATA"); */
+/*     } else if (segman.sm_info[segment_id].type == CURSEG_HOT_NODE) { */
+/*         REP(ctrl.show_only_stats, "CURSEG_HOT_NODE"); */
+/*     } else if (segman.sm_info[segment_id].type == CURSEG_WARM_NODE) { */
+/*         REP(ctrl.show_only_stats, "CURSEG_WARM_NODE"); */
+/*     } else if (segman.sm_info[segment_id].type == CURSEG_COLD_NODE) { */
+/*         REP(ctrl.show_only_stats, "CURSEG_COLD_NODE"); */
+/*     } */
 
-    REP(ctrl.show_only_stats, "  VALID BLOCKS: %3u",
-        segman.sm_info[segment_id].valid_blocks << F2FS_BLKSIZE_BITS >>
-            ctrl.sector_shift);
-    if (is_range) {
-        REP(ctrl.show_only_stats, " per segment\n");
-    } else {
-        REP(ctrl.show_only_stats, "\n");
-    }
-}
+/*     REP(ctrl.show_only_stats, "  VALID BLOCKS: %3u", */
+/*         segman.sm_info[segment_id].valid_blocks << F2FS_BLKSIZE_BITS >> */
+/*             ctrl.sector_shift); */
+/*     if (is_range) { */
+/*         REP(ctrl.show_only_stats, " per segment\n"); */
+/*     } else { */
+/*         REP(ctrl.show_only_stats, "\n"); */
+/*     } */
+/* } */
 
 static void show_segment_info(uint64_t segment_start) {
     if (ctrl.cur_segment != segment_start) {
@@ -287,48 +287,48 @@ static unsigned int get_file_stats_index(char *filename) {
  * 1, but for segment ranges this options allows different values.
  *
  * */
-static void set_segment_counters(uint32_t segment_id, uint32_t num_segments,
-                                 struct extent extent) {
-    uint32_t fs_stats_index = 0;
+/* static void set_segment_counters(uint32_t segment_id, uint32_t num_segments, */
+/*                                  struct extent extent) { */
+/*     uint32_t fs_stats_index = 0; */
 
-    if (extent.flags & FIEMAP_EXTENT_DATA_INLINE &&
-        !(ctrl.exclude_flags & FIEMAP_EXTENT_DATA_INLINE))
-        return;
+/*     if (extent.flags & FIEMAP_EXTENT_DATA_INLINE && */
+/*         !(ctrl.exclude_flags & FIEMAP_EXTENT_DATA_INLINE)) */
+/*         return; */
 
-    segmap_man.segment_ctr += num_segments;
+/*     segmap_man.segment_ctr += num_segments; */
 
-    if (ctrl.show_class_stats && ctrl.nr_files > 1) {
-        fs_stats_index = get_file_stats_index(extent.file);
-        segmap_man.fs[fs_stats_index].segment_ctr += num_segments;
-        if (segmap_man.fs[fs_stats_index].last_zone != extent.zone) {
-            segmap_man.fs[fs_stats_index].last_zone = extent.zone;
-            segmap_man.fs[fs_stats_index].zone_ctr++;
-        }
-    }
+/*     if (ctrl.show_class_stats && ctrl.nr_files > 1) { */
+/*         fs_stats_index = get_file_stats_index(extent.file); */
+/*         segmap_man.fs[fs_stats_index].segment_ctr += num_segments; */
+/*         if (segmap_man.fs[fs_stats_index].last_zone != extent.zone) { */
+/*             segmap_man.fs[fs_stats_index].last_zone = extent.zone; */
+/*             segmap_man.fs[fs_stats_index].zone_ctr++; */
+/*         } */
+/*     } */
 
-    switch (segman.sm_info[segment_id].type) {
-    case CURSEG_COLD_DATA:
-        segmap_man.cold_ctr += num_segments;
-        if (ctrl.show_class_stats && ctrl.nr_files > 1) {
-            segmap_man.fs[fs_stats_index].cold_ctr += num_segments;
-        }
-        break;
-    case CURSEG_WARM_DATA:
-        segmap_man.warm_ctr += num_segments;
-        if (ctrl.show_class_stats && ctrl.nr_files > 1) {
-            segmap_man.fs[fs_stats_index].warm_ctr += num_segments;
-        }
-        break;
-    case CURSEG_HOT_DATA:
-        segmap_man.hot_ctr += num_segments;
-        if (ctrl.show_class_stats && ctrl.nr_files > 1) {
-            segmap_man.fs[fs_stats_index].hot_ctr += num_segments;
-        }
-        break;
-    default:
-        break;
-    }
-}
+/*     switch (segman.sm_info[segment_id].type) { */
+/*     case CURSEG_COLD_DATA: */
+/*         segmap_man.cold_ctr += num_segments; */
+/*         if (ctrl.show_class_stats && ctrl.nr_files > 1) { */
+/*             segmap_man.fs[fs_stats_index].cold_ctr += num_segments; */
+/*         } */
+/*         break; */
+/*     case CURSEG_WARM_DATA: */
+/*         segmap_man.warm_ctr += num_segments; */
+/*         if (ctrl.show_class_stats && ctrl.nr_files > 1) { */
+/*             segmap_man.fs[fs_stats_index].warm_ctr += num_segments; */
+/*         } */
+/*         break; */
+/*     case CURSEG_HOT_DATA: */
+/*         segmap_man.hot_ctr += num_segments; */
+/*         if (ctrl.show_class_stats && ctrl.nr_files > 1) { */
+/*             segmap_man.fs[fs_stats_index].hot_ctr += num_segments; */
+/*         } */
+/*         break; */
+/*     default: */
+/*         break; */
+/*     } */
+/* } */
 
 /*
  *
@@ -612,156 +612,6 @@ static void show_segment_report() {
     }
 }
 
-/*/1* */
-/* * Print the report summary of glob_extent_map for Btrfs. */
-/* * Report is same as fiemap.c for multiple files, therefore */
-/* * includes file names. */
-/* * */
-/* * *1/ */
-/*static void print_filemap_report() { */
-/*    uint32_t current_zone = 0; */
-/*    uint32_t hole_ctr = 0; */
-/*    uint64_t hole_cum_size = 0; */
-/*    uint64_t hole_size = 0; */
-/*    uint64_t hole_end = 0; */
-/*    uint64_t pbae = 0; */
-
-/*    MSG("=================================================================" */
-/*        "===\n"); */
-/*    MSG("\t\t\tEXTENT MAPPINGS\n"); */
-/*    MSG("===================================================================" */
-/*        "=\n"); */
-
-/*    for (uint32_t i = 0; i < glob_extent_map->ext_ctr; i++) { */
-/*        if (current_zone != glob_extent_map->extent[i].zone) { */
-/*            current_zone = glob_extent_map->extent[i].zone; */
-/*            glob_extent_map->zone_ctr++; */
-/*            print_zone_info(current_zone); */
-/*            MSG("\n"); */
-/*            UNDERSCORE_FORMATTER_SHORT */
-/*            FORMATTER_SHORT */
-/*        } */
-
-/*        // Track holes in between extents in the same zone */
-/*        if (ctrl.show_holes && i > 0 && */
-/*            (glob_extent_map->extent[i - 1].phy_blk + */
-/*                 glob_extent_map->extent[i - 1].len != */
-/*             glob_extent_map->extent[i].phy_blk)) { */
-
-/*            if (glob_extent_map->extent[i - 1].zone == */
-/*                glob_extent_map->extent[i].zone) { */
-/*                // Hole in the same zone between segments */
-
-/*                hole_size = glob_extent_map->extent[i].phy_blk - */
-/*                            (glob_extent_map->extent[i - 1].phy_blk + */
-/*                             glob_extent_map->extent[i - 1].len); */
-/*                hole_cum_size += hole_size; */
-/*                hole_ctr++; */
-
-/*                HOLE_FORMATTER */
-/*                MSG(">>>>> HOLE:    PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64 */
-/*                    "  SIZE: %#-10" PRIx64 "\n", */
-/*                    glob_extent_map->extent[i - 1].phy_blk + */
-/*                        glob_extent_map->extent[i - 1].len, */
-/*                    glob_extent_map->extent[i].phy_blk, hole_size); */
-/*                HOLE_FORMATTER */
-/*            } */
-/*        } */
-/*        if (ctrl.show_holes && i > 0 && i < glob_extent_map->ext_ctr - 1 && */
-/*            glob_extent_map->extent[i].zone_lbas != */
-/*                glob_extent_map->extent[i].phy_blk && */
-/*            glob_extent_map->extent[i - 1].zone != */
-/*                glob_extent_map->extent[i].zone) { */
-/*            // Hole between LBAS of zone and PBAS of the extent */
-
-/*            hole_size = glob_extent_map->extent[i].phy_blk - */
-/*                        glob_extent_map->extent[i].zone_lbas; */
-/*            hole_cum_size += hole_size; */
-/*            hole_ctr++; */
-
-/*            HOLE_FORMATTER */
-/*            MSG(">>>>> HOLE:    PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64 */
-/*                "  SIZE: %#-10" PRIx64 "\n", */
-/*                glob_extent_map->extent[i].zone_lbas, */
-/*                glob_extent_map->extent[i].phy_blk, hole_size); */
-/*            HOLE_FORMATTER */
-/*        } */
-
-/*        MSG("***** EXTENT:  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64 */
-/*            "  SIZE: %#-10" PRIx64 "  FILE: %50s  EXTID:  %d/%-5d\n", */
-/*            glob_extent_map->extent[i].phy_blk, */
-/*            (glob_extent_map->extent[i].phy_blk + */
-/*             glob_extent_map->extent[i].len), */
-/*            glob_extent_map->extent[i].len, glob_extent_map->extent[i].file, */
-/*            glob_extent_map->extent[i].ext_nr + 1, */
-/*            get_file_counter(glob_extent_map->extent[i].file)); */
-
-/*        if (glob_extent_map->extent[i].flags != 0 && ctrl.show_flags) { */
-/*            show_extent_flags(glob_extent_map->extent[i].flags); */
-/*        } */
-
-/*        pbae = */
-/*            glob_extent_map->extent[i].phy_blk + glob_extent_map->extent[i].len; */
-/*        if (ctrl.show_holes && i > 0 && i < glob_extent_map->ext_ctr && */
-/*            pbae != glob_extent_map->extent[i].zone_lbae && */
-/*            glob_extent_map->extent[i].zone_wp > pbae && */
-/*            glob_extent_map->extent[i].zone != */
-/*                glob_extent_map->extent[i + 1].zone) { */
-/*            // Hole between PBAE of the extent and the zone LBAE (since WP can */
-/*            // be next zone LBAS if full) e.g. extent ends before the write */
-/*            // pointer of its zone but the next extent is in a different zone */
-/*            // (hence hole between PBAE and WP) */
-
-/*            if (glob_extent_map->extent[i].zone_wp < */
-/*                glob_extent_map->extent[i].zone_lbae) { */
-/*                hole_end = glob_extent_map->extent[i].zone_wp; */
-/*            } else { */
-/*                hole_end = glob_extent_map->extent[i].zone_lbae; */
-/*            } */
-
-/*            hole_size = hole_end - pbae; */
-/*            hole_cum_size += hole_size; */
-/*            hole_ctr++; */
-
-/*            HOLE_FORMATTER */
-/*            MSG(">>>>> HOLE:    PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64 */
-/*                "  SIZE: %#-10" PRIx64 "\n", */
-/*                glob_extent_map->extent[i].phy_blk + */
-/*                    glob_extent_map->extent[i].len, */
-/*                hole_end, hole_size); */
-/*            HOLE_FORMATTER */
-/*        } */
-
-/*        if (glob_extent_map->ext_ctr >= i && */
-/*            glob_extent_map->extent[i + 1].zone != current_zone) { */
-/*            UNDERSCORE_FORMATTER_SHORT */
-/*            FORMATTER_SHORT */
-/*        } */
-/*    } */
-
-/*    MSG("\n\n===============================================================" */
-/*        "===========\n"); */
-/*    MSG("\t\t\t STATS SUMMARY\n"); */
-/*    MSG("===================================================================" */
-/*        "=======\n"); */
-/*    MSG("\nNOE: %-4u  TES: %#-10" PRIx64 "  AES: %#-10" PRIx64 "  EAES: %-10f" */
-/*        "  NOZ: %-4u\n", */
-/*        glob_extent_map->ext_ctr, glob_extent_map->cum_extent_size, */
-/*        glob_extent_map->cum_extent_size / (glob_extent_map->ext_ctr), */
-/*        (double)glob_extent_map->cum_extent_size / */
-/*            (double)(glob_extent_map->ext_ctr), */
-/*        glob_extent_map->zone_ctr); */
-
-/*    if (ctrl.show_holes && hole_ctr > 0) { */
-/*        MSG("NOH: %-4u  THS: %#-10" PRIx64 "  AHS: %#-10" PRIx64 */
-/*            "  EAHS: %-10f\n", */
-/*            hole_ctr, hole_cum_size, hole_cum_size / hole_ctr, */
-/*            (double)hole_cum_size / (double)hole_ctr); */
-/*    } else if (ctrl.show_holes && hole_ctr == 0) { */
-/*        MSG("NOH: 0\n"); */
-/*    } */
-/*} */
-
 int main(int argc, char *argv[]) {
     int c;
     uint8_t ret = 0;
@@ -850,6 +700,14 @@ int main(int argc, char *argv[]) {
         set_super_block_info(f2fs_sb);
         ctrl.multi_dev = 1;
         ctrl.offset = get_dev_size(ctrl.bdev.dev_path);
+        if (ctrl.procfs) {
+            ctrl.fs_info = init_fs_info(ctrl.bdev.dev_name);
+            ctrl.fs_info_cleanup = (fs_info_cleanup) set_fs_info_cleanup();
+            if (ctrl.fs_info == NULL) {
+                // Something failed, fallling back
+                ctrl.procfs = 0;
+            }
+        }
     } else if (ctrl.fs_magic == BTRFS_MAGIC) {
         ctrl.multi_dev = 0;
         ctrl.offset = 0;
@@ -906,46 +764,49 @@ int main(int argc, char *argv[]) {
     // TODO: after this point update the segment mapping and so forth
     /* sort_extents(glob_extent_map); */
 
-    if (ctrl.fs_magic == F2FS_MAGIC) {
-        /* highest_segment = */
-            /* ((glob_extent_map->extent[glob_extent_map->ext_ctr - 1].phy_blk + */
-            /*   glob_extent_map->extent[glob_extent_map->ext_ctr - 1].len) & */
-            /*  ctrl.f2fs_segment_mask) >> */
-            /* ctrl.segment_shift; */
-        if (ctrl.procfs) {
-            if (!get_procfs_segment_bits(ctrl.bdev.dev_name, highest_segment)) {
-                // Something failed, fallling back
-                ctrl.procfs = 0;
-            }
-        }
+    /* if (ctrl.fs_magic == F2FS_MAGIC) { */
+    /*     /1* highest_segment = *1/ */
+    /*         /1* ((glob_extent_map->extent[glob_extent_map->ext_ctr - 1].phy_blk + *1/ */
+    /*         /1*   glob_extent_map->extent[glob_extent_map->ext_ctr - 1].len) & *1/ */
+    /*         /1*  ctrl.f2fs_segment_mask) >> *1/ */
+    /*         /1* ctrl.segment_shift; *1/ */
+    /*     /1* if (ctrl.procfs) { *1/ */
+    /*     /1*     if (!get_procfs_segment_bits(ctrl.bdev.dev_name, highest_segment)) { *1/ */
+    /*     /1*         // Something failed, fallling back *1/ */
+    /*     /1*         ctrl.procfs = 0; *1/ */
+    /*     /1*     } *1/ */
+    /*     } */
 
-        /* set_file_extent_counters(glob_extent_map); */
+    /*     /1* set_file_extent_counters(glob_extent_map); *1/ */
 
-        show_segment_report();
+    /*     show_segment_report(); */
 
-        free(file_counter_map->file);
-        free(file_counter_map);
-        if (ctrl.show_class_stats) {
-            free(segmap_man.fs);
-            for (uint32_t i = 0; i < segmap_man.ctr; i++) {
-                free(segmap_man.fs[i].filename);
-            }
-        }
-        if (ctrl.procfs) {
-            free(segman.sm_info);
-        }
-    } else if (ctrl.fs_magic == BTRFS_MAGIC) {
-        /* set_file_extent_counters(glob_extent_map); */
-        print_fiemap_report();
+    /*     free(file_counter_map->file); */
+    /*     free(file_counter_map); */
+    /*     if (ctrl.show_class_stats) { */
+    /*         free(segmap_man.fs); */
+    /*         for (uint32_t i = 0; i < segmap_man.ctr; i++) { */
+    /*             free(segmap_man.fs[i].filename); */
+    /*         } */
+    /*     } */
+    /*     /1* if (ctrl.procfs) { *1/ */
+    /*     /1*     free(segman.sm_info); *1/ */
+    /*     /1* } *1/ */
+    /* } else if (ctrl.fs_magic == BTRFS_MAGIC) { */
+    /*     /1* set_file_extent_counters(glob_extent_map); *1/ */
+    /*     print_fiemap_report(); */
 
-        free(file_counter_map->file);
-        free(file_counter_map);
-    }
+    /*     free(file_counter_map->file); */
+    /*     free(file_counter_map); */
+    /* } */
 
 cleanup:
     cleanup_ctrl();
+    if (ctrl.fs_info != NULL) {
+        ctrl.fs_info_cleanup(ctrl.fs_info);
+    }
 
     /* free(glob_extent_map); */
 
-    return 0;
+    return EXIT_SUCCESS;
 }

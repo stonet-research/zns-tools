@@ -269,13 +269,42 @@ uint32_t get_nr_zones() {
  * Cleanup control struct - free memory
  *
  * */
-void cleanup_ctrl() { free(ctrl.stats); }
+void cleanup_ctrl() { 
+    free(ctrl.stats);
+    ctrl.stats = NULL;
+}
 
 /*
  * Cleanup zonemap struct - free memory
  *
  * */
-void cleanup_zonemap() { free(ctrl.zonemap.zones); }
+void cleanup_zonemap() { 
+    uint i;
+    struct node *node, *next;
+
+    for (i = 0; i < ctrl.zonemap.nr_zones; i++) {
+        node = ctrl.zonemap.zones[i].extents;
+
+        if (node == NULL) {
+            continue;
+        } else {
+            while (node->next != NULL) {
+                next = node->next; 
+                free(node);
+                node = next;
+            }
+
+            /* if list has only one element we never enter the loop */
+            if (node != NULL) {
+                free(node);
+            }
+        }
+        ctrl.zonemap.zones[i].extents = NULL;
+    }
+
+    free(ctrl.zonemap.zones); 
+    ctrl.zonemap.zones = NULL;
+}
 
 // TODO: description
 // this was the btree part, if we go back to it. for now linked list is simplest
@@ -597,8 +626,6 @@ int get_extents() {
         }
 
         if (fiemap->fm_extents[0].fe_flags & FIEMAP_EXTENT_LAST) {
-            // TODO: here i is equal to the number of extents for the file, if
-            // we need to store it somewhere?
             last_ext = 1;
         }
 
