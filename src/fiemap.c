@@ -65,8 +65,11 @@ static void show_help() {
 }
 
 int main(int argc, char *argv[]) {
+    struct stat *stats;
     int c, ret = 0;
     uint8_t set_file = 0;
+    char *filename;
+    int fd = 0;
 
     memset(&ctrl, 0, sizeof(struct control));
 
@@ -76,7 +79,7 @@ int main(int argc, char *argv[]) {
             show_help();
             break;
         case 'f':
-            ctrl.filename = optarg;
+            filename = optarg;
             set_file = 1;
             break;
         case 'w':
@@ -99,23 +102,36 @@ int main(int argc, char *argv[]) {
         show_help();
     }
 
-    init_ctrl();
-    fsync(ctrl.fd);
+    fd = open(filename, O_RDONLY);
+    if (fd < 0) {
+        ERR_MSG("Failed opening fd on %s.\n", filename);
+        return EXIT_FAILURE;
+    }
 
-    ret = get_extents();
+    fsync(fd);
+
+    stats = calloc(sizeof(struct stat), sizeof(char *));
+    if (fstat(fd, stats) < 0) {
+        ERR_MSG("Failed stat on file %s\n", filename);
+    }
+
+    init_ctrl(filename, fd, stats);
+
+    ret = get_extents(filename, fd, stats);
 
     if (ret == EXIT_FAILURE) {
-        ERR_MSG("retrieving extents for %s\n", ctrl.filename);
+        ERR_MSG("retrieving extents for %s\n", filename);
     } else if (ctrl.zonemap.extent_ctr == 0) {
         ERR_MSG("No extents found on device\n");
     }
 
-    close(ctrl.fd);
+    close(fd);
 
     print_fiemap_report();
 
     cleanup_zonemap();
     cleanup_ctrl();
+    free(stats);
 
-    return 0;
+    return EXIT_SUCCESS;
 }

@@ -106,9 +106,9 @@ struct zone_map {
 typedef void (*fs_info_cleanup)();
 
 struct control {
-    char *filename;     /* full file name and path to map */
-    int fd;             /* file descriptor of the file to be mapped */
-    struct stat *stats; /* statistics from fstat() call */
+    /* char *filename;     /1* full file name and path to map *1/ */
+    /* int fd;             /1* file descriptor of the file to be mapped *1/ */
+    /* struct stat *stats; /1* statistics from fstat() call *1/ */
     struct bdev bdev;   /* block device file is located on */
     struct bdev znsdev; /* additional ZNS device if file F2FS reporst file on
                             prior bdev */
@@ -208,7 +208,7 @@ extern uint32_t get_zone_number(uint64_t);
 extern void cleanup_ctrl();
 extern void cleanup_zonemap();
 extern void print_zone_info(uint32_t);
-extern int get_extents();
+extern int get_extents(char *, int, struct stat *);
 extern int contains_element(uint32_t[], uint32_t, uint32_t);
 extern void map_extents(struct extent_map *);
 extern void show_extent_flags(uint32_t);
@@ -218,7 +218,7 @@ extern void increase_file_segment_counter(char *, unsigned int, unsigned int,
                                           enum type, uint64_t);
 extern void set_super_block_info(struct f2fs_super_block);
 extern void set_fs_magic(char *);
-extern void init_ctrl();
+extern void init_ctrl(char *, int, struct stat *);
 extern void print_fiemap_report();
 
 #define INFO(n, fmt, ...)                                                      \

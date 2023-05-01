@@ -97,83 +97,88 @@ static void check_dir() {
  * @path: char * to path to recursively check
  *
  * */
-// TODO: allow directories
-/* static void collect_extents(char *path) { */
-/*     struct extent_map *temp_map; */
-/*     struct dirent *dir; */
-/*     char *sub_path = NULL; */
-/*     size_t len = 0; */
+static void collect_extents(char *path) {
+    struct stat *stats; /* statistics from fstat() call */
+    struct dirent *dir;
+    char *sub_path = NULL;
+    size_t len = 0;
+    int ret = 0;
+    char *filename;
+    int fd = 0;
 
-/*     file_counter_map = NULL; */
+    file_counter_map = NULL;
 
-/*     DIR *directory = opendir(path); */
-/*     if (!directory) { */
-/*         ERR_MSG("Failed opening dir %s\n", path); */
-/*     } */
+    DIR *directory = opendir(path);
+    if (!directory) {
+        ERR_MSG("Failed opening dir %s\n", path);
+    }
 
-/*     while ((dir = readdir(directory)) != NULL) { */
-/*         if (dir->d_type != DT_DIR) { */
-/*             ctrl.filename = NULL; // NULL so we can realloc */
-/*             ctrl.filename = */
-/*                 realloc(ctrl.filename, strlen(path) + strlen(dir->d_name) + 2); */
-/*             sprintf(ctrl.filename, "%s/%s", path, dir->d_name); */
+    while ((dir = readdir(directory)) != NULL) {
+        if (dir->d_type != DT_DIR) {
+            // TODO: we want to pass the name not set a global field
+            filename = NULL; // NULL so we can realloc
+            filename = realloc(filename, strlen(path) + strlen(dir->d_name) + 2);
+            sprintf(filename, "%s/%s", path, dir->d_name);
 
-/*             ctrl.fd = open(ctrl.filename, O_RDONLY); */
-/*             fsync(ctrl.fd); */
+            fd = open(filename, O_RDONLY);
+            fsync(fd);
 
-/*             if (ctrl.fd < 0) { */
-/*                 // The file could have been deleted in the meantime. */
-/*                 if (access(ctrl.filename, F_OK) != 0) { */
-/*                     INFO(1, "File no longer exists: %s", ctrl.filename); */
-/*                     continue; */
-/*                 } else { */
-/*                     ERR_MSG("failed opening file %s\n", ctrl.filename); */
-/*                 } */
-/*             } */
+            if (fd < 0) {
+                // The file could have been deleted in the meantime.
+                if (access(filename, F_OK) != 0) {
+                    INFO(1, "File no longer exists: %s", filename);
+                    continue;
+                } else {
+                    ERR_MSG("failed opening file %s\n", filename);
+                }
+            }
 
-/*             if (fstat(ctrl.fd, ctrl.stats) < 0) { */
-/*                 ERR_MSG("Failed stat on file %s\n", ctrl.filename); */
-/*             } */
+            stats = calloc(sizeof(struct stat), sizeof(char *));
 
-/*             temp_map = (struct extent_map *)get_extents(); */
-/*         /1* ret = get_extents(); *1/ */
+            if (fstat(fd, stats) < 0) {
+                ERR_MSG("Failed stat on file %s\n", filename);
+            }
 
-/*         /1* if (ret == EXIT_FAILURE) { *1/ */
-/*         /1*     ERR_MSG("retrieving extents for %s\n", ctrl.filename); *1/ */
-/*         /1* } else if (ctrl.zonemap.extent_ctr == 0) { *1/ */
-/*         /1*     ERR_MSG("No extents found on device\n"); *1/ */
-/*         /1* } *1/ */
+            ret = get_extents(filename, fd, stats);
 
-/*             if (!temp_map || temp_map->ext_ctr == 0) { */
-/*                 INFO(1, "No extents found for file: %s\n", ctrl.filename); */
-/*             } else { */
-/*                 glob_extent_map->ext_ctr += temp_map->ext_ctr; */
-/*                 glob_extent_map->cum_extent_size += temp_map->cum_extent_size; */
-/*                 glob_extent_map = realloc( */
-/*                     glob_extent_map, */
-/*                     sizeof(struct extent_map) + */
-/*                         sizeof(struct extent) * (glob_extent_map->ext_ctr + 1)); */
-/*                 memcpy(&glob_extent_map->extent[glob_extent_map->ext_ctr - */
-/*                                                 temp_map->ext_ctr], */
-/*                        temp_map->extent, */
-/*                        sizeof(struct extent) * temp_map->ext_ctr); */
-/*             } */
+            if (ret == EXIT_FAILURE) {
+                ERR_MSG("retrieving extents for %s\n", filename);
+            } else if (ctrl.zonemap.extent_ctr == 0) {
+                ERR_MSG("No extents found on device\n");
+            }
 
-/*             free(temp_map); */
-/*             close(ctrl.fd); */
-/*         } else if (dir->d_type == DT_DIR && strcmp(dir->d_name, ".") != 0 && */
-/*                    strcmp(dir->d_name, "..") != 0) { */
-/*             len = strlen(path) + strlen(dir->d_name) + 2; */
-/*             sub_path = realloc(sub_path, len); */
+            // TODO: have file counter map with number of extents and check if none found
+            /* if (!temp_map || temp_map->ext_ctr == 0) { */
+            /*     INFO(1, "No extents found for file: %s\n", ctrl.filename); */
+            /* } else { */
+            /*     glob_extent_map->ext_ctr += temp_map->ext_ctr; */
+            /*     glob_extent_map->cum_extent_size += temp_map->cum_extent_size; */
+            /*     glob_extent_map = realloc( */
+            /*         glob_extent_map, */
+            /*         sizeof(struct extent_map) + */
+            /*             sizeof(struct extent) * (glob_extent_map->ext_ctr + 1)); */
+            /*     memcpy(&glob_extent_map->extent[glob_extent_map->ext_ctr - */
+            /*                                     temp_map->ext_ctr], */
+            /*            temp_map->extent, */
+            /*            sizeof(struct extent) * temp_map->ext_ctr); */
+            /* } */
 
-/*             snprintf(sub_path, len, "%s/%s/", path, dir->d_name); */
-/*             collect_extents(sub_path); */
-/*         } */
-/*     } */
+            close(fd);
+        } else if (dir->d_type == DT_DIR && strcmp(dir->d_name, ".") != 0 &&
+                   strcmp(dir->d_name, "..") != 0) {
+            len = strlen(path) + strlen(dir->d_name) + 2;
+            sub_path = realloc(sub_path, len);
 
-/*     free(sub_path); */
-/*     closedir(directory); */
-/* } */
+            snprintf(sub_path, len, "%s/%s/", path, dir->d_name);
+            collect_extents(sub_path);
+        }
+
+        free(stats);
+    }
+
+    free(sub_path);
+    closedir(directory);
+}
 
 /*
  * Show the segment flags (type and valid blocks) for the specified segment
@@ -613,7 +618,9 @@ static void show_segment_report() {
 }
 
 int main(int argc, char *argv[]) {
-    int c;
+    struct stat *stats; /* statistics from fstat() call */
+    char *filename;
+    int fd =0, c = 0;
     uint8_t ret = 0;
     uint8_t set_zone = 0;
     uint8_t set_dir = 0;
@@ -729,35 +736,36 @@ int main(int argc, char *argv[]) {
         ctrl.end_zone = ctrl.znsdev.nr_zones;
     }
 
-    ctrl.stats = calloc(sizeof(struct stat), sizeof(char *));
-    /* glob_extent_map = calloc(sizeof(struct extent_map), sizeof(char *)); */
-
     if (segmap_man.isdir) {
-        /* collect_extents(segmap_man.dir); */
-        /* if (glob_extent_map->ext_ctr == 0) { */
-        /*     WARN("No separate extent mappings found for any file.\nFound " */
-        /*          "Inlined inode Extents: %lu\n", */
-        /*          ctrl.inlined_extent_ctr); */
-        /*     goto cleanup; */
-        /* } */
+        collect_extents(segmap_man.dir);
+        if (ctrl.zonemap.extent_ctr == 0) {
+            WARN("No separate extent mappings found for any file.\nFound "
+                 "Inlined inode Extents: %lu\n",
+                 ctrl.inlined_extent_ctr);
+            goto cleanup;
+        }
     } else {
-        ctrl.filename = segmap_man.dir;
-        ctrl.fd = open(ctrl.filename, O_RDONLY);
-        ctrl.stats = calloc(sizeof(struct stat), sizeof(char *));
+        filename = segmap_man.dir;
+        fd = open(filename, O_RDONLY);
+        fsync(fd);
 
-        if (fstat(ctrl.fd, ctrl.stats) < 0) {
-            ERR_MSG("Failed stat on file %s\n", ctrl.filename);
+        stats = calloc(sizeof(struct stat), sizeof(char *));
+
+        if (fstat(fd, stats) < 0) {
+            ERR_MSG("Failed stat on file %s\n", filename);
         }
 
-        ret = get_extents();
+        ret = get_extents(filename, fd, stats);
 
         if (ret == EXIT_FAILURE) {
-            ERR_MSG("retrieving extents for %s\n", ctrl.filename);
+            ERR_MSG("retrieving extents for %s\n", filename);
         } else if (ctrl.zonemap.extent_ctr == 0) {
             ERR_MSG("No extents found on device\n");
         }
 
-        close(ctrl.fd);
+        close(fd);
+
+        free(stats);
     }
 
     /* map_extents(glob_extent_map); */

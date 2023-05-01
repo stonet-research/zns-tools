@@ -11,6 +11,7 @@ uint32_t file_counter = 0;
  * @dev_path: device path (e.g., /dev/nvme0n2)
  *
  * returns: 1 if Zoned, else 0
+ * TODO: fix return codes
  *
  * */
 uint8_t is_zoned(char *dev_path) {
@@ -270,8 +271,9 @@ uint32_t get_nr_zones() {
  *
  * */
 void cleanup_ctrl() { 
-    free(ctrl.stats);
-    ctrl.stats = NULL;
+    // TODO: remove if empty, other cleanup?
+    /* free(ctrl.stats); */
+    /* ctrl.stats = NULL; */
 }
 
 /*
@@ -535,7 +537,7 @@ void show_extent_flags(uint32_t flags) {
  * return 0 on success, else failure
  *
  * */
-int get_extents() {
+int get_extents(char *filename, int fd, struct stat *stats) {
     struct fiemap *fiemap;
     struct extent *extent;
     uint8_t last_ext = 0;
@@ -544,14 +546,11 @@ int get_extents() {
 
     fiemap->fm_flags = FIEMAP_FLAG_SYNC;
     fiemap->fm_start = 0;
-    fiemap->fm_extent_count =
-        ctrl.stats->st_blocks; /* set to max number of blocks in file */
-    fiemap->fm_length =
-        (ctrl.stats->st_blocks
-         << 3); /* st_blocks is always 512B units, shift to bytes */
+    fiemap->fm_extent_count = stats->st_blocks; /* set to max number of blocks in file */
+    fiemap->fm_length = (stats->st_blocks << 3); /* st_blocks is always 512B units, shift to bytes */
 
     do {
-        if (ioctl(ctrl.fd, FS_IOC_FIEMAP, fiemap) < 0) {
+        if (ioctl(fd, FS_IOC_FIEMAP, fiemap) < 0) {
             return EXIT_FAILURE;
         }
 
@@ -567,7 +566,7 @@ int get_extents() {
             INFO(2,
                  "FILE %s\nExtent Reported on %s  PBAS: "
                  "0x%06llx  PBAE: 0x%06llx  SIZE: 0x%06llx\n",
-                 ctrl.filename, ctrl.bdev.dev_name,
+                 filename, ctrl.bdev.dev_name,
                  fiemap->fm_extents[0].fe_physical >> ctrl.sector_shift,
                  (fiemap->fm_extents[0].fe_physical +
                   fiemap->fm_extents[0].fe_length) >>
@@ -581,7 +580,7 @@ int get_extents() {
             INFO(2,
                  "FILE %s\nExtent Reported on %s  PBAS: "
                  "0x%06llx  PBAE: 0x%06llx  SIZE: 0x%06llx\n",
-                 ctrl.filename, ctrl.bdev.dev_name,
+                 filename, ctrl.bdev.dev_name,
                  fiemap->fm_extents[0].fe_physical >> ctrl.sector_shift,
                  (fiemap->fm_extents[0].fe_physical +
                   fiemap->fm_extents[0].fe_length) >>
@@ -612,7 +611,7 @@ int get_extents() {
             extent->zone =
                 get_zone_number((extent->phy_blk << ctrl.zns_sector_shift));
             extent->file = calloc(1, sizeof(char) * MAX_FILE_LENGTH);
-            memcpy(extent->file, ctrl.filename, sizeof(char) * MAX_FILE_LENGTH);
+            memcpy(extent->file, filename, sizeof(char) * MAX_FILE_LENGTH);
 
             get_zone_info(extent);
             extent->fileID = ctrl.nr_files;
@@ -844,24 +843,11 @@ void set_fs_magic(char *name) {
  *
  *
  * */
-void init_ctrl() {
-
-    ctrl.fd = open(ctrl.filename, O_RDONLY);
-    fsync(ctrl.fd);
-
-    if (ctrl.fd < 0) {
-        ERR_MSG("failed opening file %s\n", ctrl.filename);
-    }
-
-    ctrl.stats = calloc(sizeof(struct stat), sizeof(char *));
-    if (fstat(ctrl.fd, ctrl.stats) < 0) {
-        ERR_MSG("Failed stat on file %s\n", ctrl.filename);
-    }
-
-    set_fs_magic(ctrl.filename);
+void init_ctrl(char *filename, int fd, struct stat *stats) {
+    set_fs_magic(filename);
 
     if (ctrl.fs_magic == F2FS_MAGIC) {
-        init_dev(ctrl.stats);
+        init_dev(stats);
 
         f2fs_read_super_block(ctrl.bdev.dev_path);
         set_super_block_info(f2fs_sb);
@@ -875,7 +861,7 @@ void init_ctrl() {
         WARN("%s is registered as being on Btrfs which can occupy multiple "
              "devices.\nEnter the"
              " associated ZNS device name: ",
-             ctrl.filename);
+             filename);
 
         int ret = scanf("%s", ctrl.znsdev.dev_name);
         if (!ret) {

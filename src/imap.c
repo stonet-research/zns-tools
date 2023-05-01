@@ -17,6 +17,9 @@ static void show_help() {
 }
 
 int main(int argc, char *argv[]) {
+    struct stat *stats;
+    char *filename;
+    int fd = 0;
     int c;
     uint8_t set_file = 0;
     struct f2fs_nat_entry *nat_entry = NULL;
@@ -26,7 +29,7 @@ int main(int argc, char *argv[]) {
     while ((c = getopt(argc, argv, "cf:hl:s")) != -1) {
         switch (c) {
         case 'f':
-            ctrl.filename = optarg;
+            filename = optarg;
             set_file = 1;
             break;
         case 'h':
@@ -51,8 +54,20 @@ int main(int argc, char *argv[]) {
         ERR_MSG("Missing file name -f Flag.\n");
     }
 
-    init_ctrl();
-    fsync(ctrl.fd);
+    fd = open(filename, O_RDONLY);
+    if (fd < 0) {
+        ERR_MSG("Failed opening fd on %s.\n", filename);
+        return EXIT_FAILURE;
+    }
+    fsync(fd);
+
+    stats = calloc(sizeof(struct stat), sizeof(char *));
+
+    if (fstat(fd, stats) < 0) {
+        ERR_MSG("Failed stat on file %s\n", filename);
+    }
+
+    init_ctrl(filename, fd, stats);
 
     if (ctrl.show_superblock) {
         f2fs_show_super_block();
@@ -68,8 +83,8 @@ int main(int argc, char *argv[]) {
         f2fs_show_checkpoint();
     }
 
-    INFO(1, "File %s has inode number %lu\n", ctrl.filename,
-         ctrl.stats->st_ino);
+    INFO(1, "File %s has inode number %lu\n", filename,
+         stats->st_ino);
     inode = (struct f2fs_inode *)calloc(sizeof(struct f2fs_inode), 1);
 
     do {
@@ -82,12 +97,12 @@ int main(int argc, char *argv[]) {
         }
 
         nat_entry =
-            f2fs_get_inode_nat_entry(ctrl.bdev.dev_path, ctrl.stats->st_ino);
+            f2fs_get_inode_nat_entry(ctrl.bdev.dev_path, stats->st_ino);
 
         // nat_entry is NULL -> no block address found for the inode
         if (!nat_entry) {
-            ERR_MSG("finding NAT entry for %s with inode %lu\n", ctrl.filename,
-                    ctrl.stats->st_ino);
+            ERR_MSG("finding NAT entry for %s with inode %lu\n", filename,
+                    stats->st_ino);
         }
 
         node_block =
@@ -105,14 +120,14 @@ int main(int argc, char *argv[]) {
     uint64_t lba =
         nat_entry->block_addr << F2FS_BLKSIZE_BITS >> ctrl.sector_shift;
     uint32_t zone_number = get_zone_number(lba);
-    MSG("\nFile %s with inode %u is located in zone %u\n", ctrl.filename,
+    MSG("\nFile %s with inode %u is located in zone %u\n", filename,
         nat_entry->ino, zone_number);
     print_zone_info(zone_number);
 
     MSG("\n***** INODE:  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
         "  SIZE: %#-10" PRIx64 "  FILE: %s\n",
         lba, lba + F2FS_SECS_PER_BLOCK, (unsigned long)F2FS_SECS_PER_BLOCK,
-        ctrl.filename);
+        filename);
 
     MSG("\n>>>>> NODE FOOTER:\n");
 
@@ -129,6 +144,7 @@ int main(int argc, char *argv[]) {
     free(nat_entry);
     free(node_block);
     free(inode);
+    free(stats);
 
-    return 0;
+    return EXIT_SUCCESS;
 }

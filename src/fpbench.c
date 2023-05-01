@@ -366,38 +366,38 @@ static void update_workloads() {
  *
  * */
 static void prepare_report() {
-    struct extent_map *extents;
+    /* struct extent_map *extents; */
 
-    FORMATTER
-    MSG("%-50s | Number of Extents | Number of Occupied Segments | Number of "
-        "Occupied Zones | Cold Segments | Warm Segments | Hot Segments\n",
-        "Filename");
-    FORMATTER
+    /* FORMATTER */
+    /* MSG("%-50s | Number of Extents | Number of Occupied Segments | Number of " */
+    /*     "Occupied Zones | Cold Segments | Warm Segments | Hot Segments\n", */
+    /*     "Filename"); */
+    /* FORMATTER */
 
-    for (uint16_t i = 0; i < wl_man.nr_wls; i++) {
-        ctrl.filename = wl_man.wl[i].filename;
-        ctrl.fd = open(ctrl.filename, O_RDONLY);
-        ctrl.stats = calloc(sizeof(struct stat), sizeof(char *));
+    /* for (uint16_t i = 0; i < wl_man.nr_wls; i++) { */
+    /*     ctrl.filename = wl_man.wl[i].filename; */
+    /*     ctrl.fd = open(ctrl.filename, O_RDONLY); */
+    /*     ctrl.stats = calloc(sizeof(struct stat), sizeof(char *)); */
 
-        if (fstat(ctrl.fd, ctrl.stats) < 0) {
-            ERR_MSG("Failed stat on file %s\n", ctrl.filename);
-        }
+    /*     if (fstat(ctrl.fd, ctrl.stats) < 0) { */
+    /*         ERR_MSG("Failed stat on file %s\n", ctrl.filename); */
+    /*     } */
 
-        extents = (struct extent_map *)get_extents();
-        close(ctrl.fd);
+    /*     extents = (struct extent_map *)get_extents(); */
+    /*     close(ctrl.fd); */
 
-        /* sort_extents(extents); */
+    /*     /1* sort_extents(extents); *1/ */
 
-        print_report(wl_man.wl[i], extents);
+    /*     print_report(wl_man.wl[i], extents); */
 
-        free(extents);
-        close(ctrl.fd);
+    /*     free(extents); */
+    /*     close(ctrl.fd); */
 
-        wl_man.segment_ctr = 0;
-        wl_man.cold_ctr = 0;
-        wl_man.warm_ctr = 0;
-        wl_man.hot_ctr = 0;
-    }
+    /*     wl_man.segment_ctr = 0; */
+    /*     wl_man.cold_ctr = 0; */
+    /*     wl_man.warm_ctr = 0; */
+    /*     wl_man.hot_ctr = 0; */
+    /* } */
 }
 
 int main(int argc, char *argv[]) {
@@ -512,5 +512,5 @@ int main(int argc, char *argv[]) {
     free(wl_man.wl);
     free(root_dir);
 
-    return 0;
+    return EXIT_SUCCESS;
 }
