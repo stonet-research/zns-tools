@@ -63,7 +63,7 @@ static void show_help() {
 static void check_dir_init_ctrl() {
     struct stat *stats;
 
-    stats = calloc(sizeof(struct stat), sizeof(char *));
+    stats = calloc(1, sizeof(struct stat));
 
     if (stat(segmap_man.dir, stats) < 0) {
         ERR_MSG("Failed stat on dir %s\n", segmap_man.dir);
@@ -164,17 +164,18 @@ static void collect_extents(char *path) {
                 }
             }
 
-            stats = calloc(sizeof(struct stat), sizeof(char *));
+            stats = calloc(1, sizeof(struct stat));
 
             if (fstat(fd, stats) < 0) {
                 ERR_MSG("Failed stat on file %s\n", filename);
             }
 
             ret = get_extents(filename, fd, stats);
+            ERR_MSG("HERE\n");
 
             if (ret == EXIT_FAILURE) {
                 ERR_MSG("retrieving extents for %s\n", filename);
-            } else if (ctrl.zonemap.extent_ctr == 0) {
+            } else if (ctrl.zonemap->extent_ctr == 0) {
                 ERR_MSG("No extents found on device\n");
             }
 
@@ -309,7 +310,7 @@ static unsigned int get_file_stats_index(char *filename) {
         }
     }
 
-    segmap_man.fs[i].filename = calloc(MAX_FILE_LENGTH, 1);
+    segmap_man.fs[i].filename = calloc(1, MAX_FILE_LENGTH);
     memcpy(segmap_man.fs[i].filename, filename, MAX_FILE_LENGTH);
     segmap_man.ctr++;
 
@@ -527,7 +528,7 @@ static void show_segment_report() {
         (ctrl.end_zone + 1) * ctrl.znsdev.zone_size - ctrl.znsdev.zone_size;
 
     if (ctrl.show_class_stats) {
-        segmap_man.fs = calloc(sizeof(struct file_stats) * ctrl.nr_files, 1);
+        segmap_man.fs = calloc(1, sizeof(struct file_stats) * ctrl.nr_files);
     }
 
     REP_EQUAL_FORMATTER
@@ -746,7 +747,7 @@ int main(int argc, char *argv[]) {
 
     if (segmap_man.isdir) {
         collect_extents(segmap_man.dir);
-        if (ctrl.zonemap.extent_ctr == 0) {
+        if (ctrl.zonemap->extent_ctr == 0) {
             WARN("No separate extent mappings found for any file.\nFound "
                  "Inlined inode Extents: %lu\n",
                  ctrl.inlined_extent_ctr);
@@ -757,7 +758,7 @@ int main(int argc, char *argv[]) {
         fd = open(filename, O_RDONLY);
         fsync(fd);
 
-        stats = calloc(sizeof(struct stat), sizeof(char *));
+        stats = calloc(1, sizeof(struct stat));
 
         if (fstat(fd, stats) < 0) {
             ERR_MSG("Failed stat on file %s\n", filename);
@@ -767,7 +768,7 @@ int main(int argc, char *argv[]) {
 
         if (ret == EXIT_FAILURE) {
             ERR_MSG("retrieving extents for %s\n", filename);
-        } else if (ctrl.zonemap.extent_ctr == 0) {
+        } else if (ctrl.zonemap->extent_ctr == 0) {
             ERR_MSG("No extents found on device\n");
         }
 

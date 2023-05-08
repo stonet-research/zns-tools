@@ -62,15 +62,15 @@ struct extent {
     uint64_t zone_size;   /* Size of the zone the extent is in */
     uint64_t zone_wp;     /* Write Pointer of this current zone */
     uint64_t zone_lbae;   /* LBA that can be written up to (LBAS + ZONE CAP) */
-    char *file;           /* file path to which the extent belongs */
+    char file[MAX_FILE_LENGTH];           /* file path to which the extent belongs */
 };
 
 struct extent_map {
-    uint32_t ext_ctr;  /* Number of extents in struct extent[] */
+    uint32_t ext_ctr;  /* Number of extents in struct extents[] */
     uint32_t zone_ctr; /* Number of zones in which extents are */
     uint64_t
         cum_extent_size;    /* Cumulative size of all extents in 512B sectors */
-    struct extent extent[]; /* Array of struct extent for each extent */
+    struct extent extents[]; /* Array of struct extent for each extent */
 };
 
 struct node {
@@ -95,12 +95,12 @@ struct zone {
 };
 
 struct zone_map {
-    struct zone *zones;
     uint32_t nr_zones;   /* number of zones in struct zone *zones */
     uint64_t extent_ctr; /* counter for total number of extents */
     uint64_t
         cum_extent_size; /* Cumulative size of all extents in 512B sectors */
     uint32_t zone_ctr;   /* number of zones that hold extents */
+    struct zone zones[];
 };
 
 typedef void (*fs_info_cleanup)();
@@ -166,7 +166,7 @@ struct control {
     uint8_t fpbench_streammap;     /* zns.fpbench stream to map file to */
     uint8_t fpbench_streammap_set; /* zns.fpbench indicate if streammap set */
 
-    struct zone_map zonemap; /* track extents in zones with zone information */
+    struct zone_map *zonemap; /* track extents in zones with zone information */
     void *fs_super_block; /* if parsed by the fs lib, can store the super block in the control */
     void *fs_info; /* file system specific information */
     fs_info_cleanup fs_info_cleanup; /* function pointer to cleanup the fs_info */

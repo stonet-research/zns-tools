@@ -59,7 +59,7 @@ static void write_file(struct workload workload) {
 #ifdef HAVE_MULTI_STREAMS
     unsigned long *streammap = 0;
     if (ctrl.fpbench_streammap_set)
-        streammap = calloc(sizeof(unsigned long), sizeof(char *));
+        streammap = calloc(1, sizeof(unsigned long));
 #endif
 
     MSG("Starting job for file %s with pid %d\n", workload.filename, getpid());
@@ -202,20 +202,20 @@ static void print_report(struct workload workload, struct extent_map *extents) {
     uint64_t segment_start, segment_end;
 
     for (uint64_t i = 0; i < extents->ext_ctr; i++) {
-        segment_id = (extents->extent[i].phy_blk & ctrl.f2fs_segment_mask) >>
+        segment_id = (extents->extents[i].phy_blk & ctrl.f2fs_segment_mask) >>
                      ctrl.segment_shift;
 
-        if (current_zone != extents->extent[i].zone) {
-            current_zone = extents->extent[i].zone;
+        if (current_zone != extents->extents[i].zone) {
+            current_zone = extents->extents[i].zone;
             extents->zone_ctr++;
         }
 
-        segment_start = (extents->extent[i].phy_blk & ctrl.f2fs_segment_mask);
+        segment_start = (extents->extents[i].phy_blk & ctrl.f2fs_segment_mask);
 
         // if the beginning of the extent and the ending of the extent are in
         // the same segment
         if (segment_start ==
-            ((extents->extent[i].phy_blk + extents->extent[i].len) &
+            ((extents->extents[i].phy_blk + extents->extents[i].len) &
              ctrl.f2fs_segment_mask)) {
             if (segment_id != ctrl.cur_segment) {
                 ctrl.cur_segment = segment_id;
@@ -227,7 +227,7 @@ static void print_report(struct workload workload, struct extent_map *extents) {
             // break it up
 
             // part 1: the beginning of extent to end of that single segment
-            if (extents->extent[i].phy_blk != segment_start) {
+            if (extents->extents[i].phy_blk != segment_start) {
                 /* set_segment_counters(segment_start >> ctrl.segment_shift, 1); */
                 segment_id++;
             }
@@ -235,7 +235,7 @@ static void print_report(struct workload workload, struct extent_map *extents) {
             // part 2: all in between segments after the 1st segment and the
             // last (in case the last is only partially used by the segment)
             segment_end =
-                (extents->extent[i].phy_blk + extents->extent[i].len) &
+                (extents->extents[i].phy_blk + extents->extents[i].len) &
                 ctrl.f2fs_segment_mask;
             num_segments = (segment_end - segment_start) >> ctrl.segment_shift;
             /* set_segment_counters(segment_start >> ctrl.segment_shift, */
@@ -245,10 +245,10 @@ static void print_report(struct workload workload, struct extent_map *extents) {
             // fill the entire last segment only if the segment actually has a
             // remaining fragment
             segment_end =
-                ((extents->extent[i].phy_blk + extents->extent[i].len) &
+                ((extents->extents[i].phy_blk + extents->extents[i].len) &
                  ctrl.f2fs_segment_mask);
             if (segment_end !=
-                extents->extent[i].phy_blk + extents->extent[i].len) {
+                extents->extents[i].phy_blk + extents->extents[i].len) {
                 /* set_segment_counters(segment_end >> ctrl.segment_shift, 1); */
             }
         }
@@ -406,7 +406,7 @@ int main(int argc, char *argv[]) {
     uint64_t size = 0;
     uint8_t set_exclusive_or_stream = false;
 
-    wl_man.wl = calloc(sizeof(struct workload), 1);
+    wl_man.wl = calloc(1, sizeof(struct workload));
     wl_man.wl[0].bsize = BLOCK_SZ;
     wl_man.wl[0].fsize = BLOCK_SZ;
 

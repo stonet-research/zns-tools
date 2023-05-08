@@ -110,7 +110,7 @@ int main(int argc, char *argv[]) {
 
     fsync(fd);
 
-    stats = calloc(sizeof(struct stat), sizeof(char *));
+    stats = calloc(1, sizeof(struct stat));
     if (fstat(fd, stats) < 0) {
         ERR_MSG("Failed stat on file %s\n", filename);
     }
@@ -121,7 +121,7 @@ int main(int argc, char *argv[]) {
 
     if (ret == EXIT_FAILURE) {
         ERR_MSG("retrieving extents for %s\n", filename);
-    } else if (ctrl.zonemap.extent_ctr == 0) {
+    } else if (ctrl.zonemap->extent_ctr == 0) {
         ERR_MSG("No extents found on device\n");
     }
 
@@ -129,7 +129,6 @@ int main(int argc, char *argv[]) {
 
     print_fiemap_report();
 
-    cleanup_zonemap();
     cleanup_ctrl();
     free(stats);
 

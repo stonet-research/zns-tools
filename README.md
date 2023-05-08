@@ -300,3 +300,16 @@ sh ./timeline_data_rocksdb_gen.sh
 ```
 
 To then visualize the data, copy it to the `../timeline-gen/` directory and execute the cells in the `plot.ipynb` notebook (`jupyter notebook` to start the notebook).
+
+## Development
+
+For development, if using `gdb` to debug, simply configure with (prior to building)
+
+```bash
+./configure \
+    --build=x86_64-linux-gnu \
+    --host=arm-linux-gnueabihf \
+    --target=arm-linux-gnueabihf \
+    --disable-shared \
+    --disable-documentation
+```

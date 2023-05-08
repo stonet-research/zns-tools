@@ -132,22 +132,22 @@ static void init_zone_map() {
         return;
     }
 
-    ctrl.zonemap.zones = calloc(1, sizeof(struct zone) * ctrl.znsdev.nr_zones);
+    ctrl.zonemap = calloc(1, sizeof(struct zone_map) + sizeof(struct zone) * ctrl.znsdev.nr_zones);
     // TODO: later we want multi zns device support
-    ctrl.zonemap.nr_zones = ctrl.znsdev.nr_zones;
+    ctrl.zonemap->nr_zones = ctrl.znsdev.nr_zones;
 
     for (int i = 0; i < ctrl.znsdev.nr_zones; i++) {
-        ctrl.zonemap.zones[i].zone_number = i;
-        ctrl.zonemap.zones[i].start =
+        ctrl.zonemap->zones[i].zone_number = i;
+        ctrl.zonemap->zones[i].start =
             hdr->zones[i].start >> ctrl.zns_sector_shift;
-        ctrl.zonemap.zones[i].end =
+        ctrl.zonemap->zones[i].end =
             (hdr->zones[i].start >> ctrl.zns_sector_shift) +
             (hdr->zones[i].capacity >> ctrl.zns_sector_shift);
-        ctrl.zonemap.zones[i].capacity =
+        ctrl.zonemap->zones[i].capacity =
             hdr->zones[i].capacity >> ctrl.zns_sector_shift;
-        ctrl.zonemap.zones[i].state = hdr->zones[i].cond << 4;
-        ctrl.zonemap.zones[i].mask = ctrl.znsdev.zone_mask;
-        ctrl.zonemap.zones[i].extents = NULL;
+        ctrl.zonemap->zones[i].state = hdr->zones[i].cond << 4;
+        ctrl.zonemap->zones[i].mask = ctrl.znsdev.zone_mask;
+        ctrl.zonemap->zones[i].extents = NULL;
     }
 
     close(fd);
@@ -266,31 +266,12 @@ uint32_t get_nr_zones() {
     return nr_zones;
 }
 
-
-/* 
- * Cleanup all memory allocated for the zonemap extents 
- *
- */
-static void free_zonemap_extents() {
-    struct node *head; 
-    struct node *next;
-
-    for (uint32_t i = 0; i < ctrl.zonemap.nr_zones; i++) {
-        head = ctrl.zonemap.zones[i].extents;
-        while (head != NULL) {
-            next = head->next;
-            free(head);
-            head = next;
-        }
-    }
-}
-
 /*
  * Cleanup control struct - free memory
  *
  * */
 void cleanup_ctrl() { 
-    free_zonemap_extents();
+    cleanup_zonemap();
 }
 
 /*
@@ -298,31 +279,18 @@ void cleanup_ctrl() {
  *
  * */
 void cleanup_zonemap() { 
-    uint i;
-    struct node *node, *next;
+    struct node *head; 
+    struct node *next;
 
-    for (i = 0; i < ctrl.zonemap.nr_zones; i++) {
-        node = ctrl.zonemap.zones[i].extents;
-
-        if (node == NULL) {
-            continue;
-        } else {
-            while (node->next != NULL) {
-                next = node->next; 
-                free(node);
-                node = next;
-            }
-
-            /* if list has only one element we never enter the loop */
-            if (node != NULL) {
-                free(node);
-            }
+    for (uint32_t i = 0; i < ctrl.zonemap->nr_zones; i++) {
+        head = ctrl.zonemap->zones[i].extents;
+        while (head != NULL) {
+            next = head->next;
+            // TODO: double free here?
+            /* free(head); */
+            head = next;
         }
-        ctrl.zonemap.zones[i].extents = NULL;
     }
-
-    free(ctrl.zonemap.zones); 
-    ctrl.zonemap.zones = NULL;
 }
 
 // TODO: description
@@ -386,16 +354,15 @@ static struct node *create_zone_extent_node(struct extent *extent) {
 }
 
 static void add_extent_to_zone_list(struct extent *extent) {
-    struct node *head = ctrl.zonemap.zones[extent->zone].extents;
+    struct node *head = ctrl.zonemap->zones[extent->zone].extents;
     struct node *node = create_zone_extent_node(extent);
     struct node *current = head;
 
-    ctrl.zonemap.zones[extent->zone].extent_ctr++;
+    ctrl.zonemap->zones[extent->zone].extent_ctr++;
 
     if (head == NULL || head->extent->phy_blk > extent->phy_blk) {
         node->next = head;
-        head = node;
-        ctrl.zonemap.zones[extent->zone].extents = node;
+        ctrl.zonemap->zones[extent->zone].extents = node;
         return;
     }
 
@@ -557,11 +524,12 @@ void show_extent_flags(uint32_t flags) {
 /* int get_extents(char *filename, int fd, struct stat *stats) { */
 /*     struct fiemap *fiemap; */
 /*     struct extent_map *extent_map; */
+/*     struct extent_map *temp = NULL; */
 /*     uint8_t last_ext = 0; */
 
 /*     fiemap = (struct fiemap *)calloc(sizeof(struct fiemap), sizeof(char *)); */
-/*     extent_map = (struct extent_map *)calloc( */
-/*         sizeof(struct extent_map) + sizeof(struct extent), sizeof(char *)); */
+/*     extent_map = (struct extent_map *)calloc(1, */ 
+/*         sizeof(struct extent_map) + sizeof(struct extent)); */
 
 /*     fiemap->fm_flags = FIEMAP_FLAG_SYNC; */
 /*     fiemap->fm_start = 0; */
@@ -570,9 +538,17 @@ void show_extent_flags(uint32_t flags) {
 
 /*     do { */
 /*         if (extent_map->ext_ctr > 0) { */
-/*             extent_map = realloc(extent_map, sizeof(struct extent_map) + */
+/*             temp = realloc(extent_map, sizeof(struct extent_map) + */
 /*                     sizeof(struct extent) * */
 /*                     (extent_map->ext_ctr + 1)); */
+/*             if (temp == NULL) { */
+/*                 /1* mem realloc failed *1/ */
+/*                 free(extent_map); */
+/*                 ERR_MSG("Failed memory allocation\n"); */
+/*                 return EXIT_FAILURE; */
+/*             } */
+/*             extent_map = temp; */
+/*             temp = NULL; */
 /*         } */
 
 /*         if (ioctl(fd, FS_IOC_FIEMAP, fiemap) < 0) { */
@@ -584,9 +560,9 @@ void show_extent_flags(uint32_t flags) {
 /*             return EXIT_FAILURE; */
 /*         } */
 
-/*         // If data is on the bdev (empty files that have space allocated but */
-/*         // nothing written) or there are flags we want to ignore (inline data) */
-/*         // Disregard this extent but print warning (if logging is set) */
+/*         /1* If data is on the bdev (empty files that have space allocated but */
+/*         * nothing written) or there are flags we want to ignore (inline data) */
+/*         * Disregard this extent but print warning (if logging is set) *1/ */
 /*         if (fiemap->fm_extents[0].fe_physical < ctrl.offset) { */
 /*             INFO(2, */
 /*                  "FILE %s\nExtent Reported on %s  PBAS: " */
@@ -618,35 +594,33 @@ void show_extent_flags(uint32_t flags) {
 /*                 show_extent_flags(ctrl.exclude_flags); */
 /*             } */
 /*         } else { */
-/*             extent_map->extent[extent_map->ext_ctr].phy_blk = */
+/*             extent_map->extents[extent_map->ext_ctr].phy_blk = */
 /*                 (fiemap->fm_extents[0].fe_physical - ctrl.offset) >> */
 /*                 ctrl.sector_shift; */
-/*             extent_map->extent[extent_map->ext_ctr].logical_blk = */
+/*             extent_map->extents[extent_map->ext_ctr].logical_blk = */
 /*                 fiemap->fm_extents[0].fe_logical >> ctrl.sector_shift; */
-/*             extent_map->extent[extent_map->ext_ctr].len = */
+/*             extent_map->extents[extent_map->ext_ctr].len = */
 /*                 fiemap->fm_extents[0].fe_length >> ctrl.sector_shift; */
-/*             extent_map->extent[extent_map->ext_ctr].zone_size = */
+/*             extent_map->extents[extent_map->ext_ctr].zone_size = */
 /*                 ctrl.znsdev.zone_size; */
-/*             extent_map->extent[extent_map->ext_ctr].ext_nr = */
+/*             extent_map->extents[extent_map->ext_ctr].ext_nr = */
 /*                 extent_map->ext_ctr; */
-/*             extent_map->extent[extent_map->ext_ctr].flags = */
+/*             extent_map->extents[extent_map->ext_ctr].flags = */
 /*                 fiemap->fm_extents[0].fe_flags; */
 
-/*             ctrl.zonemap.cum_extent_size += extent_map->extent[extent_map->ext_ctr].len; */
+/*             ctrl.zonemap->cum_extent_size += extent_map->extents[extent_map->ext_ctr].len; */
 
-/*             extent_map->extent[extent_map->ext_ctr].zone = get_zone_number( */
-/*                 (extent_map->extent[extent_map->ext_ctr].phy_blk << ctrl.zns_sector_shift)); */
-/*             extent_map->extent[extent_map->ext_ctr].file = */
-/*                 calloc(1, sizeof(char) * MAX_FILE_LENGTH); */
-/*             memcpy(extent_map->extent[extent_map->ext_ctr].file, filename, */
+/*             extent_map->extents[extent_map->ext_ctr].zone = get_zone_number( */
+/*                 (extent_map->extents[extent_map->ext_ctr].phy_blk << ctrl.zns_sector_shift)); */
+/*             memcpy(extent_map->extents[extent_map->ext_ctr].file, filename, */
 /*                    sizeof(char) * MAX_FILE_LENGTH); */
 
-/*             get_zone_info(&extent_map->extent[extent_map->ext_ctr]); */
-/*             extent_map->extent[extent_map->ext_ctr].fileID = ctrl.nr_files; */
-/*             add_extent_to_zone_list(&extent_map->extent[extent_map->ext_ctr]); */
+/*             get_zone_info(&extent_map->extents[extent_map->ext_ctr]); */
+/*             extent_map->extents[extent_map->ext_ctr].fileID = ctrl.nr_files; */
+/*             add_extent_to_zone_list(&extent_map->extents[extent_map->ext_ctr]); */
 
 /*             extent_map->ext_ctr++; */
-/*             ctrl.zonemap.extent_ctr++; */
+/*             ctrl.zonemap->extent_ctr++; */
 /*         } */
 
 /*         if (fiemap->fm_extents[0].fe_flags & FIEMAP_EXTENT_DATA_INLINE) { */
@@ -671,13 +645,12 @@ void show_extent_flags(uint32_t flags) {
 /* } */
 
 
-
 int get_extents(char *filename, int fd, struct stat *stats) {
     struct fiemap *fiemap;
     struct extent *extent;
     uint8_t last_ext = 0;
 
-    fiemap = (struct fiemap *)calloc(sizeof(struct fiemap), sizeof(char *));
+    fiemap = calloc(sizeof(struct fiemap), sizeof(char *));
 
     fiemap->fm_flags = FIEMAP_FLAG_SYNC;
     fiemap->fm_start = 0;
@@ -694,9 +667,9 @@ int get_extents(char *filename, int fd, struct stat *stats) {
             return EXIT_FAILURE;
         }
 
-        // If data is on the bdev (empty files that have space allocated but
-        // nothing written) or there are flags we want to ignore (inline data)
-        // Disregard this extent but print warning (if logging is set)
+        /* If data is on the bdev (empty files that have space allocated but
+         * nothing written) or there are flags we want to ignore (inline data)
+         * Disregard this extent but print warning (if logging is set) */
         if (fiemap->fm_extents[0].fe_physical < ctrl.offset) {
             INFO(2,
                  "FILE %s\nExtent Reported on %s  PBAS: "
@@ -735,23 +708,25 @@ int get_extents(char *filename, int fd, struct stat *stats) {
             extent->logical_blk =
                 fiemap->fm_extents[0].fe_logical >> ctrl.sector_shift;
             extent->len = fiemap->fm_extents[0].fe_length >> ctrl.sector_shift;
+
+            /* Note: don't need this unless zones can have different sizes */
             extent->zone_size =
-                ctrl.znsdev.zone_size; // TODO: don't need this probably
-            extent->ext_nr = ctrl.zonemap.extent_ctr;
+                ctrl.znsdev.zone_size; 
+
+            extent->ext_nr = ctrl.zonemap->extent_ctr;
             extent->flags = fiemap->fm_extents[0].fe_flags;
 
-            ctrl.zonemap.cum_extent_size += extent->len;
+            ctrl.zonemap->cum_extent_size += extent->len;
 
             extent->zone =
                 get_zone_number((extent->phy_blk << ctrl.zns_sector_shift));
-            extent->file = calloc(1, sizeof(char) * MAX_FILE_LENGTH);
-            memcpy(extent->file, filename, sizeof(char) * MAX_FILE_LENGTH);
+            memcpy(extent->file, filename, MAX_FILE_LENGTH);
 
             get_zone_info(extent);
             extent->fileID = ctrl.nr_files;
             add_extent_to_zone_list(extent);
 
-            ctrl.zonemap.extent_ctr++;
+            ctrl.zonemap->extent_ctr++;
         }
 
         if (fiemap->fm_extents[0].fe_flags & FIEMAP_EXTENT_DATA_INLINE) {
@@ -849,7 +824,7 @@ void set_file_extent_counters(struct extent_map *extent_map) {
         1, sizeof(struct file_counter) * ctrl.nr_files);
 
     for (uint32_t i = 0; i < extent_map->ext_ctr; i++) {
-        increase_file_extent_counter(extent_map->extent[i].file);
+        increase_file_extent_counter(extent_map->extents[i].file);
     }
 }
 
@@ -1036,16 +1011,16 @@ void print_fiemap_report() {
     MSG("==================================================================="
         "=\n");
 
-    for (i = 0; i < ctrl.zonemap.nr_zones; i++) {
-        if (ctrl.zonemap.zones[i].extent_ctr == 0) {
+    for (i = 0; i < ctrl.zonemap->nr_zones; i++) {
+        if (ctrl.zonemap->zones[i].extent_ctr == 0) {
             continue;
         }
 
-        ctrl.zonemap.zone_ctr++;
+        ctrl.zonemap->zone_ctr++;
         print_zone_info(i);
         MSG("\n");
 
-        current = &ctrl.zonemap.zones[i].extents[0];
+        current = &ctrl.zonemap->zones[i].extents[0];
 
         while (current) {
             /* Track holes in between extents in the same zone */
@@ -1140,11 +1115,11 @@ void print_fiemap_report() {
         "=\n");
     MSG("\nNOE: %-4lu  TES: %#-10" PRIx64 "  AES: %#-10" PRIx64 "  EAES: %-10f"
         "  NOZ: %-4u\n",
-        ctrl.zonemap.extent_ctr, ctrl.zonemap.cum_extent_size,
-        ctrl.zonemap.cum_extent_size / (ctrl.zonemap.extent_ctr),
-        (double)ctrl.zonemap.cum_extent_size /
-            (double)(ctrl.zonemap.extent_ctr),
-        ctrl.zonemap.zone_ctr);
+        ctrl.zonemap->extent_ctr, ctrl.zonemap->cum_extent_size,
+        ctrl.zonemap->cum_extent_size / (ctrl.zonemap->extent_ctr),
+        (double)ctrl.zonemap->cum_extent_size /
+            (double)(ctrl.zonemap->extent_ctr),
+        ctrl.zonemap->zone_ctr);
 
     if (ctrl.show_holes && hole_ctr > 0) {
         MSG("NOH: %-4u  THS: %#-10" PRIx64 "  AHS: %#-10" PRIx64

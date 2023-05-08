@@ -55,13 +55,15 @@ int main(int argc, char *argv[]) {
     }
 
     fd = open(filename, O_RDONLY);
+
     if (fd < 0) {
         ERR_MSG("Failed opening fd on %s.\n", filename);
         return EXIT_FAILURE;
     }
+
     fsync(fd);
 
-    stats = calloc(sizeof(struct stat), sizeof(char *));
+    stats = calloc(1, sizeof(struct stat));
 
     if (fstat(fd, stats) < 0) {
         ERR_MSG("Failed stat on file %s\n", filename);
@@ -85,7 +87,7 @@ int main(int argc, char *argv[]) {
 
     INFO(1, "File %s has inode number %lu\n", filename,
          stats->st_ino);
-    inode = (struct f2fs_inode *)calloc(sizeof(struct f2fs_inode), 1);
+    inode = (struct f2fs_inode *)calloc(1, sizeof(struct f2fs_inode));
 
     do {
         // we malloc in libf2fs so need to free if we are not using it

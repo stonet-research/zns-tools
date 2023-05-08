@@ -227,9 +227,9 @@ struct f2fs_nat_entry *f2fs_get_inode_nat_entry(char *dev_path,
     nat_segments = f2fs_sb.segment_count_nat >> 1;
     nat_blocks = nat_segments << f2fs_sb.log_blocks_per_seg;
 
-    nat_block = (struct f2fs_nat_block *)calloc(BLOCK_SZ, 1);
+    nat_block = (struct f2fs_nat_block *)calloc(1, BLOCK_SZ);
     nat_entry =
-        (struct f2fs_nat_entry *)calloc(sizeof(struct f2fs_nat_entry), 1);
+        (struct f2fs_nat_entry *)calloc(1, sizeof(struct f2fs_nat_entry));
 
     fd = open(dev_path, O_RDONLY);
     if (fd < 0) {
@@ -516,8 +516,8 @@ finish:
 void *init_fs_info(char *dev_name) {
    struct segment_manager *segman;
 
-   segman = calloc(sizeof(struct segment_manager), 1);
-   segman->segments = calloc(sizeof (struct segment_info) * f2fs_sb.segment_count_main, 1);
+   segman = calloc(1, sizeof(struct segment_manager));
+   segman->segments = calloc(1, sizeof (struct segment_info) * f2fs_sb.segment_count_main);
 
    if (init_procfs_segment_bits(dev_name, f2fs_sb.segment_count_main, segman) == EXIT_FAILURE) {
         goto cleanup;
