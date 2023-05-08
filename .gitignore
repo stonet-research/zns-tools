@@ -41,3 +41,6 @@ compile_commands.json
 
 timeline-gen/.ipynb_checkpoints/
 timeline-gen/*.pdf
+
+confdefs.h
+conftest.dir/

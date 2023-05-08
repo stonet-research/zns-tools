@@ -266,14 +266,31 @@ uint32_t get_nr_zones() {
     return nr_zones;
 }
 
+
+/* 
+ * Cleanup all memory allocated for the zonemap extents 
+ *
+ */
+static void free_zonemap_extents() {
+    struct node *head; 
+    struct node *next;
+
+    for (uint32_t i = 0; i < ctrl.zonemap.nr_zones; i++) {
+        head = ctrl.zonemap.zones[i].extents;
+        while (head != NULL) {
+            next = head->next;
+            free(head);
+            head = next;
+        }
+    }
+}
+
 /*
  * Cleanup control struct - free memory
  *
  * */
 void cleanup_ctrl() { 
-    // TODO: remove if empty, other cleanup?
-    /* free(ctrl.stats); */
-    /* ctrl.stats = NULL; */
+    free_zonemap_extents();
 }
 
 /*
@@ -533,10 +550,128 @@ void show_extent_flags(uint32_t flags) {
 }
 
 /*
- * TODO: description
+ * TODO: description and return codes
  * return 0 on success, else failure
  *
  * */
+/* int get_extents(char *filename, int fd, struct stat *stats) { */
+/*     struct fiemap *fiemap; */
+/*     struct extent_map *extent_map; */
+/*     uint8_t last_ext = 0; */
+
+/*     fiemap = (struct fiemap *)calloc(sizeof(struct fiemap), sizeof(char *)); */
+/*     extent_map = (struct extent_map *)calloc( */
+/*         sizeof(struct extent_map) + sizeof(struct extent), sizeof(char *)); */
+
+/*     fiemap->fm_flags = FIEMAP_FLAG_SYNC; */
+/*     fiemap->fm_start = 0; */
+/*     fiemap->fm_extent_count = stats->st_blocks; /1* set to max number of blocks in file *1/ */
+/*     fiemap->fm_length = (stats->st_blocks << 3); /1* st_blocks is always 512B units, shift to bytes *1/ */
+
+/*     do { */
+/*         if (extent_map->ext_ctr > 0) { */
+/*             extent_map = realloc(extent_map, sizeof(struct extent_map) + */
+/*                     sizeof(struct extent) * */
+/*                     (extent_map->ext_ctr + 1)); */
+/*         } */
+
+/*         if (ioctl(fd, FS_IOC_FIEMAP, fiemap) < 0) { */
+/*             return EXIT_FAILURE; */
+/*         } */
+
+/*         if (fiemap->fm_mapped_extents == 0) { */
+/*             ERR_MSG("no extents are mapped\n"); */
+/*             return EXIT_FAILURE; */
+/*         } */
+
+/*         // If data is on the bdev (empty files that have space allocated but */
+/*         // nothing written) or there are flags we want to ignore (inline data) */
+/*         // Disregard this extent but print warning (if logging is set) */
+/*         if (fiemap->fm_extents[0].fe_physical < ctrl.offset) { */
+/*             INFO(2, */
+/*                  "FILE %s\nExtent Reported on %s  PBAS: " */
+/*                  "0x%06llx  PBAE: 0x%06llx  SIZE: 0x%06llx\n", */
+/*                  filename, ctrl.bdev.dev_name, */
+/*                  fiemap->fm_extents[0].fe_physical >> ctrl.sector_shift, */
+/*                  (fiemap->fm_extents[0].fe_physical + */
+/*                   fiemap->fm_extents[0].fe_length) >> */
+/*                      ctrl.sector_shift, */
+/*                  fiemap->fm_extents[0].fe_length >> ctrl.sector_shift); */
+
+/*             if (ctrl.log_level > 1 && ctrl.show_flags) { */
+/*                 show_extent_flags(fiemap->fm_extents[0].fe_flags); */
+/*             } */
+/*         } else if (fiemap->fm_extents[0].fe_flags & ctrl.exclude_flags) { */
+/*             INFO(2, */
+/*                  "FILE %s\nExtent Reported on %s  PBAS: " */
+/*                  "0x%06llx  PBAE: 0x%06llx  SIZE: 0x%06llx\n", */
+/*                  filename, ctrl.bdev.dev_name, */
+/*                  fiemap->fm_extents[0].fe_physical >> ctrl.sector_shift, */
+/*                  (fiemap->fm_extents[0].fe_physical + */
+/*                   fiemap->fm_extents[0].fe_length) >> */
+/*                      ctrl.sector_shift, */
+/*                  fiemap->fm_extents[0].fe_length >> ctrl.sector_shift); */
+
+/*             if (ctrl.log_level > 1) { */
+/*                 show_extent_flags(fiemap->fm_extents[0].fe_flags); */
+/*                 MSG("Disregarding extent because exclude flag is set to:\n"); */
+/*                 show_extent_flags(ctrl.exclude_flags); */
+/*             } */
+/*         } else { */
+/*             extent_map->extent[extent_map->ext_ctr].phy_blk = */
+/*                 (fiemap->fm_extents[0].fe_physical - ctrl.offset) >> */
+/*                 ctrl.sector_shift; */
+/*             extent_map->extent[extent_map->ext_ctr].logical_blk = */
+/*                 fiemap->fm_extents[0].fe_logical >> ctrl.sector_shift; */
+/*             extent_map->extent[extent_map->ext_ctr].len = */
+/*                 fiemap->fm_extents[0].fe_length >> ctrl.sector_shift; */
+/*             extent_map->extent[extent_map->ext_ctr].zone_size = */
+/*                 ctrl.znsdev.zone_size; */
+/*             extent_map->extent[extent_map->ext_ctr].ext_nr = */
+/*                 extent_map->ext_ctr; */
+/*             extent_map->extent[extent_map->ext_ctr].flags = */
+/*                 fiemap->fm_extents[0].fe_flags; */
+
+/*             ctrl.zonemap.cum_extent_size += extent_map->extent[extent_map->ext_ctr].len; */
+
+/*             extent_map->extent[extent_map->ext_ctr].zone = get_zone_number( */
+/*                 (extent_map->extent[extent_map->ext_ctr].phy_blk << ctrl.zns_sector_shift)); */
+/*             extent_map->extent[extent_map->ext_ctr].file = */
+/*                 calloc(1, sizeof(char) * MAX_FILE_LENGTH); */
+/*             memcpy(extent_map->extent[extent_map->ext_ctr].file, filename, */
+/*                    sizeof(char) * MAX_FILE_LENGTH); */
+
+/*             get_zone_info(&extent_map->extent[extent_map->ext_ctr]); */
+/*             extent_map->extent[extent_map->ext_ctr].fileID = ctrl.nr_files; */
+/*             add_extent_to_zone_list(&extent_map->extent[extent_map->ext_ctr]); */
+
+/*             extent_map->ext_ctr++; */
+/*             ctrl.zonemap.extent_ctr++; */
+/*         } */
+
+/*         if (fiemap->fm_extents[0].fe_flags & FIEMAP_EXTENT_DATA_INLINE) { */
+/*             ctrl.inlined_extent_ctr++; */
+/*         } */
+
+/*         if (fiemap->fm_extents[0].fe_flags & FIEMAP_EXTENT_LAST) { */
+/*             last_ext = 1; */
+/*         } */
+
+/*         fiemap->fm_start = ((fiemap->fm_extents[0].fe_logical) + */
+/*                             (fiemap->fm_extents[0].fe_length)); */
+
+/*     } while (last_ext == 0); */
+
+/*     ctrl.nr_files++; */
+
+/*     free(fiemap); */
+/*     fiemap = NULL; */
+
+/*     return EXIT_SUCCESS; */
+/* } */
+
+
+
 int get_extents(char *filename, int fd, struct stat *stats) {
     struct fiemap *fiemap;
     struct extent *extent;
@@ -593,8 +728,7 @@ int get_extents(char *filename, int fd, struct stat *stats) {
                 show_extent_flags(ctrl.exclude_flags);
             }
         } else {
-            extent =
-                (struct extent *)calloc(sizeof(struct extent), sizeof(char *));
+            extent = calloc(1, sizeof(struct extent));
             extent->phy_blk =
                 (fiemap->fm_extents[0].fe_physical - ctrl.offset) >>
                 ctrl.sector_shift;

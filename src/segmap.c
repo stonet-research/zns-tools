@@ -60,14 +60,16 @@ static void show_help() {
  *
  *
  * */
-static void check_dir() {
-    struct stat stats;
+static void check_dir_init_ctrl() {
+    struct stat *stats;
 
-    if (stat(segmap_man.dir, &stats) < 0) {
+    stats = calloc(sizeof(struct stat), sizeof(char *));
+
+    if (stat(segmap_man.dir, stats) < 0) {
         ERR_MSG("Failed stat on dir %s\n", segmap_man.dir);
     }
 
-    if (S_ISDIR(stats.st_mode)) {
+    if (S_ISDIR(stats->st_mode)) {
         segmap_man.isdir = 1;
         INFO(1, "%s is a directory\n", segmap_man.dir);
     } else {
@@ -77,7 +79,24 @@ static void check_dir() {
     set_fs_magic(segmap_man.dir);
 
     if (ctrl.fs_magic == F2FS_MAGIC) {
-        init_dev(&stats);
+        init_dev(stats);
+
+        f2fs_read_super_block(ctrl.bdev.dev_path);
+        set_super_block_info(f2fs_sb);
+
+        ctrl.multi_dev = 1;
+        ctrl.offset = get_dev_size(ctrl.bdev.dev_path);
+        ctrl.znsdev.zone_size = get_zone_size();
+        ctrl.znsdev.zone_mask = ~(ctrl.znsdev.zone_size - 1);
+        ctrl.znsdev.nr_zones = get_nr_zones();
+        if (ctrl.procfs) {
+            ctrl.fs_info = init_fs_info(ctrl.bdev.dev_name);
+            ctrl.fs_info_cleanup = (fs_info_cleanup) set_fs_info_cleanup();
+            if (ctrl.fs_info == NULL) {
+                // Something failed, fallling back
+                ctrl.procfs = 0;
+            }
+        }
     } else if (ctrl.fs_magic == BTRFS_MAGIC) {
         WARN("%s is registered as being on Btrfs which can occupy multiple "
              "devices.\nEnter the"
@@ -88,7 +107,19 @@ static void check_dir() {
         if (!ret) {
             ERR_MSG("reading input\n");
         }
+
+        if (init_znsdev() == EXIT_FAILURE) {
+            ERR_MSG("Failed initializing %s\n", ctrl.znsdev.dev_path);
+        }
+
+        ctrl.multi_dev = 0;
+        ctrl.offset = 0;
+        ctrl.znsdev.zone_size = get_zone_size();
+        ctrl.znsdev.zone_mask = ~(ctrl.znsdev.zone_size - 1);
+        ctrl.znsdev.nr_zones = get_nr_zones();
     }
+
+    free(stats);
 }
 
 /*
@@ -164,6 +195,7 @@ static void collect_extents(char *path) {
             /* } */
 
             close(fd);
+            free(stats);
         } else if (dir->d_type == DT_DIR && strcmp(dir->d_name, ".") != 0 &&
                    strcmp(dir->d_name, "..") != 0) {
             len = strlen(path) + strlen(dir->d_name) + 2;
@@ -172,8 +204,10 @@ static void collect_extents(char *path) {
             snprintf(sub_path, len, "%s/%s/", path, dir->d_name);
             collect_extents(sub_path);
         }
+    }
 
-        free(stats);
+    if (filename != NULL) {
+        free(filename);
     }
 
     free(sub_path);
@@ -700,33 +734,7 @@ int main(int argc, char *argv[]) {
         ctrl.show_class_stats = 0;
     }
 
-    check_dir();
-
-    if (ctrl.fs_magic == F2FS_MAGIC) {
-        f2fs_read_super_block(ctrl.bdev.dev_path);
-        set_super_block_info(f2fs_sb);
-        ctrl.multi_dev = 1;
-        ctrl.offset = get_dev_size(ctrl.bdev.dev_path);
-        if (ctrl.procfs) {
-            ctrl.fs_info = init_fs_info(ctrl.bdev.dev_name);
-            ctrl.fs_info_cleanup = (fs_info_cleanup) set_fs_info_cleanup();
-            if (ctrl.fs_info == NULL) {
-                // Something failed, fallling back
-                ctrl.procfs = 0;
-            }
-        }
-    } else if (ctrl.fs_magic == BTRFS_MAGIC) {
-        ctrl.multi_dev = 0;
-        ctrl.offset = 0;
-
-        if (init_znsdev() == EXIT_FAILURE) {
-            ERR_MSG("Failed initializing %s\n", ctrl.znsdev.dev_path);
-        }
-    }
-
-    ctrl.znsdev.zone_size = get_zone_size();
-    ctrl.znsdev.zone_mask = ~(ctrl.znsdev.zone_size - 1);
-    ctrl.znsdev.nr_zones = get_nr_zones();
+    check_dir_init_ctrl();
 
     if (ctrl.start_zone == 0 && !set_zone) {
         ctrl.start_zone = 1;
@@ -809,12 +817,10 @@ int main(int argc, char *argv[]) {
     /* } */
 
 cleanup:
-    cleanup_ctrl();
     if (ctrl.fs_info != NULL) {
         ctrl.fs_info_cleanup(ctrl.fs_info);
     }
-
-    /* free(glob_extent_map); */
+    cleanup_ctrl();
 
     return EXIT_SUCCESS;
 }
