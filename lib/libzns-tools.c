@@ -132,7 +132,8 @@ static void init_zone_map() {
         return;
     }
 
-    ctrl.zonemap = calloc(1, sizeof(struct zone_map) + sizeof(struct zone) * ctrl.znsdev.nr_zones);
+    ctrl.zonemap = calloc(1, sizeof(struct zone_map));
+    ctrl.zonemap->zones = calloc(1, sizeof(struct zone) * ctrl.znsdev.nr_zones);
     // TODO: later we want multi zns device support
     ctrl.zonemap->nr_zones = ctrl.znsdev.nr_zones;
 
@@ -147,7 +148,7 @@ static void init_zone_map() {
             hdr->zones[i].capacity >> ctrl.zns_sector_shift;
         ctrl.zonemap->zones[i].state = hdr->zones[i].cond << 4;
         ctrl.zonemap->zones[i].mask = ctrl.znsdev.zone_mask;
-        ctrl.zonemap->zones[i].extents = NULL;
+        ctrl.zonemap->zones[i].extents_head = NULL;
     }
 
     close(fd);
@@ -283,7 +284,7 @@ void cleanup_zonemap() {
     struct node *next;
 
     for (uint32_t i = 0; i < ctrl.zonemap->nr_zones; i++) {
-        head = ctrl.zonemap->zones[i].extents;
+        head = ctrl.zonemap->zones[i].extents_head;
         while (head != NULL) {
             next = head->next;
             // TODO: double free here?
@@ -344,36 +345,63 @@ void cleanup_zonemap() {
 /* } */
 
 // TODO: description
-static struct node *create_zone_extent_node(struct extent *extent) {
-    struct node *new_node = calloc(1, sizeof(struct node));
+static struct node *create_zone_extent_node(struct extent extent) {
+    struct node *node = calloc(1, sizeof(struct node));
 
-    new_node->extent = extent;
-    new_node->next = NULL;
+    node->extent = calloc(1, sizeof(struct extent));
+    memcpy(node->extent, &extent, sizeof(struct extent));
 
-    return new_node;
+    node->next = NULL;
+
+    return node;
 }
 
-static void add_extent_to_zone_list(struct extent *extent) {
-    struct node *head = ctrl.zonemap->zones[extent->zone].extents;
+static void insert_zone_list_head(struct node **head, struct node *node) {
+    *head = node;
+}
+
+static void sorted_zone_list_insert(struct node **head, struct node *node) {
+    struct node **current = head;
+
+    while (*current != NULL && (*current)->extent->phy_blk < node->extent->phy_blk) {
+        current = &((*current)->next);
+    }
+ 
+    node->next = *current;
+    *current = node;
+}
+
+/* TODO remove: dummy temp list debug print */
+void printList(struct node* head)
+{
+    struct node* ptr = head;
+    while (ptr)
+    {
+        printf("%lu %d -> ", ptr->extent->phy_blk, ptr->extent->ext_nr);
+        ptr = ptr->next;
+    }
+ 
+    printf("NULL\n");
+}
+
+static void add_extent_to_zone_list(struct extent extent) {
     struct node *node = create_zone_extent_node(extent);
-    struct node *current = head;
 
-    ctrl.zonemap->zones[extent->zone].extent_ctr++;
+    DBG("INSERTING %lu %d\n", extent.phy_blk, extent.ext_nr);
+    DBG("BEFORE\n");
+    printList(ctrl.zonemap->zones[extent.zone].extents_head);
+    DBG("AFTER\n\n");
 
-    if (head == NULL || head->extent->phy_blk > extent->phy_blk) {
-        node->next = head;
-        ctrl.zonemap->zones[extent->zone].extents = node;
-        return;
+    if (ctrl.zonemap->zones[extent.zone].extent_ctr == 0) {
+        insert_zone_list_head(&ctrl.zonemap->zones[extent.zone].extents_head, node);
+    } else {
+        sorted_zone_list_insert(&ctrl.zonemap->zones[extent.zone].extents_head, node);
     }
 
-    while (current->next != NULL &&
-           current->next->extent->phy_blk < node->extent->phy_blk) {
-        current = current->next;
-    }
-
-    node->next = current->next;
-    current->next = node;
+    printList(ctrl.zonemap->zones[extent.zone].extents_head);
+    ctrl.zonemap->zones[extent.zone].extent_ctr++;
 }
+
 
 /*
  * Calculate the zone number of an LBA
@@ -521,136 +549,12 @@ void show_extent_flags(uint32_t flags) {
  * return 0 on success, else failure
  *
  * */
-/* int get_extents(char *filename, int fd, struct stat *stats) { */
-/*     struct fiemap *fiemap; */
-/*     struct extent_map *extent_map; */
-/*     struct extent_map *temp = NULL; */
-/*     uint8_t last_ext = 0; */
-
-/*     fiemap = (struct fiemap *)calloc(sizeof(struct fiemap), sizeof(char *)); */
-/*     extent_map = (struct extent_map *)calloc(1, */ 
-/*         sizeof(struct extent_map) + sizeof(struct extent)); */
-
-/*     fiemap->fm_flags = FIEMAP_FLAG_SYNC; */
-/*     fiemap->fm_start = 0; */
-/*     fiemap->fm_extent_count = stats->st_blocks; /1* set to max number of blocks in file *1/ */
-/*     fiemap->fm_length = (stats->st_blocks << 3); /1* st_blocks is always 512B units, shift to bytes *1/ */
-
-/*     do { */
-/*         if (extent_map->ext_ctr > 0) { */
-/*             temp = realloc(extent_map, sizeof(struct extent_map) + */
-/*                     sizeof(struct extent) * */
-/*                     (extent_map->ext_ctr + 1)); */
-/*             if (temp == NULL) { */
-/*                 /1* mem realloc failed *1/ */
-/*                 free(extent_map); */
-/*                 ERR_MSG("Failed memory allocation\n"); */
-/*                 return EXIT_FAILURE; */
-/*             } */
-/*             extent_map = temp; */
-/*             temp = NULL; */
-/*         } */
-
-/*         if (ioctl(fd, FS_IOC_FIEMAP, fiemap) < 0) { */
-/*             return EXIT_FAILURE; */
-/*         } */
-
-/*         if (fiemap->fm_mapped_extents == 0) { */
-/*             ERR_MSG("no extents are mapped\n"); */
-/*             return EXIT_FAILURE; */
-/*         } */
-
-/*         /1* If data is on the bdev (empty files that have space allocated but */
-/*         * nothing written) or there are flags we want to ignore (inline data) */
-/*         * Disregard this extent but print warning (if logging is set) *1/ */
-/*         if (fiemap->fm_extents[0].fe_physical < ctrl.offset) { */
-/*             INFO(2, */
-/*                  "FILE %s\nExtent Reported on %s  PBAS: " */
-/*                  "0x%06llx  PBAE: 0x%06llx  SIZE: 0x%06llx\n", */
-/*                  filename, ctrl.bdev.dev_name, */
-/*                  fiemap->fm_extents[0].fe_physical >> ctrl.sector_shift, */
-/*                  (fiemap->fm_extents[0].fe_physical + */
-/*                   fiemap->fm_extents[0].fe_length) >> */
-/*                      ctrl.sector_shift, */
-/*                  fiemap->fm_extents[0].fe_length >> ctrl.sector_shift); */
-
-/*             if (ctrl.log_level > 1 && ctrl.show_flags) { */
-/*                 show_extent_flags(fiemap->fm_extents[0].fe_flags); */
-/*             } */
-/*         } else if (fiemap->fm_extents[0].fe_flags & ctrl.exclude_flags) { */
-/*             INFO(2, */
-/*                  "FILE %s\nExtent Reported on %s  PBAS: " */
-/*                  "0x%06llx  PBAE: 0x%06llx  SIZE: 0x%06llx\n", */
-/*                  filename, ctrl.bdev.dev_name, */
-/*                  fiemap->fm_extents[0].fe_physical >> ctrl.sector_shift, */
-/*                  (fiemap->fm_extents[0].fe_physical + */
-/*                   fiemap->fm_extents[0].fe_length) >> */
-/*                      ctrl.sector_shift, */
-/*                  fiemap->fm_extents[0].fe_length >> ctrl.sector_shift); */
-
-/*             if (ctrl.log_level > 1) { */
-/*                 show_extent_flags(fiemap->fm_extents[0].fe_flags); */
-/*                 MSG("Disregarding extent because exclude flag is set to:\n"); */
-/*                 show_extent_flags(ctrl.exclude_flags); */
-/*             } */
-/*         } else { */
-/*             extent_map->extents[extent_map->ext_ctr].phy_blk = */
-/*                 (fiemap->fm_extents[0].fe_physical - ctrl.offset) >> */
-/*                 ctrl.sector_shift; */
-/*             extent_map->extents[extent_map->ext_ctr].logical_blk = */
-/*                 fiemap->fm_extents[0].fe_logical >> ctrl.sector_shift; */
-/*             extent_map->extents[extent_map->ext_ctr].len = */
-/*                 fiemap->fm_extents[0].fe_length >> ctrl.sector_shift; */
-/*             extent_map->extents[extent_map->ext_ctr].zone_size = */
-/*                 ctrl.znsdev.zone_size; */
-/*             extent_map->extents[extent_map->ext_ctr].ext_nr = */
-/*                 extent_map->ext_ctr; */
-/*             extent_map->extents[extent_map->ext_ctr].flags = */
-/*                 fiemap->fm_extents[0].fe_flags; */
-
-/*             ctrl.zonemap->cum_extent_size += extent_map->extents[extent_map->ext_ctr].len; */
-
-/*             extent_map->extents[extent_map->ext_ctr].zone = get_zone_number( */
-/*                 (extent_map->extents[extent_map->ext_ctr].phy_blk << ctrl.zns_sector_shift)); */
-/*             memcpy(extent_map->extents[extent_map->ext_ctr].file, filename, */
-/*                    sizeof(char) * MAX_FILE_LENGTH); */
-
-/*             get_zone_info(&extent_map->extents[extent_map->ext_ctr]); */
-/*             extent_map->extents[extent_map->ext_ctr].fileID = ctrl.nr_files; */
-/*             add_extent_to_zone_list(&extent_map->extents[extent_map->ext_ctr]); */
-
-/*             extent_map->ext_ctr++; */
-/*             ctrl.zonemap->extent_ctr++; */
-/*         } */
-
-/*         if (fiemap->fm_extents[0].fe_flags & FIEMAP_EXTENT_DATA_INLINE) { */
-/*             ctrl.inlined_extent_ctr++; */
-/*         } */
-
-/*         if (fiemap->fm_extents[0].fe_flags & FIEMAP_EXTENT_LAST) { */
-/*             last_ext = 1; */
-/*         } */
-
-/*         fiemap->fm_start = ((fiemap->fm_extents[0].fe_logical) + */
-/*                             (fiemap->fm_extents[0].fe_length)); */
-
-/*     } while (last_ext == 0); */
-
-/*     ctrl.nr_files++; */
-
-/*     free(fiemap); */
-/*     fiemap = NULL; */
-
-/*     return EXIT_SUCCESS; */
-/* } */
-
-
 int get_extents(char *filename, int fd, struct stat *stats) {
     struct fiemap *fiemap;
-    struct extent *extent;
+    struct extent extent;
     uint8_t last_ext = 0;
 
-    fiemap = calloc(sizeof(struct fiemap), sizeof(char *));
+    fiemap = (struct fiemap *)calloc(sizeof(struct fiemap), sizeof(char *));
 
     fiemap->fm_flags = FIEMAP_FLAG_SYNC;
     fiemap->fm_start = 0;
@@ -668,8 +572,8 @@ int get_extents(char *filename, int fd, struct stat *stats) {
         }
 
         /* If data is on the bdev (empty files that have space allocated but
-         * nothing written) or there are flags we want to ignore (inline data)
-         * Disregard this extent but print warning (if logging is set) */
+        * nothing written) or there are flags we want to ignore (inline data)
+        * Disregard this extent but print warning (if logging is set) */
         if (fiemap->fm_extents[0].fe_physical < ctrl.offset) {
             INFO(2,
                  "FILE %s\nExtent Reported on %s  PBAS: "
@@ -701,30 +605,30 @@ int get_extents(char *filename, int fd, struct stat *stats) {
                 show_extent_flags(ctrl.exclude_flags);
             }
         } else {
-            extent = calloc(1, sizeof(struct extent));
-            extent->phy_blk =
+            extent.phy_blk =
                 (fiemap->fm_extents[0].fe_physical - ctrl.offset) >>
                 ctrl.sector_shift;
-            extent->logical_blk =
+            extent.logical_blk =
                 fiemap->fm_extents[0].fe_logical >> ctrl.sector_shift;
-            extent->len = fiemap->fm_extents[0].fe_length >> ctrl.sector_shift;
+            extent.len =
+                fiemap->fm_extents[0].fe_length >> ctrl.sector_shift;
+            extent.zone_size =
+                ctrl.znsdev.zone_size;
+            extent.ext_nr = ctrl.zonemap->extent_ctr;
+            extent.flags =
+                fiemap->fm_extents[0].fe_flags;
 
-            /* Note: don't need this unless zones can have different sizes */
-            extent->zone_size =
-                ctrl.znsdev.zone_size; 
+            ctrl.zonemap->cum_extent_size += extent.len;
 
-            extent->ext_nr = ctrl.zonemap->extent_ctr;
-            extent->flags = fiemap->fm_extents[0].fe_flags;
+            extent.zone = get_zone_number((extent.phy_blk << ctrl.zns_sector_shift));
+            memcpy(extent.file, filename, sizeof(char) * MAX_FILE_LENGTH);
 
-            ctrl.zonemap->cum_extent_size += extent->len;
-
-            extent->zone =
-                get_zone_number((extent->phy_blk << ctrl.zns_sector_shift));
-            memcpy(extent->file, filename, MAX_FILE_LENGTH);
-
-            get_zone_info(extent);
-            extent->fileID = ctrl.nr_files;
+            get_zone_info(&extent);
+            extent.fileID = ctrl.nr_files;
             add_extent_to_zone_list(extent);
+
+            /* clear extent memory for the next extent */
+            memset(&extent, 0, sizeof(struct extent));
 
             ctrl.zonemap->extent_ctr++;
         }
@@ -1005,6 +909,7 @@ void print_fiemap_report() {
     uint64_t pbae = 0;
     struct node *current, *prev = NULL;
 
+
     MSG("================================================================="
         "===\n");
     MSG("\t\t\tEXTENT MAPPINGS\n");
@@ -1020,7 +925,8 @@ void print_fiemap_report() {
         print_zone_info(i);
         MSG("\n");
 
-        current = &ctrl.zonemap->zones[i].extents[0];
+        current = ctrl.zonemap->zones[i].extents_head;
+        printList(current);
 
         while (current) {
             /* Track holes in between extents in the same zone */
@@ -1099,12 +1005,8 @@ void print_fiemap_report() {
                 HOLE_FORMATTER;
             }
 
-            if (current->next == NULL) {
-                break;
-            } else {
-                prev = current;
-                current = current->next;
-            }
+            prev = current;
+            current = current->next;
         }
     }
 

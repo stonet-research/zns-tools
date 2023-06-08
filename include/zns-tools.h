@@ -86,12 +86,9 @@ struct zone {
     uint64_t wp;          /* write pointer of the zone */
     uint8_t state;        /* capacity of the zone */
     uint32_t mask;        /* mask of the zone */
-    /* struct extent *extents; /1* array of extents in the zone *1/  TODO
-     * remove*/
-    /* struct node *btree; /1* binary tree of the extents in the zone *1/ */
+    uint32_t extent_ctr; /* number of extents in the zone */
     struct node
-        *extents; /* sorted singly linked list of the extents in the zone */
-    uint32_t extent_ctr; /* number of extents in the btree */
+        *extents_head; /* pointer to head of sorted singly linked list of the extents in the zone */
 };
 
 struct zone_map {
@@ -100,7 +97,7 @@ struct zone_map {
     uint64_t
         cum_extent_size; /* Cumulative size of all extents in 512B sectors */
     uint32_t zone_ctr;   /* number of zones that hold extents */
-    struct zone zones[];
+    struct zone *zones; /* singly linked list of sorted extents in this zone */
 };
 
 typedef void (*fs_info_cleanup)();

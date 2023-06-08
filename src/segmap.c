@@ -171,7 +171,6 @@ static void collect_extents(char *path) {
             }
 
             ret = get_extents(filename, fd, stats);
-            ERR_MSG("HERE\n");
 
             if (ret == EXIT_FAILURE) {
                 ERR_MSG("retrieving extents for %s\n", filename);
