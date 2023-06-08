@@ -371,26 +371,8 @@ static void sorted_zone_list_insert(struct node **head, struct node *node) {
     *current = node;
 }
 
-/* TODO remove: dummy temp list debug print */
-void printList(struct node* head)
-{
-    struct node* ptr = head;
-    while (ptr)
-    {
-        printf("%lu %d -> ", ptr->extent->phy_blk, ptr->extent->ext_nr);
-        ptr = ptr->next;
-    }
- 
-    printf("NULL\n");
-}
-
 static void add_extent_to_zone_list(struct extent extent) {
     struct node *node = create_zone_extent_node(extent);
-
-    DBG("INSERTING %lu %d\n", extent.phy_blk, extent.ext_nr);
-    DBG("BEFORE\n");
-    printList(ctrl.zonemap->zones[extent.zone].extents_head);
-    DBG("AFTER\n\n");
 
     if (ctrl.zonemap->zones[extent.zone].extent_ctr == 0) {
         insert_zone_list_head(&ctrl.zonemap->zones[extent.zone].extents_head, node);
@@ -398,7 +380,6 @@ static void add_extent_to_zone_list(struct extent extent) {
         sorted_zone_list_insert(&ctrl.zonemap->zones[extent.zone].extents_head, node);
     }
 
-    printList(ctrl.zonemap->zones[extent.zone].extents_head);
     ctrl.zonemap->zones[extent.zone].extent_ctr++;
 }
 
@@ -926,7 +907,6 @@ void print_fiemap_report() {
         MSG("\n");
 
         current = ctrl.zonemap->zones[i].extents_head;
-        printList(current);
 
         while (current) {
             /* Track holes in between extents in the same zone */
