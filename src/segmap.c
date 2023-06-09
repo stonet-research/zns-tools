@@ -821,6 +821,7 @@ cleanup:
     if (ctrl.fs_info != NULL) {
         ctrl.fs_info_cleanup(ctrl.fs_info);
     }
+
     cleanup_ctrl();
 
     return EXIT_SUCCESS;

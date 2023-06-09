@@ -272,8 +272,6 @@ uint32_t get_nr_zones() {
 void cleanup_ctrl() { 
     cleanup_zonemap();
 
-    // TODO: cleanup needs to loop over all files in file_counter_map
-    free(ctrl.file_counter_map->files);
     free(ctrl.file_counter_map);
 }
 
