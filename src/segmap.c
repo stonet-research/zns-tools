@@ -137,9 +137,8 @@ static void collect_extents(char *path) {
     char *filename;
     int fd = 0;
 
-    file_counter_map = NULL;
-
     DIR *directory = opendir(path);
+
     if (!directory) {
         ERR_MSG("Failed opening dir %s\n", path);
     }
@@ -221,31 +220,33 @@ static void collect_extents(char *path) {
  * @is_range: flag to show if SEGMENT RANGE is caller
  *
  * */
-/* static void show_segment_flags(uint32_t segment_id, uint8_t is_range) { */
-/*     REP(ctrl.show_only_stats, "+++++ TYPE: "); */
-/*     if (segman.sm_info[segment_id].type == CURSEG_HOT_DATA) { */
-/*         REP(ctrl.show_only_stats, "CURSEG_HOT_DATA"); */
-/*     } else if (segman.sm_info[segment_id].type == CURSEG_WARM_DATA) { */
-/*         REP(ctrl.show_only_stats, "CURSEG_WARM_DATA"); */
-/*     } else if (segman.sm_info[segment_id].type == CURSEG_COLD_DATA) { */
-/*         REP(ctrl.show_only_stats, "CURSEG_COLD_DATA"); */
-/*     } else if (segman.sm_info[segment_id].type == CURSEG_HOT_NODE) { */
-/*         REP(ctrl.show_only_stats, "CURSEG_HOT_NODE"); */
-/*     } else if (segman.sm_info[segment_id].type == CURSEG_WARM_NODE) { */
-/*         REP(ctrl.show_only_stats, "CURSEG_WARM_NODE"); */
-/*     } else if (segman.sm_info[segment_id].type == CURSEG_COLD_NODE) { */
-/*         REP(ctrl.show_only_stats, "CURSEG_COLD_NODE"); */
-/*     } */
+static void show_segment_flags(uint32_t segment_id, uint8_t is_range) {
+    struct segment_manager *segman = (struct segment_manager *) ctrl.fs_info;
 
-/*     REP(ctrl.show_only_stats, "  VALID BLOCKS: %3u", */
-/*         segman.sm_info[segment_id].valid_blocks << F2FS_BLKSIZE_BITS >> */
-/*             ctrl.sector_shift); */
-/*     if (is_range) { */
-/*         REP(ctrl.show_only_stats, " per segment\n"); */
-/*     } else { */
-/*         REP(ctrl.show_only_stats, "\n"); */
-/*     } */
-/* } */
+    REP(ctrl.show_only_stats, "+++++ TYPE: ");
+    if (segman->segments[segment_id].type == CURSEG_HOT_DATA) {
+        REP(ctrl.show_only_stats, "CURSEG_HOT_DATA");
+    } else if (segman->segments[segment_id].type == CURSEG_WARM_DATA) {
+        REP(ctrl.show_only_stats, "CURSEG_WARM_DATA");
+    } else if (segman->segments[segment_id].type == CURSEG_COLD_DATA) {
+        REP(ctrl.show_only_stats, "CURSEG_COLD_DATA");
+    } else if (segman->segments[segment_id].type == CURSEG_HOT_NODE) {
+        REP(ctrl.show_only_stats, "CURSEG_HOT_NODE");
+    } else if (segman->segments[segment_id].type == CURSEG_WARM_NODE) {
+        REP(ctrl.show_only_stats, "CURSEG_WARM_NODE");
+    } else if (segman->segments[segment_id].type == CURSEG_COLD_NODE) {
+        REP(ctrl.show_only_stats, "CURSEG_COLD_NODE");
+    }
+
+    REP(ctrl.show_only_stats, "  VALID BLOCKS: %3u",
+        segman->segments[segment_id].valid_blocks << F2FS_BLKSIZE_BITS >>
+            ctrl.sector_shift);
+    if (is_range) {
+        REP(ctrl.show_only_stats, " per segment\n");
+    } else {
+        REP(ctrl.show_only_stats, "\n");
+    }
+}
 
 static void show_segment_info(uint64_t segment_start) {
     if (ctrl.cur_segment != segment_start) {
@@ -257,9 +258,9 @@ static void show_segment_info(uint64_t segment_start) {
             segment_start, segment_start << ctrl.segment_shift,
             ((segment_start << ctrl.segment_shift) + ctrl.f2fs_segment_sectors),
             ctrl.f2fs_segment_sectors);
-        if (ctrl.procfs) {
-            show_segment_flags(segment_start, 0);
-        }
+        /* if (ctrl.procfs) { */
+        /*     show_segment_flags(segment_start, 0); */
+        /* } */
         REP_FORMATTER
         ctrl.cur_segment = segment_start;
     }
@@ -276,19 +277,19 @@ static void show_segment_info(uint64_t segment_start) {
  * show_remainder_segment())
  *
  * */
-/* static void show_beginning_segment(uint64_t i) { */
-/*     uint64_t segment_start = */
-/*         (glob_extent_map->extent[i].phy_blk & ctrl.f2fs_segment_mask); */
-/*     uint64_t segment_end = segment_start + (ctrl.f2fs_segment_sectors); */
+static void show_beginning_segment(struct extent *extent) {
+    uint64_t segment_start =
+        (extent->phy_blk & ctrl.f2fs_segment_mask);
+    uint64_t segment_end = segment_start + (ctrl.f2fs_segment_sectors);
 
-/*     REP(ctrl.show_only_stats, */
-/*         "***** EXTENT:  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64 */
-/*         "  SIZE: %#-10" PRIx64 "  FILE: %50s  EXTID:  %d/%-5d\n", */
-/*         glob_extent_map->extent[i].phy_blk, segment_end, */
-/*         segment_end - glob_extent_map->extent[i].phy_blk, */
-/*         glob_extent_map->extent[i].file, glob_extent_map->extent[i].ext_nr + 1, */
-/*         get_file_counter(glob_extent_map->extent[i].file)); */
-/* } */
+    REP(ctrl.show_only_stats,
+        "***** EXTENT:  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
+        "  SIZE: %#-10" PRIx64 "  FILE: %50s  EXTID:  %d/%-5d\n",
+        extent->phy_blk, segment_end,
+        segment_end - extent->phy_blk,
+        extent->file, extent->ext_nr + 1,
+        get_file_extent_count(extent->file));
+}
 
 /*
  * Get the index in segmap_man.fs for the filename
@@ -377,89 +378,87 @@ static unsigned int get_file_stats_index(char *filename) {
  * segment, we show it as a regular segment, not a range, and the remainder in
  * the next segment is shown by show_remainder_segment().
  *
+ * TODO docs
+ *
  * */
-/* static void show_consecutive_segments(uint64_t i, uint64_t segment_start) { */
-/*     uint64_t segment_end = */
-/*         ((glob_extent_map->extent[i].phy_blk + glob_extent_map->extent[i].len) & */
-/*          ctrl.f2fs_segment_mask) >> */
-/*         ctrl.segment_shift; */
-/*     uint64_t num_segments = segment_end - segment_start; */
+static void show_consecutive_segments(struct extent *extent, uint64_t segment_start) {
+    uint64_t segment_end =
+        ((extent->phy_blk + extent->len) &
+         ctrl.f2fs_segment_mask) >>
+        ctrl.segment_shift;
+    uint64_t num_segments = segment_end - segment_start;
 
-/*     if (ctrl.show_class_stats && ctrl.procfs) { */
-/*         // num_segments + 1 because the ending segment is included, but we only */
-/*         // use its starting LBA */
-/*         set_segment_counters(segment_start, num_segments + 1, */
-/*                              glob_extent_map->extent[i]); */
-/*     } */
+    if (ctrl.show_class_stats && ctrl.procfs) {
+        /* num_segments + 1 because the ending segment is included, but we only use its starting LBA */
+        // TODO
+        /* set_segment_counters(segment_start, num_segments + 1, */
+        /*                      glob_extent_map->extent[i]); */
+    }
 
-/*     if (num_segments == 1) { */
-/*         // The extent starts exactly at the segment beginning and ends somewhere */
-/*         // in the next segment then we just want to show the 1st segment (2nd */
-/*         // segment will be printed in the function after this) */
-/*         show_segment_info(segment_start); */
-/*         REP(ctrl.show_only_stats, */
-/*             "***** EXTENT:  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64 */
-/*             "  SIZE: %#-10" PRIx64 "  FILE: %50s  EXTID:  %d/%-5d\n", */
-/*             segment_start, segment_end << ctrl.segment_shift, */
-/*             (unsigned long)ctrl.f2fs_segment_sectors, */
-/*             glob_extent_map->extent[i].file, */
-/*             glob_extent_map->extent[i].ext_nr + 1, */
-/*             get_file_counter(glob_extent_map->extent[i].file)); */
-/*     } else { */
-/*         REP_UNDERSCORE */
-/*         REP_FORMATTER */
-/*         REP(ctrl.show_only_stats, */
-/*             ">>>>> SEGMENT RANGE: %-4lu-%-4lu   PBAS: %#-10" PRIx64 */
-/*             "  PBAE: %#-10" PRIx64 "  SIZE: %#-10" PRIx64 "\n", */
-/*             segment_start, segment_end - 1, segment_start << ctrl.segment_shift, */
-/*             segment_end << ctrl.segment_shift, */
-/*             num_segments * ctrl.f2fs_segment_sectors); */
+    if (num_segments == 1) {
+        /* The extent starts exactly at the segment beginning and ends somewhere in the next segment then we just want to show the 1st segment (2nd segment will be printed in the function after this) */
+        show_segment_info(segment_start);
+        REP(ctrl.show_only_stats,
+            "***** EXTENT:  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
+            "  SIZE: %#-10" PRIx64 "  FILE: %50s  EXTID:  %d/%-5d\n",
+            segment_start, segment_end << ctrl.segment_shift,
+            (unsigned long)ctrl.f2fs_segment_sectors,
+            extent->file,
+            extent->ext_nr + 1,
+            get_file_extent_count(extent->file));
+    } else {
+        REP_UNDERSCORE
+        REP_FORMATTER
+        REP(ctrl.show_only_stats,
+            ">>>>> SEGMENT RANGE: %-4lu-%-4lu   PBAS: %#-10" PRIx64
+            "  PBAE: %#-10" PRIx64 "  SIZE: %#-10" PRIx64 "\n",
+            segment_start, segment_end - 1, segment_start << ctrl.segment_shift,
+            segment_end << ctrl.segment_shift,
+            num_segments * ctrl.f2fs_segment_sectors);
 
-/*         // Since segments are in the same zone, they must be of the same type */
-/*         // therefore, we can just print the flags of the first one, and since */
-/*         // they are contiguous ranges, they cannot have invalid blocks, for */
-/*         // which the function will print 512 4KiB blocks (all 4KiB blocks in */
-/*         // a segment) anyways */
-/*         if (ctrl.procfs) { */
-/*             show_segment_flags(segment_start, 1); */
-/*         } */
+        // Since segments are in the same zone, they must be of the same type
+        // therefore, we can just print the flags of the first one, and since
+        // they are contiguous ranges, they cannot have invalid blocks, for
+        // which the function will print 512 4KiB blocks (all 4KiB blocks in
+        // a segment) anyways
+        if (ctrl.procfs) {
+            show_segment_flags(segment_start, 1);
+        }
 
-/*         REP_FORMATTER */
-/*         REP(ctrl.show_only_stats, */
-/*             "***** EXTENT:  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64 */
-/*             "  SIZE: %#-10" PRIx64 "  FILE: %50s  EXTID:  %d/%-5d\n", */
-/*             segment_start << ctrl.segment_shift, */
-/*             segment_end << ctrl.segment_shift, */
-/*             num_segments * ctrl.f2fs_segment_sectors, */
-/*             glob_extent_map->extent[i].file, */
-/*             glob_extent_map->extent[i].ext_nr + 1, */
-/*             get_file_counter(glob_extent_map->extent[i].file)); */
-/*     } */
-/* } */
+        REP_FORMATTER
+        REP(ctrl.show_only_stats,
+            "***** EXTENT:  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
+            "  SIZE: %#-10" PRIx64 "  FILE: %50s  EXTID:  %d/%-5d\n",
+            segment_start << ctrl.segment_shift,
+            segment_end << ctrl.segment_shift,
+            num_segments * ctrl.f2fs_segment_sectors,
+            extent->file,
+            extent->ext_nr + 1,
+            get_file_extent_count(extent->file));
+    }
+}
 
 /*
  *
  * Shows the remainder of an extent in the last segment it occupies.
  *
  * */
-/* static void show_remainder_segment(uint64_t i) { */
-/*     uint64_t segment_start = */
-/*         ((glob_extent_map->extent[i].phy_blk + glob_extent_map->extent[i].len) & */
-/*          ctrl.f2fs_segment_mask) >> */
-/*         ctrl.segment_shift; */
-/*     uint64_t remainder = glob_extent_map->extent[i].phy_blk + */
-/*                          glob_extent_map->extent[i].len - */
-/*                          (segment_start << ctrl.segment_shift); */
+static void show_remainder_segment(struct extent *extent) {
+    uint64_t segment_start =
+        ((extent->phy_blk + extent->len) & ctrl.f2fs_segment_mask) >>
+        ctrl.segment_shift;
+    uint64_t remainder = extent->phy_blk + extent->len -
+                         (segment_start << ctrl.segment_shift);
 
-/*     show_segment_info(segment_start); */
-/*     REP(ctrl.show_only_stats, */
-/*         "***** EXTENT:  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64 */
-/*         "  SIZE: %#-10" PRIx64 "  FILE: %50s  EXTID:  %d/%-5d\n", */
-/*         segment_start << ctrl.segment_shift, */
-/*         (segment_start << ctrl.segment_shift) + remainder, remainder, */
-/*         glob_extent_map->extent[i].file, glob_extent_map->extent[i].ext_nr + 1, */
-/*         get_file_counter(glob_extent_map->extent[i].file)); */
-/* } */
+    show_segment_info(segment_start);
+    REP(ctrl.show_only_stats,
+        "***** EXTENT:  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
+        "  SIZE: %#-10" PRIx64 "  FILE: %50s  EXTID:  %d/%-5d\n",
+        segment_start << ctrl.segment_shift,
+        (segment_start << ctrl.segment_shift) + remainder, remainder,
+        extent->file, extent->ext_nr + 1,
+        get_file_extent_count(extent->file));
+}
 
 /*
  * Show the segment statistics report
@@ -501,15 +500,15 @@ static void show_segment_stats() {
     if (segmap_man.isdir && ctrl.nr_files > 1) {
         UNDERSCORE_FORMATTER
         FORMATTER
-        for (uint32_t i = 0; i < file_counter_map->cur_ctr; i++) {
+        for (uint32_t i = 0; i < ctrl.file_counter_map->file_ctr; i++) {
             MSG("%-50s | %-17u | %-28u | %-25u | %-13u | %-13u | %-13u\n",
-                file_counter_map->file[i].file,
-                file_counter_map->file[i].ext_ctr,
-                file_counter_map->file[i].segment_ctr,
-                file_counter_map->file[i].zone_ctr,
-                file_counter_map->file[i].cold_ctr,
-                file_counter_map->file[i].warm_ctr,
-                file_counter_map->file[i].hot_ctr);
+                ctrl.file_counter_map->files[i].file,
+                ctrl.file_counter_map->files[i].ext_ctr,
+                ctrl.file_counter_map->files[i].segment_ctr,
+                ctrl.file_counter_map->files[i].zone_ctr,
+                ctrl.file_counter_map->files[i].cold_ctr,
+                ctrl.file_counter_map->files[i].warm_ctr,
+                ctrl.file_counter_map->files[i].hot_ctr);
         }
     }
 }
@@ -519,6 +518,8 @@ static void show_segment_stats() {
  *
  * */
 static void show_segment_report() {
+    struct node *current, *prev = NULL;
+    uint32_t i = 0;
     uint32_t current_zone = 0;
     uint64_t segment_id = 0;
     uint64_t start_lba =
@@ -534,117 +535,122 @@ static void show_segment_report() {
     REP(ctrl.show_only_stats, "\t\t\tSEGMENT MAPPINGS\n");
     REP_EQUAL_FORMATTER
 
-    /* for (uint64_t i = 0; i < glob_extent_map->ext_ctr; i++) { */
-    /*     segment_id = */
-    /*         (glob_extent_map->extent[i].phy_blk & ctrl.f2fs_segment_mask) >> */
-    /*         ctrl.segment_shift; */
-    /*     if ((segment_id << ctrl.segment_shift) >= end_lba) { */
-    /*         break; */
-    /*     } */
+    for (i = 0; i < ctrl.zonemap->nr_zones; i++) {
+        if (ctrl.zonemap->zones[i].extent_ctr == 0) {
+            continue;
+        }
 
-    /*     if ((segment_id << ctrl.segment_shift) < start_lba) { */
-    /*         continue; */
-    /*     } */
+        current = ctrl.zonemap->zones[i].extents_head;
 
-    /*     if (current_zone != glob_extent_map->extent[i].zone) { */
-    /*         if (current_zone != 0) { */
-    /*             REP_FORMATTER */
-    /*         } */
-    /*         current_zone = glob_extent_map->extent[i].zone; */
-    /*         glob_extent_map->zone_ctr++; */
-    /*         if (!ctrl.show_only_stats) { */
-    /*             print_zone_info(current_zone); */
-    /*         } */
-    /*     } */
+        while (current) {
+            segment_id = (current->extent->phy_blk & ctrl.f2fs_segment_mask) >>
+                ctrl.segment_shift;
+            if ((segment_id << ctrl.segment_shift) >= end_lba) {
+                break;
+            }
 
-    /*     uint64_t segment_start = */
-    /*         (glob_extent_map->extent[i].phy_blk & ctrl.f2fs_segment_mask); */
-    /*     uint64_t extent_end = */
-    /*         glob_extent_map->extent[i].phy_blk + glob_extent_map->extent[i].len; */
+            if ((segment_id << ctrl.segment_shift) < start_lba) {
+                continue;
+            }
 
-    /*     uint64_t segment_end = ((glob_extent_map->extent[i].phy_blk + */
-    /*                              glob_extent_map->extent[i].len) & */
-    /*                             ctrl.f2fs_segment_mask) >> */
-    /*                            ctrl.segment_shift; */
+            if (current_zone != current->extent->zone) {
+                if (current_zone != 0) {
+                    REP_FORMATTER
+                }
 
-    /*     /1* Can be zero if file starts and ends in same segment therefore + 1 for */
-    /*      * current segment *1/ */
-    /*     uint64_t num_segments = */
-    /*         segment_end - (segment_start >> ctrl.segment_shift) + 1; */
+                current_zone = current->extent->zone;
+                if (!ctrl.show_only_stats) {
+                    print_zone_info(current_zone);
+                }
+            }
 
-    /*     /1* Extent can only be a single file so add all segments we have here *1/ */
-    /*     if (ctrl.procfs) */
-    /*         increase_file_segment_counter(glob_extent_map->extent[i].file, */
-    /*                                       num_segments, segment_id, */
-    /*                                       segman.sm_info[segment_id].type, */
-    /*                                       glob_extent_map->extent[i].zone_cap); */
+            uint64_t segment_start =
+                (current->extent->phy_blk & ctrl.f2fs_segment_mask);
+            uint64_t extent_end =
+                current->extent->phy_blk + current->extent->len;
+            uint64_t segment_end = ((current->extent->phy_blk +
+                        current->extent->len) &
+                    ctrl.f2fs_segment_mask) >>
+                ctrl.segment_shift;
 
-    /*     // if the beginning of the extent and the ending of the extent are in */
-    /*     // the same segment */
-    /*     if (segment_start == (extent_end & ctrl.f2fs_segment_mask) || */
-    /*         extent_end == */
-    /*             (segment_start + (F2FS_SEGMENT_BYTES >> ctrl.sector_shift))) { */
-    /*         if (segment_id != ctrl.cur_segment) { */
-    /*             show_segment_info(segment_id); */
-    /*             ctrl.cur_segment = segment_id; */
-    /*             if (ctrl.show_class_stats && ctrl.procfs) { */
-    /*                 set_segment_counters(segment_start >> ctrl.segment_shift, 1, */
-    /*                                      glob_extent_map->extent[i]); */
-    /*             } */
-    /*         } */
+            /* Can be zero if file starts and ends in same segment therefore + 1 for
+             * current segment */
+            uint64_t num_segments =
+                segment_end - (segment_start >> ctrl.segment_shift) + 1;
 
-    /*         REP(ctrl.show_only_stats, */
-    /*             "***** EXTENT:  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64 */
-    /*             "  SIZE: %#-10" PRIx64 "  FILE: %50s  EXTID:  %d/%-5d\n", */
-    /*             glob_extent_map->extent[i].phy_blk, */
-    /*             glob_extent_map->extent[i].phy_blk + */
-    /*                 glob_extent_map->extent[i].len, */
-    /*             glob_extent_map->extent[i].len, glob_extent_map->extent[i].file, */
-    /*             glob_extent_map->extent[i].ext_nr + 1, */
-    /*             get_file_counter(glob_extent_map->extent[i].file)); */
-    /*     } else { */
-    /*         // Else the extent spans across multiple segments, so we need to */
-    /*         // break it up */
+            /* Extent can only be a single file so add all segments we have here */
+            /* if (ctrl.procfs) { */
+            /*     increase_file_segment_counter(glob_extent_map->extent[i].file, */
+            /*             num_segments, segment_id, */
+            /*             segman.sm_info[segment_id].type, */
+            /*             glob_extent_map->extent[i].zone_cap); */
+            /* } */
+            
+            /* if the beginning of the extent and the ending of the extent are in
+             * the same segment */
+            if (segment_start == (extent_end & ctrl.f2fs_segment_mask) ||
+                    extent_end ==
+                    (segment_start + (F2FS_SEGMENT_BYTES >> ctrl.sector_shift))) {
+                if (segment_id != ctrl.cur_segment) {
+                    show_segment_info(segment_id);
+                    ctrl.cur_segment = segment_id;
+                    /* if (ctrl.show_class_stats && ctrl.procfs) { */
+                    /*     set_segment_counters(segment_start >> ctrl.segment_shift, 1, */
+                    /*             glob_extent_map->extent[i]); */
+                    /* } */
+                }
 
-    /*         // part 1: the beginning of extent to end of that single segment */
-    /*         if (glob_extent_map->extent[i].phy_blk != segment_start) { */
-    /*             if (segment_id != ctrl.cur_segment) { */
-    /*                 uint64_t segment_start = */
-    /*                     (glob_extent_map->extent[i].phy_blk & */
-    /*                      ctrl.f2fs_segment_mask) >> */
-    /*                     ctrl.segment_shift; */
-    /*                 show_segment_info(segment_start); */
-    /*             } */
-    /*             show_beginning_segment(i); */
-    /*             if (ctrl.show_class_stats && ctrl.procfs) { */
-    /*                 set_segment_counters(segment_start >> ctrl.segment_shift, 1, */
-    /*                                      glob_extent_map->extent[i]); */
-    /*             } */
-    /*             segment_id++; */
-    /*         } */
+                REP(ctrl.show_only_stats,
+                        "***** EXTENT:  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
+                        "  SIZE: %#-10" PRIx64 "  FILE: %50s  EXTID:  %d/%-5d\n",
+                        current->extent->phy_blk,
+                        current->extent->phy_blk +
+                        current->extent->len,
+                        current->extent->len, current->extent->file,
+                        current->extent->ext_nr + 1,
+                        get_file_extent_count(current->extent->file));
+            } else {
+                /* Else the extent spans across multiple segments, so we need to break it up */
 
-    /*         // part 2: all in between segments after the 1st segment and the */
-    /*         // last (in case the last is only partially used by the segment) */
-    /*         // - checks if there are more than 1 segments after the start */
-    /*         uint64_t segment_end = ((glob_extent_map->extent[i].phy_blk + */
-    /*                                  glob_extent_map->extent[i].len) & */
-    /*                                 ctrl.f2fs_segment_mask); */
-    /*         if ((segment_end - segment_start) >> ctrl.segment_shift > 1) */
-    /*             show_consecutive_segments(i, segment_id); */
+                /* part 1: the beginning of extent to end of that single segment */
+                if (current->extent->phy_blk != segment_start) {
+                    if (segment_id != ctrl.cur_segment) {
+                        uint64_t segment_start =
+                            (current->extent->phy_blk &
+                             ctrl.f2fs_segment_mask) >>
+                            ctrl.segment_shift;
+                        show_segment_info(segment_start);
+                    }
+                    show_beginning_segment(current->extent);
+                    /* if (ctrl.show_class_stats && ctrl.procfs) { */
+                    /*     set_segment_counters(segment_start >> ctrl.segment_shift, 1, */
+                    /*             glob_extent_map->extent[i]); */
+                    /* } */
+                    segment_id++;
+                }
 
-    /*         // part 3: any remaining parts of the last segment, which do not */
-    /*         // fill the entire last segment only if the segment actually has a */
-    /*         // remaining fragment */
-    /*         if (segment_end != glob_extent_map->extent[i].phy_blk + */
-    /*                                glob_extent_map->extent[i].len) { */
-    /*             show_remainder_segment(i); */
-    /*             if (ctrl.show_class_stats && ctrl.procfs) { */
-    /*                 set_segment_counters(segment_end >> ctrl.segment_shift, 1, */
-    /*                                      glob_extent_map->extent[i]); */
-    /*             } */
-    /*         } */
-    /*     } */
-    /* } */
+                /* part 2: all in between segments after the 1st segment and the last (in case the last is only partially used by the segment) - checks if there are more than 1 segments after the start */
+                uint64_t segment_end = ((current->extent->phy_blk +
+                            current->extent->len) &
+                        ctrl.f2fs_segment_mask);
+                if ((segment_end - segment_start) >> ctrl.segment_shift > 1)
+                    show_consecutive_segments(current->extent, segment_id);
+
+                /* part 3: any remaining parts of the last segment, which do not fill the entire last segment only if the segment actually has a remaining fragment */
+                if (segment_end != current->extent->phy_blk +
+                        current->extent->len) {
+                    show_remainder_segment(current->extent);
+                    /* if (ctrl.show_class_stats && ctrl.procfs) { */
+                    /*     set_segment_counters(segment_end >> ctrl.segment_shift, 1, */
+                    /*             current->extent); */
+                    /* } */
+                }
+            }
+
+            prev = current;
+            current = current->next;
+        }
+    }
 
     if (ctrl.show_class_stats) {
         show_segment_stats();
@@ -652,7 +658,7 @@ static void show_segment_report() {
 }
 
 int main(int argc, char *argv[]) {
-    struct stat *stats; /* statistics from fstat() call */
+    struct stat *stats;
     char *filename;
     int fd =0, c = 0;
     uint8_t ret = 0;
@@ -780,7 +786,7 @@ int main(int argc, char *argv[]) {
     // TODO: after this point update the segment mapping and so forth
     /* sort_extents(glob_extent_map); */
 
-    /* if (ctrl.fs_magic == F2FS_MAGIC) { */
+    if (ctrl.fs_magic == F2FS_MAGIC) {
     /*     /1* highest_segment = *1/ */
     /*         /1* ((glob_extent_map->extent[glob_extent_map->ext_ctr - 1].phy_blk + *1/ */
     /*         /1*   glob_extent_map->extent[glob_extent_map->ext_ctr - 1].len) & *1/ */
@@ -793,9 +799,8 @@ int main(int argc, char *argv[]) {
     /*     /1*     } *1/ */
     /*     } */
 
-    /*     /1* set_file_extent_counters(glob_extent_map); *1/ */
 
-    /*     show_segment_report(); */
+        show_segment_report();
 
     /*     free(file_counter_map->file); */
     /*     free(file_counter_map); */
@@ -808,13 +813,9 @@ int main(int argc, char *argv[]) {
     /*     /1* if (ctrl.procfs) { *1/ */
     /*     /1*     free(segman.sm_info); *1/ */
     /*     /1* } *1/ */
-    /* } else if (ctrl.fs_magic == BTRFS_MAGIC) { */
-    /*     /1* set_file_extent_counters(glob_extent_map); *1/ */
-    /*     print_fiemap_report(); */
-
-    /*     free(file_counter_map->file); */
-    /*     free(file_counter_map); */
-    /* } */
+    } else if (ctrl.fs_magic == BTRFS_MAGIC) {
+        print_fiemap_report();
+    }
 
 cleanup:
     if (ctrl.fs_info != NULL) {

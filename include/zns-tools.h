@@ -100,6 +100,28 @@ struct zone_map {
     struct zone *zones; /* singly linked list of sorted extents in this zone */
 };
 
+/* count for each file the number of extents */
+struct file_counter {
+    char file[MAX_FILE_LENGTH]; /* file name, fix maximum file length to avoid
+                                   messy reallocs */
+    uint32_t ext_ctr;           /* extent counter for the file */
+    uint32_t segment_ctr;       /* number of segments the file contained in */
+    uint32_t zone_ctr;          /* number of zones the file is contained in */
+    uint32_t cold_ctr; /* number of the segments that are CURSEG_COLD_DATA */
+    uint32_t warm_ctr; /* number of the segments that are CURSEG_WARM_DATA*/
+    uint32_t hot_ctr;  /* number of the segments that are CURSEG_HOT_DATA */
+    uint64_t last_segment_id; /* track the last segment id so we don't increase
+                                 counters for extents in the same segment for a
+                                 file */
+    uint32_t last_zone;       /* track the last zone number so we don't increase
+                                 counters for extents in the same zone */
+};
+
+struct file_counter_map {
+    uint32_t file_ctr;          /* indicate the number of file entries in *files */
+    struct file_counter files[]; /* track the file counters */
+};
+
 typedef void (*fs_info_cleanup)();
 
 struct control {
@@ -166,34 +188,12 @@ struct control {
     struct zone_map *zonemap; /* track extents in zones with zone information */
     void *fs_super_block; /* if parsed by the fs lib, can store the super block in the control */
     void *fs_info; /* file system specific information */
+    struct file_counter_map
+        *file_counter_map; /* tracking extent counters per file */
     fs_info_cleanup fs_info_cleanup; /* function pointer to cleanup the fs_info */
 };
 
-// count for each file the number of extents
-struct file_counter {
-    char file[MAX_FILE_LENGTH]; /* file name, fix maximum file length to avoid
-                                   messy reallocs */
-    uint32_t ext_ctr;           /* extent counter for the file */
-    uint32_t segment_ctr;       /* number of segments the file contained in */
-    uint32_t zone_ctr;          /* number of zones the file is contained in */
-    uint32_t cold_ctr; /* number of the segments that are CURSEG_COLD_DATA */
-    uint32_t warm_ctr; /* number of the segments that are CURSEG_WARM_DATA*/
-    uint32_t hot_ctr;  /* number of the segments that are CURSEG_HOT_DATA */
-    uint64_t last_segment_id; /* track the last segment id so we don't increase
-                                 counters for extents in the same segment for a
-                                 file */
-    uint32_t last_zone;       /* track the last zone number so we don't increase
-                                 counters for extents in the same zone */
-};
-
-struct file_counter_map {
-    struct file_counter *file; /* track the file counters */
-    uint32_t cur_ctr;          /* track how many we have initialized */
-};
-
 extern struct control ctrl;
-extern struct file_counter_map
-    *file_counter_map; /* tracking extent counters per file */
 
 extern uint8_t is_zoned(char *);
 extern void init_dev(struct stat *);
@@ -209,8 +209,7 @@ extern int get_extents(char *, int, struct stat *);
 extern int contains_element(uint32_t[], uint32_t, uint32_t);
 extern void map_extents(struct extent_map *);
 extern void show_extent_flags(uint32_t);
-extern uint32_t get_file_counter(char *);
-extern void set_file_extent_counters(struct extent_map *);
+extern uint32_t get_file_extent_count(char *);
 extern void increase_file_segment_counter(char *, unsigned int, unsigned int,
                                           enum type, uint64_t);
 extern void set_super_block_info(struct f2fs_super_block);

@@ -2,8 +2,6 @@
 #include <stdlib.h>
 
 struct control ctrl;
-struct file_counter_map *file_counter_map;
-uint32_t file_counter = 0;
 
 /*
  * Check if a device a zoned device.
@@ -273,6 +271,10 @@ uint32_t get_nr_zones() {
  * */
 void cleanup_ctrl() { 
     cleanup_zonemap();
+
+    // TODO: cleanup needs to loop over all files in file_counter_map
+    free(ctrl.file_counter_map->files);
+    free(ctrl.file_counter_map);
 }
 
 /*
@@ -287,8 +289,8 @@ void cleanup_zonemap() {
         head = ctrl.zonemap->zones[i].extents_head;
         while (head != NULL) {
             next = head->next;
-            // TODO: double free here?
-            /* free(head); */
+            free(head->extent);
+            free(head);
             head = next;
         }
     }
@@ -526,6 +528,26 @@ void show_extent_flags(uint32_t flags) {
 }
 
 /*
+ * Increase the extent counts for a particular file
+ *
+ * @file: char * to file name (full path)
+ *
+ * */
+static void increase_file_extent_counter(char *file) {
+    for (uint32_t i = 0; i < ctrl.file_counter_map->file_ctr; i++) {
+        if (strcmp(ctrl.file_counter_map->files[i].file, file) == 0) {
+            ctrl.file_counter_map->files[i].ext_ctr++;
+            return;
+        }
+    }
+
+    memcpy(ctrl.file_counter_map->files[ctrl.file_counter_map->file_ctr].file, file,
+           MAX_FILE_LENGTH);
+    ctrl.file_counter_map->files[ctrl.file_counter_map->file_ctr].ext_ctr = 1;
+    ctrl.file_counter_map->file_ctr++;
+}
+
+/*
  * TODO: description and return codes
  * return 0 on success, else failure
  *
@@ -534,6 +556,8 @@ int get_extents(char *filename, int fd, struct stat *stats) {
     struct fiemap *fiemap;
     struct extent extent;
     uint8_t last_ext = 0;
+    uint64_t ext_ctr = 0;
+    struct file_counter_map *temp = NULL;
 
     fiemap = (struct fiemap *)calloc(sizeof(struct fiemap), sizeof(char *));
 
@@ -541,6 +565,22 @@ int get_extents(char *filename, int fd, struct stat *stats) {
     fiemap->fm_start = 0;
     fiemap->fm_extent_count = stats->st_blocks; /* set to max number of blocks in file */
     fiemap->fm_length = (stats->st_blocks << 3); /* st_blocks is always 512B units, shift to bytes */
+
+    /* (re)allocate the file_counter_map here as this function is always called for a single file */
+    if (ctrl.nr_files == 0) {
+        ctrl.file_counter_map = calloc(1, sizeof(struct file_counter_map) + sizeof(struct file_counter));
+    } else {
+        temp = realloc(ctrl.file_counter_map, sizeof(struct file_counter_map) +
+                    sizeof(struct file_counter) * (ctrl.nr_files + 1));
+            if (temp == NULL) {
+                /* mem realloc failed */
+                free(ctrl.file_counter_map);
+                ERR_MSG("Failed memory allocation\n");
+                return EXIT_FAILURE;
+            }
+            ctrl.file_counter_map = temp;
+            temp = NULL;
+    }
 
     do {
         if (ioctl(fd, FS_IOC_FIEMAP, fiemap) < 0) {
@@ -595,7 +635,7 @@ int get_extents(char *filename, int fd, struct stat *stats) {
                 fiemap->fm_extents[0].fe_length >> ctrl.sector_shift;
             extent.zone_size =
                 ctrl.znsdev.zone_size;
-            extent.ext_nr = ctrl.zonemap->extent_ctr;
+            extent.ext_nr = ext_ctr; /* individual extent counter for each get_extents() scope -> each file */
             extent.flags =
                 fiemap->fm_extents[0].fe_flags;
 
@@ -607,11 +647,14 @@ int get_extents(char *filename, int fd, struct stat *stats) {
             get_zone_info(&extent);
             extent.fileID = ctrl.nr_files;
             add_extent_to_zone_list(extent);
+            increase_file_extent_counter(extent.file);
 
             /* clear extent memory for the next extent */
             memset(&extent, 0, sizeof(struct extent));
 
+            ext_ctr++;
             ctrl.zonemap->extent_ctr++;
+            ctrl.zonemap->zone_ctr++;
         }
 
         if (fiemap->fm_extents[0].fe_flags & FIEMAP_EXTENT_DATA_INLINE) {
@@ -664,53 +707,15 @@ int contains_element(uint32_t list[], uint32_t element, uint32_t size) {
  * returns: uint32_t counter of extents for the file
  *
  * */
-uint32_t get_file_counter(char *file) {
-    for (uint32_t i = 0; i < file_counter_map->cur_ctr; i++) {
-        if (strncmp(file_counter_map->file[i].file, file,
-                    strlen(file_counter_map->file[i].file)) == 0) {
-            return file_counter_map->file[i].ext_ctr;
+uint32_t get_file_extent_count(char *file) {
+    for (uint32_t i = 0; i < ctrl.file_counter_map->file_ctr; i++) {
+        if (strncmp(ctrl.file_counter_map->files[i].file, file,
+                    strlen(ctrl.file_counter_map->files[i].file)) == 0) {
+            return ctrl.file_counter_map->files[i].ext_ctr;
         }
     }
 
     return 0;
-}
-
-/*
- * Increase the extent counts for a particular file
- *
- * @file: char * to file name (full path)
- *
- * */
-static void increase_file_extent_counter(char *file) {
-    for (uint32_t i = 0; i < file_counter_map->cur_ctr; i++) {
-        if (strcmp(file_counter_map->file[i].file, file) == 0) {
-            file_counter_map->file[i].ext_ctr++;
-            return;
-        }
-    }
-
-    memcpy(file_counter_map->file[file_counter_map->cur_ctr].file, file,
-           MAX_FILE_LENGTH);
-    file_counter_map->file[file_counter_map->cur_ctr].ext_ctr = 1;
-    file_counter_map->cur_ctr++;
-}
-
-/*
- * Initialize and set per file extent counters based on the provided
- * extent map
- *
- * @extent_map: extents to count file extents
- *
- * */
-void set_file_extent_counters(struct extent_map *extent_map) {
-    file_counter_map =
-        (struct file_counter_map *)calloc(1, sizeof(struct file_counter_map));
-    file_counter_map->file = (struct file_counter *)calloc(
-        1, sizeof(struct file_counter) * ctrl.nr_files);
-
-    for (uint32_t i = 0; i < extent_map->ext_ctr; i++) {
-        increase_file_extent_counter(extent_map->extents[i].file);
-    }
 }
 
 /*
@@ -724,27 +729,27 @@ void increase_file_segment_counter(char *file, unsigned int num_segments,
                                    uint64_t zone_cap) {
     uint32_t i;
 
-    for (i = 0; i < file_counter_map->cur_ctr; i++) {
-        if (strncmp(file_counter_map->file[i].file, file,
-                    strlen(file_counter_map->file[i].file)) == 0) {
+    for (i = 0; i < ctrl.file_counter_map->file_ctr; i++) {
+        if (strncmp(ctrl.file_counter_map->files[i].file, file,
+                    strlen(ctrl.file_counter_map->files[i].file)) == 0) {
             goto found;
         }
     }
 
 found:
-    if (file_counter_map->file[i].last_segment_id != cur_segment) {
-        file_counter_map->file[i].segment_ctr += num_segments;
-        file_counter_map->file[i].last_segment_id = cur_segment;
+    if (ctrl.file_counter_map->files[i].last_segment_id != cur_segment) {
+        ctrl.file_counter_map->files[i].segment_ctr += num_segments;
+        ctrl.file_counter_map->files[i].last_segment_id = cur_segment;
 
         switch (type) {
         case CURSEG_COLD_DATA:
-            file_counter_map->file[i].cold_ctr += num_segments;
+            ctrl.file_counter_map->files[i].cold_ctr += num_segments;
             break;
         case CURSEG_WARM_DATA:
-            file_counter_map->file[i].warm_ctr += num_segments;
+            ctrl.file_counter_map->files[i].warm_ctr += num_segments;
             break;
         case CURSEG_HOT_DATA:
-            file_counter_map->file[i].hot_ctr += num_segments;
+            ctrl.file_counter_map->files[i].hot_ctr += num_segments;
             break;
         default:
             break;
@@ -753,12 +758,12 @@ found:
 
     uint32_t zone = get_zone_number(cur_segment << ctrl.segment_shift >>
                                     ctrl.zns_sector_shift);
-    if (file_counter_map->file[i].last_zone != zone) {
-        file_counter_map->file[i].zone_ctr +=
+    if (ctrl.file_counter_map->files[i].last_zone != zone) {
+        ctrl.file_counter_map->files[i].zone_ctr +=
             (num_segments * F2FS_SEGMENT_BYTES >> ctrl.sector_shift) /
                 zone_cap +
             1;
-        file_counter_map->file[i].last_zone = zone;
+        ctrl.file_counter_map->files[i].last_zone = zone;
     }
 }
 
@@ -902,7 +907,6 @@ void print_fiemap_report() {
             continue;
         }
 
-        ctrl.zonemap->zone_ctr++;
         print_zone_info(i);
         MSG("\n");
 
