@@ -89,14 +89,10 @@ static void check_dir_init_ctrl() {
         ctrl.znsdev.zone_size = get_zone_size();
         ctrl.znsdev.zone_mask = ~(ctrl.znsdev.zone_size - 1);
         ctrl.znsdev.nr_zones = get_nr_zones();
-        if (ctrl.procfs) {
-            ctrl.fs_info = init_fs_info(ctrl.bdev.dev_name);
-            ctrl.fs_info_cleanup = (fs_info_cleanup) set_fs_info_cleanup();
-            if (ctrl.fs_info == NULL) {
-                // Something failed, fallling back
-                ctrl.procfs = 0;
-            }
-        }
+        ctrl.fs_manager = f2fs_fs_manager_init(ctrl.bdev.dev_name);
+        ctrl.fs_info_init = (fs_info_init) f2fs_fs_info_init();
+        ctrl.fs_info_bytes = get_fs_info_bytes();
+        ctrl.fs_info_cleanup = (fs_info_cleanup) f2fs_fs_info_cleanup();
     } else if (ctrl.fs_magic == BTRFS_MAGIC) {
         WARN("%s is registered as being on Btrfs which can occupy multiple "
              "devices.\nEnter the"
@@ -134,7 +130,7 @@ static void collect_extents(char *path) {
     char *sub_path = NULL;
     size_t len = 0;
     int ret = 0;
-    char *filename;
+    char *filename = NULL;
     int fd = 0;
 
     DIR *directory = opendir(path);
@@ -221,31 +217,31 @@ static void collect_extents(char *path) {
  *
  * */
 static void show_segment_flags(uint32_t segment_id, uint8_t is_range) {
-    struct segment_manager *segman = (struct segment_manager *) ctrl.fs_info;
+    /* struct segment_manager *segman = (struct segment_manager *) ctrl.fs_info; */
 
-    REP(ctrl.show_only_stats, "+++++ TYPE: ");
-    if (segman->segments[segment_id].type == CURSEG_HOT_DATA) {
-        REP(ctrl.show_only_stats, "CURSEG_HOT_DATA");
-    } else if (segman->segments[segment_id].type == CURSEG_WARM_DATA) {
-        REP(ctrl.show_only_stats, "CURSEG_WARM_DATA");
-    } else if (segman->segments[segment_id].type == CURSEG_COLD_DATA) {
-        REP(ctrl.show_only_stats, "CURSEG_COLD_DATA");
-    } else if (segman->segments[segment_id].type == CURSEG_HOT_NODE) {
-        REP(ctrl.show_only_stats, "CURSEG_HOT_NODE");
-    } else if (segman->segments[segment_id].type == CURSEG_WARM_NODE) {
-        REP(ctrl.show_only_stats, "CURSEG_WARM_NODE");
-    } else if (segman->segments[segment_id].type == CURSEG_COLD_NODE) {
-        REP(ctrl.show_only_stats, "CURSEG_COLD_NODE");
-    }
+    /* REP(ctrl.show_only_stats, "+++++ TYPE: "); */
+    /* if (segman->segments[segment_id].type == CURSEG_HOT_DATA) { */
+    /*     REP(ctrl.show_only_stats, "CURSEG_HOT_DATA"); */
+    /* } else if (segman->segments[segment_id].type == CURSEG_WARM_DATA) { */
+    /*     REP(ctrl.show_only_stats, "CURSEG_WARM_DATA"); */
+    /* } else if (segman->segments[segment_id].type == CURSEG_COLD_DATA) { */
+    /*     REP(ctrl.show_only_stats, "CURSEG_COLD_DATA"); */
+    /* } else if (segman->segments[segment_id].type == CURSEG_HOT_NODE) { */
+    /*     REP(ctrl.show_only_stats, "CURSEG_HOT_NODE"); */
+    /* } else if (segman->segments[segment_id].type == CURSEG_WARM_NODE) { */
+    /*     REP(ctrl.show_only_stats, "CURSEG_WARM_NODE"); */
+    /* } else if (segman->segments[segment_id].type == CURSEG_COLD_NODE) { */
+    /*     REP(ctrl.show_only_stats, "CURSEG_COLD_NODE"); */
+    /* } */
 
-    REP(ctrl.show_only_stats, "  VALID BLOCKS: %3u",
-        segman->segments[segment_id].valid_blocks << F2FS_BLKSIZE_BITS >>
-            ctrl.sector_shift);
-    if (is_range) {
-        REP(ctrl.show_only_stats, " per segment\n");
-    } else {
-        REP(ctrl.show_only_stats, "\n");
-    }
+    /* REP(ctrl.show_only_stats, "  VALID BLOCKS: %3u", */
+    /*     segman->segments[segment_id].valid_blocks << F2FS_BLKSIZE_BITS >> */
+    /*         ctrl.sector_shift); */
+    /* if (is_range) { */
+    /*     REP(ctrl.show_only_stats, " per segment\n"); */
+    /* } else { */
+    /*     REP(ctrl.show_only_stats, "\n"); */
+    /* } */
 }
 
 static void show_segment_info(uint64_t segment_start) {
@@ -818,8 +814,9 @@ int main(int argc, char *argv[]) {
     }
 
 cleanup:
-    if (ctrl.fs_info != NULL) {
-        ctrl.fs_info_cleanup(ctrl.fs_info);
+    // TODO: cleanup the fs info in each extent - in the zonemap cleanup during extent freeing
+    if (ctrl.fs_manager != NULL) {
+        ctrl.fs_manager_cleanup(ctrl.fs_manager);
     }
 
     cleanup_ctrl();

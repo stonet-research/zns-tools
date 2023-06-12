@@ -267,7 +267,10 @@ struct f2fs_inode {
                              double_indirect(1) node id */
 };
 
+typedef void (*fs_manager_cleanup)();
+typedef void (*fs_info_init)();
 typedef void (*fs_info_cleanup)();
+
 
 static_assert(sizeof(struct f2fs_inode) == 4072, "");
 
@@ -317,8 +320,8 @@ struct segment_info {
 };
 
 struct segment_manager {
-    struct segment_info *segments;
-    uint32_t nr_segments;
+    uint32_t nr_segments; /* number of segments in segments[] */
+    struct segment_info segments[];
 };
 
 extern struct f2fs_super_block f2fs_sb;
@@ -331,8 +334,12 @@ extern void f2fs_show_checkpoint();
 struct f2fs_nat_entry *f2fs_get_inode_nat_entry(char *, uint32_t);
 struct f2fs_node *f2fs_get_node_block(char *, uint32_t);
 extern void f2fs_show_inode_info(struct f2fs_inode *);
-extern void *init_fs_info(char *dev_name);
-extern fs_info_cleanup set_fs_info_cleanup();
+/* extern void *init_fs_info(char *dev_name); */
+extern void *f2fs_get_segment_info_for_extent();
+extern fs_info_init f2fs_fs_info_init();
+extern fs_info_cleanup f2fs_fs_info_cleanup();
+extern uint32_t get_fs_info_bytes();
+extern void *f2fs_fs_manager_init();
 
 static inline int IS_INODE(struct f2fs_node *node) {
     return ((node)->footer.nid == (node)->footer.ino);

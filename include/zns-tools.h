@@ -63,6 +63,8 @@ struct extent {
     uint64_t zone_wp;     /* Write Pointer of this current zone */
     uint64_t zone_lbae;   /* LBA that can be written up to (LBAS + ZONE CAP) */
     char file[MAX_FILE_LENGTH];           /* file path to which the extent belongs */
+    void *fs_info; /* file system specific information - segment information for F2FS 
+                    * NOTE: must be the last field of the struct, as the size can vary */
 };
 
 struct extent_map {
@@ -122,6 +124,8 @@ struct file_counter_map {
     struct file_counter files[]; /* track the file counters */
 };
 
+typedef void (*fs_manager_cleanup)();
+typedef void (*fs_info_init)();
 typedef void (*fs_info_cleanup)();
 
 struct control {
@@ -187,10 +191,13 @@ struct control {
 
     struct zone_map *zonemap; /* track extents in zones with zone information */
     void *fs_super_block; /* if parsed by the fs lib, can store the super block in the control */
-    void *fs_info; /* file system specific information */
+    void *fs_manager; /* any global file system related info can be set by the fs lib */
+    fs_manager_cleanup fs_manager_cleanup; /* cleanup call to clean any fs manager related manager by the fs lib */
+    fs_info_init fs_info_init; /* function pointer to set the fs_info in each extent by the respective FS lib */
+    uint32_t fs_info_bytes; /* the FS lib must set the size in bytes of the fs_info in order for memory allocation and copyig to work correctly */
+    fs_info_cleanup fs_info_cleanup; /* function pointer to cleanup the fs_info - free its memory */
     struct file_counter_map
         *file_counter_map; /* tracking extent counters per file */
-    fs_info_cleanup fs_info_cleanup; /* function pointer to cleanup the fs_info */
 };
 
 extern struct control ctrl;
