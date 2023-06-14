@@ -347,12 +347,12 @@ void cleanup_zonemap() {
 static struct node *create_zone_extent_node(struct extent *extent) {
     struct node *node = calloc(1, sizeof(struct node));
 
-    // TODO: check if fs_info is set (is NULL if not set)
-
     node->extent = calloc(1, sizeof(struct extent));
-    node->extent->fs_info = calloc(1, ctrl.fs_info_bytes);
     memcpy(node->extent, extent, sizeof(struct extent));
-    memcpy(node->extent->fs_info, extent->fs_info, ctrl.fs_info_bytes);
+    if (extent->fs_info) {
+        node->extent->fs_info = calloc(1, ctrl.fs_info_bytes);
+        memcpy(node->extent->fs_info, extent->fs_info, ctrl.fs_info_bytes);
+    }
 
     node->next = NULL;
 
@@ -649,19 +649,19 @@ int get_extents(char *filename, int fd, struct stat *stats) {
             get_zone_info(extent);
             extent->fileID = ctrl.nr_files;
 
-            /* if (ctrl.fs_info_bytes > 0) { */
-            /*     /1* only init if file system has fs_info setup *1/ */
-            /*     extent.fs_info = calloc(1, ctrl.fs_info_bytes); */
+            if (ctrl.fs_info_bytes > 0) {
+                /* only init if file system has fs_info setup */
+                extent->fs_info = calloc(1, ctrl.fs_info_bytes);
 
-            /*     /1* must init the fs_info before adding extent to the zone list, it does a memcpy() *1/ */
-            /*     ctrl.fs_info_init(ctrl.bdev.dev_name, extent.fs_info, (extent.phy_blk & ctrl.f2fs_segment_mask) >> ctrl.segment_shift); */
-            /*     add_extent_to_zone_list(extent); */
+                /* must init the fs_info before adding extent to the zone list, it does a memcpy() */
+                ctrl.fs_info_init(ctrl.fs_manager, extent->fs_info, (extent->phy_blk & ctrl.f2fs_segment_mask) >> ctrl.segment_shift);
+                add_extent_to_zone_list(*extent);
 
-            /*     /1* free extent fs_info as it has been memcpy() *1/ */
-            /*     free(extent.fs_info); */
-            /* } else { */
-            /* } */
+                /* free extent fs_info as it has been memcpy() */
+                free(extent->fs_info);
+            } else {
             add_extent_to_zone_list(*extent);
+            }
 
             increase_file_extent_counter(extent->file);
 
