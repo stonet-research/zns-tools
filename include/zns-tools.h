@@ -62,9 +62,9 @@ struct extent {
     uint64_t zone_size;   /* Size of the zone the extent is in */
     uint64_t zone_wp;     /* Write Pointer of this current zone */
     uint64_t zone_lbae;   /* LBA that can be written up to (LBAS + ZONE CAP) */
-    char file[MAX_FILE_LENGTH];           /* file path to which the extent belongs */
     void *fs_info; /* file system specific information - segment information for F2FS 
                     * NOTE: must be the last field of the struct, as the size can vary */
+    char file[MAX_FILE_LENGTH];           /* file path to which the extent belongs */
 };
 
 struct extent_map {
@@ -99,7 +99,7 @@ struct zone_map {
     uint64_t
         cum_extent_size; /* Cumulative size of all extents in 512B sectors */
     uint32_t zone_ctr;   /* number of zones that hold extents */
-    struct zone *zones; /* singly linked list of sorted extents in this zone */
+    struct zone zones[];
 };
 
 /* count for each file the number of extents */
@@ -140,7 +140,7 @@ struct control {
     uint8_t show_holes; /* cmd_line flag to show holes */
     uint8_t show_flags; /* cmd_line flag to show extent flags */
     uint8_t json_dump;  /* dump collected data as json */
-    char *json_file;    /* json file name to output data to */
+    char json_file[MAX_FILE_LENGTH];    /* json file name to output data to */
     uint8_t info;       /* cmd_line flag to show info */
     uint64_t fs_magic;  /* store the file system magic value */
 
@@ -190,14 +190,14 @@ struct control {
     uint8_t fpbench_streammap_set; /* zns.fpbench indicate if streammap set */
 
     struct zone_map *zonemap; /* track extents in zones with zone information */
-    void *fs_super_block; /* if parsed by the fs lib, can store the super block in the control */
+    struct file_counter_map
+        *file_counter_map; /* tracking extent counters per file */
+    /* void *fs_super_block; /1* if parsed by the fs lib, can store the super block in the control *1/ */
     void *fs_manager; /* any global file system related info can be set by the fs lib */
     fs_manager_cleanup fs_manager_cleanup; /* cleanup call to clean any fs manager related manager by the fs lib */
     fs_info_init fs_info_init; /* function pointer to set the fs_info in each extent by the respective FS lib */
     uint32_t fs_info_bytes; /* the FS lib must set the size in bytes of the fs_info in order for memory allocation and copyig to work correctly */
     fs_info_cleanup fs_info_cleanup; /* function pointer to cleanup the fs_info - free its memory */
-    struct file_counter_map
-        *file_counter_map; /* tracking extent counters per file */
 };
 
 extern struct control ctrl;

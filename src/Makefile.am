@@ -1,7 +1,7 @@
 ## Makefile.am
 
 AM_CPPFLAGS = -I$(top_srcdir)/include
-AM_CFLAGS = -O2 -Wall -Wextra -g -Wunused-parameter
+AM_CFLAGS = -O2 -Wall -Wextra -g -Wunused-parameter -fsanitize=address -fno-sanitize=vptr
 sbin_PROGRAMS = zns.fiemap zns.segmap zns.imap zns.fpbench
 
 zns_fiemap_SOURCES = fiemap.c fiemap.h
