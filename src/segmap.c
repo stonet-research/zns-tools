@@ -91,6 +91,7 @@ static void check_dir_init_ctrl() {
         ctrl.znsdev.nr_zones = get_nr_zones();
         ctrl.fs_manager = f2fs_fs_manager_init(ctrl.bdev.dev_name);
         ctrl.fs_info_init = (fs_info_init) f2fs_fs_info_init();
+        ctrl.fs_info_show = (fs_info_show) f2fs_fs_info_show();
         ctrl.fs_info_bytes = get_fs_info_bytes();
         ctrl.fs_info_cleanup = (fs_info_cleanup) f2fs_fs_info_cleanup();
     } else if (ctrl.fs_magic == BTRFS_MAGIC) {
@@ -209,42 +210,7 @@ static void collect_extents(char *path) {
     closedir(directory);
 }
 
-/*
- * Show the segment flags (type and valid blocks) for the specified segment
- *
- * @segment_id: segment to show flags of
- * @is_range: flag to show if SEGMENT RANGE is caller
- *
- * */
-static void show_segment_flags(uint32_t segment_id, uint8_t is_range) {
-    /* struct segment_manager *segman = (struct segment_manager *) ctrl.fs_info; */
-
-    /* REP(ctrl.show_only_stats, "+++++ TYPE: "); */
-    /* if (segman->segments[segment_id].type == CURSEG_HOT_DATA) { */
-    /*     REP(ctrl.show_only_stats, "CURSEG_HOT_DATA"); */
-    /* } else if (segman->segments[segment_id].type == CURSEG_WARM_DATA) { */
-    /*     REP(ctrl.show_only_stats, "CURSEG_WARM_DATA"); */
-    /* } else if (segman->segments[segment_id].type == CURSEG_COLD_DATA) { */
-    /*     REP(ctrl.show_only_stats, "CURSEG_COLD_DATA"); */
-    /* } else if (segman->segments[segment_id].type == CURSEG_HOT_NODE) { */
-    /*     REP(ctrl.show_only_stats, "CURSEG_HOT_NODE"); */
-    /* } else if (segman->segments[segment_id].type == CURSEG_WARM_NODE) { */
-    /*     REP(ctrl.show_only_stats, "CURSEG_WARM_NODE"); */
-    /* } else if (segman->segments[segment_id].type == CURSEG_COLD_NODE) { */
-    /*     REP(ctrl.show_only_stats, "CURSEG_COLD_NODE"); */
-    /* } */
-
-    /* REP(ctrl.show_only_stats, "  VALID BLOCKS: %3u", */
-    /*     segman->segments[segment_id].valid_blocks << F2FS_BLKSIZE_BITS >> */
-    /*         ctrl.sector_shift); */
-    /* if (is_range) { */
-    /*     REP(ctrl.show_only_stats, " per segment\n"); */
-    /* } else { */
-    /*     REP(ctrl.show_only_stats, "\n"); */
-    /* } */
-}
-
-static void show_segment_info(uint64_t segment_start) {
+static void show_segment_info(struct extent *extent, uint64_t segment_start) {
     if (ctrl.cur_segment != segment_start) {
         REP_UNDERSCORE
         REP_FORMATTER
@@ -254,9 +220,10 @@ static void show_segment_info(uint64_t segment_start) {
             segment_start, segment_start << ctrl.segment_shift,
             ((segment_start << ctrl.segment_shift) + ctrl.f2fs_segment_sectors),
             ctrl.f2fs_segment_sectors);
-        /* if (ctrl.procfs) { */
-        /*     show_segment_flags(segment_start, 0); */
-        /* } */
+        
+        // TODO: still need the procfs flag? any fs can enable and show here what it want, a bit iffy with the other functions that purely map to segments ...
+        ctrl.fs_info_show(extent->fs_info, ctrl.show_only_stats, ctrl.sector_shift);
+
         REP_FORMATTER
         ctrl.cur_segment = segment_start;
     }
@@ -393,7 +360,7 @@ static void show_consecutive_segments(struct extent *extent, uint64_t segment_st
 
     if (num_segments == 1) {
         /* The extent starts exactly at the segment beginning and ends somewhere in the next segment then we just want to show the 1st segment (2nd segment will be printed in the function after this) */
-        show_segment_info(segment_start);
+        show_segment_info(extent, segment_start);
         REP(ctrl.show_only_stats,
             "***** EXTENT:  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
             "  SIZE: %#-10" PRIx64 "  FILE: %50s  EXTID:  %d/%-5d\n",
@@ -417,9 +384,7 @@ static void show_consecutive_segments(struct extent *extent, uint64_t segment_st
         // they are contiguous ranges, they cannot have invalid blocks, for
         // which the function will print 512 4KiB blocks (all 4KiB blocks in
         // a segment) anyways
-        if (ctrl.procfs) {
-            show_segment_flags(segment_start, 1);
-        }
+        show_segment_info(extent, segment_start);
 
         REP_FORMATTER
         REP(ctrl.show_only_stats,
@@ -446,7 +411,7 @@ static void show_remainder_segment(struct extent *extent) {
     uint64_t remainder = extent->phy_blk + extent->len -
                          (segment_start << ctrl.segment_shift);
 
-    show_segment_info(segment_start);
+    show_segment_info(extent, segment_start);
     REP(ctrl.show_only_stats,
         "***** EXTENT:  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
         "  SIZE: %#-10" PRIx64 "  FILE: %50s  EXTID:  %d/%-5d\n",
@@ -588,7 +553,7 @@ static void show_segment_report() {
                     extent_end ==
                     (segment_start + (F2FS_SEGMENT_BYTES >> ctrl.sector_shift))) {
                 if (segment_id != ctrl.cur_segment) {
-                    show_segment_info(segment_id);
+                    show_segment_info(current->extent, segment_id);
                     ctrl.cur_segment = segment_id;
                     /* if (ctrl.show_class_stats && ctrl.procfs) { */
                     /*     set_segment_counters(segment_start >> ctrl.segment_shift, 1, */
@@ -615,7 +580,7 @@ static void show_segment_report() {
                             (current->extent->phy_blk &
                              ctrl.f2fs_segment_mask) >>
                             ctrl.segment_shift;
-                        show_segment_info(segment_start);
+                        show_segment_info(current->extent, segment_start);
                     }
                     show_beginning_segment(current->extent);
                     /* if (ctrl.show_class_stats && ctrl.procfs) { */

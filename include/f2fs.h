@@ -269,6 +269,7 @@ struct f2fs_inode {
 
 typedef void (*fs_manager_cleanup)();
 typedef void (*fs_info_init)();
+typedef void (*fs_info_show)(void *, uint8_t, unsigned int);
 typedef void (*fs_info_cleanup)();
 
 
@@ -335,6 +336,7 @@ struct f2fs_nat_entry *f2fs_get_inode_nat_entry(char *, uint32_t);
 struct f2fs_node *f2fs_get_node_block(char *, uint32_t);
 extern void f2fs_show_inode_info(struct f2fs_inode *);
 extern fs_info_init f2fs_fs_info_init();
+extern fs_info_show f2fs_fs_info_show();
 extern fs_info_cleanup f2fs_fs_info_cleanup();
 extern uint32_t get_fs_info_bytes();
 extern void *f2fs_fs_manager_init();
@@ -363,6 +365,13 @@ static inline int IS_INODE(struct f2fs_node *node) {
 #define MSG(fmt, ...)                                                          \
     do {                                                                       \
         printf(fmt, ##__VA_ARGS__);                                            \
+    } while (0)
+
+#define REP(n, fmt, ...)                                                       \
+    do {                                                                       \
+        if (n == 0) {                                                          \
+            printf(fmt, ##__VA_ARGS__);                                        \
+        }                                                                      \
     } while (0)
 
 #endif

@@ -126,6 +126,7 @@ struct file_counter_map {
 
 typedef void (*fs_manager_cleanup)();
 typedef void (*fs_info_init)();
+typedef void (*fs_info_show)(void *, uint8_t, unsigned int);
 typedef void (*fs_info_cleanup)();
 
 struct control {
@@ -196,6 +197,7 @@ struct control {
     void *fs_manager; /* any global file system related info can be set by the fs lib */
     fs_manager_cleanup fs_manager_cleanup; /* cleanup call to clean any fs manager related manager by the fs lib */
     fs_info_init fs_info_init; /* function pointer to set the fs_info in each extent by the respective FS lib */
+    fs_info_show fs_info_show; /* function pointer to print the fs_info fields by the FS lib */
     uint32_t fs_info_bytes; /* the FS lib must set the size in bytes of the fs_info in order for memory allocation and copyig to work correctly */
     fs_info_cleanup fs_info_cleanup; /* function pointer to cleanup the fs_info - free its memory */
 };

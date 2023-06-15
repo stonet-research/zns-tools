@@ -558,6 +558,37 @@ static void fs_info_initialize(void *fs_manager, void *fs_info, uint32_t segment
 
 extern fs_info_init f2fs_fs_info_init() { return &fs_info_initialize; }
 
+static void f2fs_show_segment(void *fs_info, uint8_t show_only_stats, unsigned int sector_shift) {
+    struct segment_info *seg_i = (struct segment_info *) fs_info;
+
+    REP(show_only_stats, "+++++ TYPE: ");
+    if (seg_i->type == CURSEG_HOT_DATA) {
+        REP(show_only_stats, "CURSEG_HOT_DATA");
+    } else if (seg_i->type == CURSEG_WARM_DATA) {
+        REP(show_only_stats, "CURSEG_WARM_DATA");
+    } else if (seg_i->type == CURSEG_COLD_DATA) {
+        REP(show_only_stats, "CURSEG_COLD_DATA");
+    } else if (seg_i->type == CURSEG_HOT_NODE) {
+        REP(show_only_stats, "CURSEG_HOT_NODE");
+    } else if (seg_i->type == CURSEG_WARM_NODE) {
+        REP(show_only_stats, "CURSEG_WARM_NODE");
+    } else if (seg_i->type == CURSEG_COLD_NODE) {
+        REP(show_only_stats, "CURSEG_COLD_NODE");
+    }
+
+    REP(show_only_stats, "  VALID BLOCKS: %3u\n",
+        seg_i->valid_blocks << F2FS_BLKSIZE_BITS >>
+            sector_shift);
+    // TODO: REMOVE RANGE SEGMENTS, just show each segment, should simplify segmap while loop as well
+    /* if (is_range) { */
+    /*     REP(show_only_stats, " per segment\n"); */
+    /* } else { */
+    /*     REP(show_only_stats, "\n"); */
+    /* } */
+}
+
+extern fs_info_show f2fs_fs_info_show() { return &f2fs_show_segment; }
+
 static void fs_info_clean(void *fs_info) {
     if (fs_info == NULL) {
         goto finish;

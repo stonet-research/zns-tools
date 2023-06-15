@@ -660,7 +660,7 @@ int get_extents(char *filename, int fd, struct stat *stats) {
                 /* free extent fs_info as it has been memcpy() */
                 free(extent->fs_info);
             } else {
-            add_extent_to_zone_list(*extent);
+                add_extent_to_zone_list(*extent);
             }
 
             increase_file_extent_counter(extent->file);
