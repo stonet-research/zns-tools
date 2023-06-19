@@ -313,3 +313,18 @@ For development, if using `gdb` to debug, simply configure with (prior to buildi
     --disable-shared \
     --disable-documentation
 ```
+
+We also recommend to enable the address sanitizer during compilation. For this simply modify the `lib/Makefile.am` and `src/Makefile.am` to have the `CFLAGS` equal to
+
+```bash
+# In lib/Makefile.am 
+libzns_tools_la_CFLAGS = -Wall -fsanitize=address -fno-sanitize=vptr
+
+libf2fs_la_CFLAGS = -Wall -fsanitize=address -fno-sanitize=vptr
+
+libjson_la_CFLAGS = -Wall -fsanitize=address -fno-sanitize=vptr
+
+
+# In src/Makefile.am
+AM_CFLAGS = -O0 -Wall -Wextra -g -Wunused-parameter -fsanitize=address -fno-sanitize=vptr
+```

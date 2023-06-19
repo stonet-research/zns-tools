@@ -427,7 +427,6 @@ void f2fs_show_inode_info(struct f2fs_inode *inode) {
     MSG("i_nid[4] (2x indirect): %u\n", inode->i_nid[4]); /* double indirect */
 }
 
-
 /*
  * Get the segment data from /proc/fs/f2fs/<device>/segment_bits
  * for more information about segments. Only get up to the highest
@@ -510,31 +509,24 @@ finish:
     return EXIT_SUCCESS;
 }
 
-/* initialize the segment manager into the control struct
- *
- * */
-void *init_fs_info(char *dev_name) {
-   struct segment_manager *segman;
+extern void *f2fs_fs_manager_init(char *dev_name) {
+    struct segment_manager *segman;
 
-   segman = calloc(1, sizeof(struct segment_manager));
-   segman->segments = calloc(1, sizeof (struct segment_info) * f2fs_sb.segment_count_main);
+    segman = calloc(1, sizeof(struct segment_manager) + sizeof (struct segment_info) * f2fs_sb.segment_count_main);
 
-   if (init_procfs_segment_bits(dev_name, f2fs_sb.segment_count_main, segman) == EXIT_FAILURE) {
+    if (init_procfs_segment_bits(dev_name, f2fs_sb.segment_count_main, segman) == EXIT_FAILURE) {
         goto cleanup;
-   }
+    }
 
-   // TODO: set the function pointer in ctrl to cleanup fs info
-
-   return segman;
+    return segman;
 
 cleanup:
-   free(segman->segments);
-   free(segman);
+    free(segman);
 
-   return NULL;
+    return NULL;
 }
 
-static void cleanup_fs_info(void *fs_info) {
+static void f2fs_fs_manager_clean(void *fs_info) {
     struct segment_manager *segman;
     if (fs_info == NULL) {
         goto finish;
@@ -542,11 +534,70 @@ static void cleanup_fs_info(void *fs_info) {
 
     segman = (struct segment_manager *) fs_info;
 
-    free(segman->segments);
     free(segman);
 
 finish:
    return;
 }
 
-extern fs_info_cleanup set_fs_info_cleanup() { return &cleanup_fs_info; }
+extern fs_manager_cleanup f2fs_fs_manager_cleanup() { return &f2fs_fs_manager_clean; }
+
+extern uint32_t get_fs_info_bytes() { return sizeof(struct segment_info); }
+
+static void fs_info_initialize(void *fs_manager, void *fs_info, uint32_t segment) {
+    struct segment_manager *segman = NULL;
+    struct segment_info *seg_i = NULL;
+
+    segman = (struct segment_manager *) fs_manager;
+    seg_i = (struct segment_info *) fs_info;
+
+    seg_i->id = segman->segments[segment].id;
+    seg_i->type = segman->segments[segment].type;
+    seg_i->valid_blocks = segman->segments[segment].valid_blocks;
+}
+
+extern fs_info_init f2fs_fs_info_init() { return &fs_info_initialize; }
+
+static void f2fs_show_segment(void *fs_info, uint8_t show_only_stats, unsigned int sector_shift) {
+    struct segment_info *seg_i = (struct segment_info *) fs_info;
+
+    REP(show_only_stats, "+++++ TYPE: ");
+    if (seg_i->type == CURSEG_HOT_DATA) {
+        REP(show_only_stats, "CURSEG_HOT_DATA");
+    } else if (seg_i->type == CURSEG_WARM_DATA) {
+        REP(show_only_stats, "CURSEG_WARM_DATA");
+    } else if (seg_i->type == CURSEG_COLD_DATA) {
+        REP(show_only_stats, "CURSEG_COLD_DATA");
+    } else if (seg_i->type == CURSEG_HOT_NODE) {
+        REP(show_only_stats, "CURSEG_HOT_NODE");
+    } else if (seg_i->type == CURSEG_WARM_NODE) {
+        REP(show_only_stats, "CURSEG_WARM_NODE");
+    } else if (seg_i->type == CURSEG_COLD_NODE) {
+        REP(show_only_stats, "CURSEG_COLD_NODE");
+    }
+
+    REP(show_only_stats, "  VALID BLOCKS: %3u\n",
+        seg_i->valid_blocks << F2FS_BLKSIZE_BITS >>
+            sector_shift);
+    // TODO: REMOVE RANGE SEGMENTS, just show each segment, should simplify segmap while loop as well
+    /* if (is_range) { */
+    /*     REP(show_only_stats, " per segment\n"); */
+    /* } else { */
+    /*     REP(show_only_stats, "\n"); */
+    /* } */
+}
+
+extern fs_info_show f2fs_fs_info_show() { return &f2fs_show_segment; }
+
+static void fs_info_clean(void *fs_info) {
+    if (fs_info == NULL) {
+        goto finish;
+    }
+
+    free(fs_info);
+
+finish:
+   return;
+}
+
+extern fs_info_cleanup f2fs_fs_info_cleanup() { return &fs_info_clean; }
