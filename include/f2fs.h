@@ -335,6 +335,7 @@ extern void f2fs_show_checkpoint();
 struct f2fs_nat_entry *f2fs_get_inode_nat_entry(char *, uint32_t);
 struct f2fs_node *f2fs_get_node_block(char *, uint32_t);
 extern void f2fs_show_inode_info(struct f2fs_inode *);
+extern fs_manager_cleanup f2fs_fs_manager_cleanup();
 extern fs_info_init f2fs_fs_info_init();
 extern fs_info_show f2fs_fs_info_show();
 extern fs_info_cleanup f2fs_fs_info_cleanup();

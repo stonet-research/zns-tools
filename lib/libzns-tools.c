@@ -567,19 +567,20 @@ int get_extents(char *filename, int fd, struct stat *stats) {
     fiemap->fm_length = (stats->st_blocks << 3); /* st_blocks is always 512B units, shift to bytes */
 
     /* (re)allocate the file_counter_map here as this function is always called for a single file */
-    if (ctrl.nr_files == 0) {
+    if (ctrl.file_counter_map == NULL) {
         ctrl.file_counter_map = calloc(1, sizeof(struct file_counter_map) + sizeof(struct file_counter));
     } else {
         temp = realloc(ctrl.file_counter_map, sizeof(struct file_counter_map) +
-                    sizeof(struct file_counter) * (ctrl.nr_files + 1));
-            if (temp == NULL) {
-                /* mem realloc failed */
-                free(ctrl.file_counter_map);
-                ERR_MSG("Failed memory allocation\n");
-                return EXIT_FAILURE;
-            }
-            ctrl.file_counter_map = temp;
-            temp = NULL;
+                sizeof(struct file_counter) * (ctrl.nr_files + 1));
+        if (temp == NULL) {
+            /* mem realloc failed */
+            free(ctrl.file_counter_map);
+            ERR_MSG("Failed memory allocation\n");
+            return EXIT_FAILURE;
+        }
+        ctrl.file_counter_map = temp;
+        temp = NULL;
+        memset(&ctrl.file_counter_map->files[ctrl.file_counter_map->file_ctr], 0, sizeof(struct file_counter));
     }
 
     do {
@@ -735,15 +736,19 @@ uint32_t get_file_extent_count(char *file) {
 }
 
 /*
+ * TODO: move this to libf2fs, since it is only f2fs
  * Increase the segment counts for a particular file
  *
  * @file: char * to file name (full path)
  *
  * */
 void increase_file_segment_counter(char *file, unsigned int num_segments,
-                                   unsigned int cur_segment, enum type type,
+                                   unsigned int cur_segment, void *fs_info,
                                    uint64_t zone_cap) {
     uint32_t i;
+
+    struct segment_info *seg_i = (struct segment_info *) fs_info;
+    enum type type = seg_i->type;
 
     for (i = 0; i < ctrl.file_counter_map->file_ctr; i++) {
         if (strncmp(ctrl.file_counter_map->files[i].file, file,

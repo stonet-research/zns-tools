@@ -109,6 +109,7 @@ struct file_counter {
     uint32_t ext_ctr;           /* extent counter for the file */
     uint32_t segment_ctr;       /* number of segments the file contained in */
     uint32_t zone_ctr;          /* number of zones the file is contained in */
+    /* For F2FS */
     uint32_t cold_ctr; /* number of the segments that are CURSEG_COLD_DATA */
     uint32_t warm_ctr; /* number of the segments that are CURSEG_WARM_DATA*/
     uint32_t hot_ctr;  /* number of the segments that are CURSEG_HOT_DATA */
@@ -117,6 +118,7 @@ struct file_counter {
                                  file */
     uint32_t last_zone;       /* track the last zone number so we don't increase
                                  counters for extents in the same zone */
+    /* void *fs_info; /1* other file system dependent data can be put here *1/ */
 };
 
 struct file_counter_map {
@@ -193,7 +195,7 @@ struct control {
     struct zone_map *zonemap; /* track extents in zones with zone information */
     struct file_counter_map
         *file_counter_map; /* tracking extent counters per file */
-    /* void *fs_super_block; /1* if parsed by the fs lib, can store the super block in the control *1/ */
+    void *fs_super_block; /* if parsed by the fs lib, can store the super block in the control */
     void *fs_manager; /* any global file system related info can be set by the fs lib */
     fs_manager_cleanup fs_manager_cleanup; /* cleanup call to clean any fs manager related manager by the fs lib */
     fs_info_init fs_info_init; /* function pointer to set the fs_info in each extent by the respective FS lib */
@@ -220,7 +222,7 @@ extern void map_extents(struct extent_map *);
 extern void show_extent_flags(uint32_t);
 extern uint32_t get_file_extent_count(char *);
 extern void increase_file_segment_counter(char *, unsigned int, unsigned int,
-                                          enum type, uint64_t);
+                                          void *, uint64_t);
 extern void set_super_block_info(struct f2fs_super_block);
 extern void set_fs_magic(char *);
 extern void init_ctrl(char *, int, struct stat *);
