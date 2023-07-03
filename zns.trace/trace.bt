@@ -15,7 +15,7 @@ BEGIN {
     }
 
     @ZONE_MASK = ~($2 - 1);
-    @logging = 0; // Set logging to 1 for debugging
+    @logging = 1; // Set logging to 1 for debugging
 }
 
 k:nvme_setup_cmd / ((struct request *)arg1)->q->disk->disk_name == str($1) / {
@@ -42,7 +42,7 @@ k:nvme_setup_cmd / ((struct request *)arg1)->q->disk->disk_name == str($1) / {
         @z_data_map[$zlbas, nvme_cmd_write] = @z_data_map[$zlbas, nvme_cmd_write] + $data_len; 
 
         if(@logging == 1) {
-            printf("w_cmd at <LBAS, ZONE, SIZE>: <%lld, %d, %d>\n", $secnum, $zlbas / $2, $data_len);
+            printf("w_cmd at <LBA, ZONE, SIZE>: <%lld, %d, %d>\n", $secnum, $zlbas / $2, $data_len);
         }
     }
 
@@ -56,7 +56,7 @@ k:nvme_setup_cmd / ((struct request *)arg1)->q->disk->disk_name == str($1) / {
         @z_data_map[$zlbas, nvme_cmd_read] = @z_data_map[$zlbas, nvme_cmd_read] + $data_len; 
 
         if(@logging == 1) {
-            printf("r_cmd at <LBAS, ZONE, SIZE>: <%ld, %d, %d>\n", $secnum, $zlbas / $2, $data_len);
+            printf("r_cmd at <LBA, ZONE, SIZE>: <%ld, %d, %d>\n", $secnum, $zlbas / $2, $data_len);
         }
     }
 
@@ -67,11 +67,11 @@ k:nvme_setup_cmd / ((struct request *)arg1)->q->disk->disk_name == str($1) / {
         $zlbas = ($secnum & @ZONE_MASK);
 
         if(@logging == 1 && $cmd == REQ_OP_DRV_OUT) {
-            printf("reset_cmd (passthrough mode) <LBAS, ZONE>: <%ld, %d>\n", $secnum, $zlbas / $2);
+            printf("reset_cmd (passthrough mode) <LBA, ZONE>: <%ld, %d>\n", $secnum, $zlbas / $2);
         }
 
         if(@logging == 1 && $cmd != REQ_OP_DRV_OUT) {
-            printf("reset_cmd <LBAS, ZONE>: <%ld, %d>\n", $secnum, $zlbas / $2);
+            printf("reset_cmd <LBA, ZONE>: <%ld, %d>\n", $secnum, $zlbas / $2);
         }
 
         @z_reset_ctr_map[$zlbas]++;
@@ -109,6 +109,10 @@ k:nvme_complete_rq / ((struct request *)arg0)->q->disk->disk_name == str($1) / {
             printf("completed reset_cmd zone %ld in (usec): %d\n", $zlbas / $2, @z_reset_lat_map[$zlbas, @z_reset_ctr_map[$zlbas]] / 1000);
         }
     }
+}
+
+// A file that is being deleted
+k:vfs_unlink {
 }
 
 END {

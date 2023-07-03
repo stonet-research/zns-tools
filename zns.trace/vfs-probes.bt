@@ -1,0 +1,54 @@
+#include <linux/path.h>
+#include <linux/fs.h>
+#include <linux/fcntl.h>
+
+BEGIN 
+{
+    // TODO: do we want to track some global parent dir (e.g., only a single file system, or probably easier we do this in post processing)
+    @logging = 1; // Set logging to 1 for debugging
+}
+
+k:vfs_open
+{
+    $dentry = (struct dentry*)((struct path *)arg0)->dentry;
+    $d_inode = (struct inode *)$dentry->d_inode;
+
+    if (@logging) {
+        printf("vfs_open <nsecs, pid, i_ino>: <%lu, %lu, %lu>\n", nsecs, pid, $d_inode->i_ino);
+    }
+
+}
+
+k:vfs_create
+{
+    $inode = (struct inode *)arg1;
+    if (@logging) {
+        printf("vfs_create <nsecs, pid, i_ino>: <%lu, %lu, %lu>\n", nsecs, pid, $inode->i_ino);
+    }
+
+}
+
+k:do_fcntl
+{
+    $cmd = (int64)arg1;
+
+    if ($cmd == F_SET_RW_HINT) {
+        $f_inode = (struct inode *) ((struct file *)arg3)->f_inode;
+        // annotate rw_hint as uptr, as it is a userspace pointer which bpftrace cannot infer
+        $argp = uptr(arg2);
+        printf("fcntl_rw_hint <nsecs, pid, i_ino, rw_hint>: <%lu, %lu, %lu, %lu>\n", nsecs, pid, $f_inode->i_ino, *$argp);
+    }
+}
+
+k:vfs_unlink 
+{
+    $dentry = (struct dentry *)arg2;
+    $inode = (struct inode *)$dentry->d_inode;
+    if (@logging) {
+        printf("vfs_unlink <nsecs, pid, i_ino>: <%lu, %lu, %lu>\n", nsecs, pid, $inode->i_ino);
+    }
+}
+
+END {
+    clear(@logging);
+}
