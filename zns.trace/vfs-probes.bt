@@ -5,7 +5,6 @@
 BEGIN 
 {
     // TODO: do we want to track some global parent dir (e.g., only a single file system, or probably easier we do this in post processing)
-    @logging = 1; // Set logging to 1 for debugging
 }
 
 k:vfs_open
@@ -13,19 +12,13 @@ k:vfs_open
     $dentry = (struct dentry*)((struct path *)arg0)->dentry;
     $d_inode = (struct inode *)$dentry->d_inode;
 
-    if (@logging) {
-        printf("vfs_open <nsecs, pid, i_ino>: <%lu, %lu, %lu>\n", nsecs, pid, $d_inode->i_ino);
-    }
-
+    printf("vfs_open <nsecs, pid, i_ino>: <%lu, %lu, %lu>\n", nsecs, pid, $d_inode->i_ino);
 }
 
 k:vfs_create
 {
     $inode = (struct inode *)arg1;
-    if (@logging) {
         printf("vfs_create <nsecs, pid, i_ino>: <%lu, %lu, %lu>\n", nsecs, pid, $inode->i_ino);
-    }
-
 }
 
 k:do_fcntl
@@ -40,15 +33,27 @@ k:do_fcntl
     }
 }
 
+k:vfs_fsync
+{
+    $f_inode = (struct inode *) ((struct file *)arg0)->f_inode;
+    printf("vfs_fsync <nsecs, pid, i_ino>: <%lu, %lu, %lu>\n", nsecs, pid, $f_inode->i_ino);
+}
+
+k:vfs_rename
+{
+    $renamedata = (struct renamedata *)arg0;
+    $old_dentry = (struct dentry *)$renamedata->old_dentry;
+    $d_inode = (struct inode *)$old_dentry->d_inode;
+
+    printf("vfs_rename <nsecs, pid, i_ino>: <%lu, %lu, %lu>\n", nsecs, pid, $d_inode->i_ino);
+}
+
 k:vfs_unlink 
 {
     $dentry = (struct dentry *)arg2;
     $inode = (struct inode *)$dentry->d_inode;
-    if (@logging) {
-        printf("vfs_unlink <nsecs, pid, i_ino>: <%lu, %lu, %lu>\n", nsecs, pid, $inode->i_ino);
-    }
+    printf("vfs_unlink <nsecs, pid, i_ino>: <%lu, %lu, %lu>\n", nsecs, pid, $inode->i_ino);
 }
 
 END {
-    clear(@logging);
 }
