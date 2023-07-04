@@ -16,7 +16,7 @@ k:vfs_open
     @[func, nsecs, pid, $d_inode->i_ino] = 0; 
 
     if (@logging) {
-        printf("vfs_open <nsecs, pid, i_ino>: <%lu, %lu, %lu>\n", nsecs, pid, $d_inode->i_ino);
+        printf("%s <nsecs, pid, i_ino>: <%lu, %lu, %lu>\n", func, nsecs, pid, $d_inode->i_ino);
     }
 }
 
@@ -26,7 +26,7 @@ k:vfs_create
     @[func, nsecs, pid, $inode->i_ino] = 0; 
 
     if (@logging) {
-        printf("vfs_create <nsecs, pid, i_ino>: <%lu, %lu, %lu>\n", nsecs, pid, $inode->i_ino);
+        printf("%s <nsecs, pid, i_ino>: <%lu, %lu, %lu>\n", func, nsecs, pid, $inode->i_ino);
     }
 }
 
@@ -41,7 +41,7 @@ k:do_fcntl
         @[func, nsecs, pid, $f_inode->i_ino] = *$argp;
 
         if (@logging) {
-            printf("fcntl_rw_hint <nsecs, pid, i_ino, rw_hint>: <%lu, %lu, %lu, %lu>\n", nsecs, pid, $f_inode->i_ino, *$argp);
+            printf("%s <nsecs, pid, i_ino, rw_hint>: <%lu, %lu, %lu, %lu>\n", func, nsecs, pid, $f_inode->i_ino, *$argp);
         }
     }
 }
@@ -52,7 +52,7 @@ k:vfs_fsync
     @[func, nsecs, pid, $f_inode->i_ino] = 0; 
 
     if (@logging) {
-        printf("vfs_fsync <nsecs, pid, i_ino>: <%lu, %lu, %lu>\n", nsecs, pid, $f_inode->i_ino);
+        printf("%s <nsecs, pid, i_ino>: <%lu, %lu, %lu>\n", func, nsecs, pid, $f_inode->i_ino);
     }
 }
 
@@ -64,7 +64,7 @@ k:vfs_rename
     @[func, nsecs, pid, $d_inode->i_ino] = 0; 
 
     if (@logging) {
-        printf("vfs_rename <nsecs, pid, i_ino>: <%lu, %lu, %lu>\n", nsecs, pid, $d_inode->i_ino);
+        printf("%s <nsecs, pid, i_ino>: <%lu, %lu, %lu>\n", func, nsecs, pid, $d_inode->i_ino);
     }
 }
 
@@ -75,7 +75,7 @@ k:vfs_unlink
     @[func, nsecs, pid, $inode->i_ino] = 0; 
 
     if (@logging) {
-        printf("vfs_unlink <nsecs, pid, i_ino>: <%lu, %lu, %lu>\n", nsecs, pid, $inode->i_ino);
+        printf("%s <nsecs, pid, i_ino>: <%lu, %lu, %lu>\n", func, nsecs, pid, $inode->i_ino);
     }
 }
 

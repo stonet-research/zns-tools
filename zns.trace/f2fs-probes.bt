@@ -1,0 +1,69 @@
+#include <linux/f2fs_fs.h>
+#include "f2fs.h"
+
+// TODO: remove comment, to run in script sudo /home/user/src/bpftrace/build/src/bpftrace -I include/f2fs.h f2fs-probes.bt
+
+BEGIN 
+{
+    @logging = 1;
+}
+
+/* Reclassifies to cold data - printed independent of the original temperature
+ * post-processing can identify if it was a reclassification
+ */
+k:move_data_page,
+k:move_data_block
+{
+    $inode = (struct inode *)arg0;
+
+    @move_data[nsecs, pid] = $inode->i_ino; 
+
+    if (@logging) {
+        printf("%s <nsecs, pid, i_ino>: <%lu, %lu, %lu>\n", func, nsecs, pid, $inode->i_ino);
+    }
+}
+
+/* Map format:
+ * func[nanoseconds, pid, inode_nr] = temperature (CURSEG_{HOT/WARM/COLD}_DATA)
+ */
+k:f2fs_allocate_data_block
+{
+    $type = arg5;
+    $fio = (struct f2fs_io_info *)sarg6;
+    $i_ino = $fio->ino;
+
+    @f2fs_allocate_data_block[nsecs, pid, $i_ino] = $type; 
+
+    if (@logging) {
+        printf("%s <nsecs, pid, i_ino, type>: <%lu, %lu, %lu, %u>\n", func, nsecs, pid, $i_ino, $type);
+    }
+}
+
+k:f2fs_do_write_data_page
+{
+    $fio = (struct f2fs_io_info *)arg0;
+    $page = (struct page *)$fio->page;
+    $host = (struct inode *)((struct address_space*)$page->mapping)->host;
+
+    @f2fs_do_write_data_page[nsecs, pid, $host->i_ino] = $fio->type; 
+
+    if (@logging) {
+        printf("%s <nsecs, pid, i_ino, type>: <%lu, %lu, %lu, %u>\n", func, nsecs, pid, $host->i_ino, $fio->type);
+    }
+}
+
+interval:s:1
+{
+	print(@move_data);
+    print(@f2fs_allocate_data_block);
+    print(@f2fs_do_write_data_page);
+
+	clear(@move_data);
+    clear(@f2fs_allocate_data_block);
+    clear(@f2fs_do_write_data_page);
+}
+
+END
+{
+    clear(@logging);
+}
