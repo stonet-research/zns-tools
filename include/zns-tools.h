@@ -26,6 +26,8 @@
 
 #include <linux/blkzoned.h>
 
+#include <json-c/json.h>
+
 #define F2FS_SEGMENT_BYTES 2097152
 
 #define MAX_FILE_LENGTH 50
@@ -143,7 +145,8 @@ struct control {
     uint8_t show_holes; /* cmd_line flag to show holes */
     uint8_t show_flags; /* cmd_line flag to show extent flags */
     uint8_t json_dump;  /* dump collected data as json */
-    char json_file[MAX_FILE_LENGTH];    /* json file name to output data to */
+    char *json_file;    /* json file name to output data to */
+    json_object *json_root; /* root json object for data output */
     uint8_t info;       /* cmd_line flag to show info */
     uint64_t fs_magic;  /* store the file system magic value */
 
