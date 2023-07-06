@@ -19,6 +19,14 @@ static char *uint32_to_hex_string_cast(uint32_t value) {
     return buf;
 }
 
+static char *uint32_to_string_cast(uint32_t value) {
+    char *buf = calloc(1, sizeof(uint32_t) + 1);
+
+    snprintf(buf, sizeof(uint32_t), "%d", value);
+
+    return buf;
+}
+
 static json_object *json_get_bdev(struct bdev bdev) {
     char *value;
     json_object *dev = json_object_new_object();
@@ -109,7 +117,9 @@ static int init_json_file() {
     return EXIT_SUCCESS;
 }
 
-static int json_dump_zone_info(uint32_t zone) {
+static json_object *json_get_zone_info(uint32_t zone) {
+    json_object *zone_json = json_object_new_object();
+    char *value;
     unsigned long long start_sector = 0;
     struct blk_zone_report *hdr = NULL;
 
@@ -117,7 +127,7 @@ static int json_dump_zone_info(uint32_t zone) {
 
     int fd = open(ctrl.znsdev.dev_path, O_RDONLY);
     if (fd < 0) {
-        return EXIT_FAILURE;
+        return NULL;
     }
 
     hdr = calloc(1, sizeof(struct blk_zone_report) + sizeof(struct blk_zone));
@@ -126,8 +136,37 @@ static int json_dump_zone_info(uint32_t zone) {
 
     if (ioctl(fd, BLKREPORTZONE, hdr) < 0) {
         ERR_MSG("getting Zone Info\n");
-        return EXIT_FAILURE;
+        return NULL;
     }
+
+    value = uint64_to_hex_string_cast(hdr->zones[0].start >> ctrl.zns_sector_shift);
+    json_object_object_add(zone_json, "lbas", json_object_new_string(value));
+    free(value);
+
+    value = uint64_to_hex_string_cast((hdr->zones[0].start >> ctrl.zns_sector_shift) +
+        (hdr->zones[0].capacity >> ctrl.zns_sector_shift));
+    json_object_object_add(zone_json, "lbae", json_object_new_string(value));
+    free(value);
+
+    value = uint64_to_hex_string_cast(hdr->zones[0].capacity >> ctrl.zns_sector_shift);
+    json_object_object_add(zone_json, "cap", json_object_new_string(value));
+    free(value);
+
+    value = uint64_to_hex_string_cast(hdr->zones[0].wp >> ctrl.zns_sector_shift);
+    json_object_object_add(zone_json, "wp", json_object_new_string(value));
+    free(value);
+
+    value = uint64_to_hex_string_cast(hdr->zones[0].len >> ctrl.zns_sector_shift);
+    json_object_object_add(zone_json, "size", json_object_new_string(value));
+    free(value);
+
+    value = uint32_to_hex_string_cast(hdr->zones[0].cond << 4);
+    json_object_object_add(zone_json, "state", json_object_new_string(value));
+    free(value);
+
+    value = uint32_to_hex_string_cast(ctrl.znsdev.zone_mask);
+    json_object_object_add(zone_json, "mask", json_object_new_string(value));
+    free(value);
 
     /* MSG("\n============ ZONE %d ============\n", zone); */
     /* MSG("LBAS: 0x%06llx  LBAE: 0x%06llx  CAP: 0x%06llx  WP: 0x%06llx  SIZE: " */
@@ -145,10 +184,12 @@ static int json_dump_zone_info(uint32_t zone) {
     free(hdr);
     hdr = NULL;
 
-    return EXIT_SUCCESS;
+    return zone_json;
 }
 
-int json_dump_f2fs_data(struct zone_map *zonemap) { 
+/* F2FS specific report of file mappings similarly results in a different 
+ * json data for the segment info, which is dumped by this function */
+static int json_dump_f2fs_zonemap() {
     struct node *current;
     uint32_t i = 0;
     struct segment_info *seg_i; 
@@ -158,16 +199,8 @@ int json_dump_f2fs_data(struct zone_map *zonemap) {
         ctrl.start_zone * ctrl.znsdev.zone_size - ctrl.znsdev.zone_size;
     uint64_t end_lba =
         (ctrl.end_zone + 1) * ctrl.znsdev.zone_size - ctrl.znsdev.zone_size;
-
-    if (init_json_file() == EXIT_FAILURE)
-        return EXIT_FAILURE;
-
-    // TODO: move this code to functions
-    if (json_object_to_file(ctrl.json_file, ctrl.json_root) == EXIT_FAILURE)
-        ERR_MSG("Failed saving json data to %s\n", ctrl.json_file);
-
-    // cleanup and exit
-    json_object_put(ctrl.json_root);
+    json_object *zonemap = json_object_new_object();
+    json_object *zone;
 
     for (i = 0; i < ctrl.zonemap->nr_zones; i++) {
         if (ctrl.zonemap->zones[i].extent_ctr == 0) {
@@ -175,6 +208,7 @@ int json_dump_f2fs_data(struct zone_map *zonemap) {
         }
 
         current = ctrl.zonemap->zones[i].extents_head;
+        zone = json_object_new_object();
 
         while (current) {
             segment_id = (current->extent->phy_blk & ctrl.f2fs_segment_mask) >>
@@ -189,10 +223,7 @@ int json_dump_f2fs_data(struct zone_map *zonemap) {
 
             if (current_zone != current->extent->zone) {
                 current_zone = current->extent->zone;
-                if (!ctrl.show_only_stats) {
-                    // TODO: first nesting of json with zone info
-                    json_dump_zone_info(current_zone);
-                }
+                json_object_object_add(zone, "zone_info", json_get_zone_info(current_zone));
             }
 
             /* uint64_t segment_start = */
@@ -279,7 +310,27 @@ int json_dump_f2fs_data(struct zone_map *zonemap) {
 
             current = current->next;
         }
+
+        char *value = uint32_to_string_cast(current_zone);
+        json_object_object_add(zonemap, value, zone);
+        free(value);
     }
+
+    json_object_object_add(ctrl.json_root, "zonemap", zonemap);
+
+    return EXIT_SUCCESS;    
+}
+
+int json_dump_data() { 
+    if (init_json_file() == EXIT_FAILURE)
+        return EXIT_FAILURE;
+
+    json_dump_f2fs_zonemap();
+
+    if (json_object_to_file(ctrl.json_file, ctrl.json_root) == EXIT_FAILURE)
+        ERR_MSG("Failed saving json data to %s\n", ctrl.json_file);
+
+    json_object_put(ctrl.json_root);
 
     return EXIT_SUCCESS; 
 }

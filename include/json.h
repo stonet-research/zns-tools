@@ -3,5 +3,5 @@
 
 #include "zns-tools.h"
 
-extern int json_dump_f2fs_data(struct zone_map *);
+extern int json_dump_data();
 #endif

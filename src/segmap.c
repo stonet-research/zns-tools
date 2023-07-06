@@ -749,7 +749,7 @@ int main(int argc, char *argv[]) {
 
     if (ctrl.fs_magic == F2FS_MAGIC) {
         if (ctrl.json_dump)
-            json_dump_f2fs_data(ctrl.zonemap);
+            json_dump_data(ctrl.zonemap);
         else 
             show_segment_report();
 
