@@ -632,6 +632,7 @@ int main(int argc, char *argv[]) {
     memset(&segmap_man, 0, sizeof(struct segmap_manager));
     ctrl.exclude_flags = FIEMAP_EXTENT_DATA_INLINE;
     ctrl.show_holes = 1; /* holes only apply to Btrfs */
+    ctrl.argv = argv[0];
 
     while ((c = getopt(argc, argv, "d:hil:ws:e:pz:conj:")) != -1) {
         switch (c) {

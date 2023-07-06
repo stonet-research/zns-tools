@@ -6,6 +6,10 @@ The blow figures visualizes the organization of the `zns-tools`, with the intera
 F2FS file system, Linux kernel, and the ZNS device.
 ![zns-tools-visual](meta/zns-tools.png)
 
+## Requirements
+
+// TODO: need json-c and bpf 
+
 ## Compiling and Running
 
 Compiling will check system requirements and notify of any missing/unsupported header files.

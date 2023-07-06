@@ -3,26 +3,89 @@
 #include <string.h>
 #include <time.h>
 
-static char *ul_to_char_char_cast(unsigned long value) {
-    char *buf = calloc(1, sizeof(unsigned long) + 1);
+static char *uint64_to_hex_string_cast(uint64_t value) {
+    char *buf = calloc(1, sizeof(uint64_t) + 8);
 
-    snprintf(buf, sizeof(unsigned long), "%lu", value);
+    snprintf(buf, sizeof(uint64_t) + 7, "0x%" PRIx64 "", value);
 
     return buf;
+}
+
+static char *uint32_to_hex_string_cast(uint32_t value) {
+    char *buf = calloc(1, sizeof(uint32_t) + 8);
+
+    snprintf(buf, sizeof(uint32_t) + 7, "0x%" PRIx32 "", value);
+
+    return buf;
+}
+
+static json_object *json_get_bdev(struct bdev bdev) {
+    char *value;
+    json_object *dev = json_object_new_object();
+
+    json_object_object_add(dev, "dev_name", json_object_new_string(bdev.dev_name));
+    json_object_object_add(dev, "dev_path", json_object_new_string(bdev.dev_path));
+    json_object_object_add(dev, "link_name", json_object_new_string(bdev.link_name));
+    json_object_object_add(dev, "is_zoned", json_object_new_boolean(bdev.is_zoned));
+
+    if (bdev.is_zoned) {
+        json_object_object_add(dev, "nr_zones", json_object_new_int(bdev.nr_zones));
+        json_object_object_add(dev, "zone_size", json_object_new_int(bdev.zone_size));
+
+        value = uint32_to_hex_string_cast(bdev.zone_mask);
+        json_object_object_add(dev, "zone_mask", json_object_new_string(value));
+        free(value);
+
+        json_object_object_add(dev, "sector_size", json_object_new_int(ctrl.sector_size));
+        json_object_object_add(dev, "sector_shift", json_object_new_int(ctrl.sector_shift));
+    }
+
+    return dev;
+}
+
+static json_object *json_get_fs_info() {
+    char *value;
+    json_object *fs = json_object_new_object();
+
+    value = uint64_to_hex_string_cast(ctrl.fs_magic);
+    json_object_object_add(fs, "fs_magic", json_object_new_string(value));
+    free(value);
+
+    if (ctrl.fs_magic == F2FS_MAGIC) {
+        json_object_object_add(fs, "fs", json_object_new_string("F2FS"));
+        json_object_object_add(fs, "f2fs_segment_sectors", json_object_new_double(ctrl.f2fs_segment_sectors));
+        json_object_object_add(fs, "f2fs_segment_shift", json_object_new_int(ctrl.segment_shift));
+
+        value = uint64_to_hex_string_cast(ctrl.f2fs_segment_mask);
+        json_object_object_add(fs, "f2fs_segment_mask", json_object_new_string(value));
+        free(value);
+    } else if (ctrl.fs_magic == BTRFS_MAGIC) {
+        json_object_object_add(fs, "fs", json_object_new_string("Btrfs"));
+    }
+
+     return fs;
 } 
 
-static int json_dump_ctrl_config() {
-    /* json_object *config = json_object_new_object(); */
+static json_object *json_get_ctrl_config() {
+    json_object *config, *dev, *fs;
 
-    /* json_object_object_add(config, "config", ); */
+    config = json_object_new_object();
 
-    /* json_object_object_add(ctrl.json_root, ""); */
+    if (ctrl.multi_dev) {
+        dev = json_get_bdev(ctrl.bdev);
+        json_object_object_add(config, "dev-1", dev);
+    } 
 
-    return EXIT_SUCCESS;
+    dev = json_get_bdev(ctrl.znsdev);
+    json_object_object_add(config, "dev-2", dev);
+
+    fs = json_get_fs_info();
+    json_object_object_add(config, "filesystem", fs);
+
+    return config;
 }
 
 static int init_json_file() {
-    char *value; /* json needs a string so we cast all values into this and keep freeing the memory after adding it to the json object */
     json_object *info;
     struct timespec ts;
 
@@ -32,16 +95,16 @@ static int init_json_file() {
         ERR_MSG("Failed setting json output root object\n");
 
     info = json_object_new_object();
+
+    json_object_object_add(info, "program", json_object_new_string(ctrl.argv));
    
     // TODO: What time do we need? realtime format with day...?
     clock_gettime(CLOCK_REALTIME, &ts);
 
-    value = ul_to_char_char_cast(ts.tv_sec);
-    json_object_object_add(info, "time", json_object_new_string(value));
-    free(value);
+    json_object_object_add(info, "time", json_object_new_uint64(ts.tv_sec));
+    json_object_object_add(info, "config", json_get_ctrl_config());
 
     json_object_object_add(ctrl.json_root, "info", info);
-    json_dump_ctrl_config();
     
     return EXIT_SUCCESS;
 }

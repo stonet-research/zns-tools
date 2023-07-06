@@ -134,9 +134,7 @@ typedef void (*fs_info_show)(void *, uint8_t, unsigned int);
 typedef void (*fs_info_cleanup)();
 
 struct control {
-    /* char *filename;     /1* full file name and path to map *1/ */
-    /* int fd;             /1* file descriptor of the file to be mapped *1/ */
-    /* struct stat *stats; /1* statistics from fstat() call *1/ */
+    char *argv; /* program name being run */
     struct bdev bdev;   /* block device file is located on */
     struct bdev znsdev; /* additional ZNS device if file F2FS reporst file on
                             prior bdev */
