@@ -179,7 +179,7 @@ static json_object *json_get_zone_info(uint32_t zone) {
 static json_object *json_get_segment_info(struct extent *extent, uint64_t segment_start) {
     struct segment_info *seg_i = (struct segment_info *) extent->fs_info;
     char *value;
-    struct json_object *segment = json_object_new_object();
+    json_object *segment = json_object_new_object();
 
     value = uint64_to_hex_string_cast(segment_start << ctrl.segment_shift);
     json_object_object_add(segment, "pbas", json_object_new_string(value));
@@ -223,7 +223,7 @@ static json_object *json_get_segment_info(struct extent *extent, uint64_t segmen
 
 static json_object *json_get_extent_info(struct extent *extent) {
     char *value;
-    struct json_object *ext = json_object_new_object();
+    json_object *ext = json_object_new_object();
 
     json_object_object_add(ext, "file", json_object_new_string(extent->file));
 
@@ -243,6 +243,118 @@ static json_object *json_get_extent_info(struct extent *extent) {
     json_object_object_add(ext, "total_exts", json_object_new_int(get_file_extent_count(extent->file)));
 
     return ext;
+}
+
+static json_object *json_get_beginning_segment_extent_info(struct extent *extent) {
+    char *value;
+    json_object *ext = json_object_new_object();
+    uint64_t segment_start =
+        (extent->phy_blk & ctrl.f2fs_segment_mask);
+    uint64_t segment_end = segment_start + (ctrl.f2fs_segment_sectors);
+
+    json_object_object_add(ext, "file", json_object_new_string(extent->file));
+
+    value = uint64_to_hex_string_cast(extent->phy_blk);
+    json_object_object_add(ext, "pbas", json_object_new_string(value));
+    free(value);
+
+    value = uint64_to_hex_string_cast(segment_end);
+    json_object_object_add(ext, "pbae", json_object_new_string(value));
+    free(value);
+
+    value = uint64_to_hex_string_cast(segment_end - extent->phy_blk);
+    json_object_object_add(ext, "size", json_object_new_string(value));
+    free(value);
+
+    json_object_object_add(ext, "ext_nr", json_object_new_int(extent->ext_nr + 1));
+    json_object_object_add(ext, "total_exts", json_object_new_int(get_file_extent_count(extent->file)));
+
+    return ext;
+}
+
+/* function is only for an extent that occupies the entire segment (up to the last LBA) */
+static void json_add_single_segment_extent_info(struct extent *extent, uint64_t segment_start, json_object *root) {
+    char *value;
+    json_object *ext;
+
+    value = uint32_to_string_cast(segment_start);
+    json_object_object_add(root, value, json_get_segment_info(extent, segment_start));
+    free(value);
+
+    ext = json_object_new_object();
+
+    json_object_object_add(ext, "file", json_object_new_string(extent->file));
+
+    value = uint64_to_hex_string_cast(segment_start);
+    json_object_object_add(ext, "pbas", json_object_new_string(value));
+    free(value);
+
+    value = uint64_to_hex_string_cast(segment_start + ctrl.f2fs_segment_sectors);
+    json_object_object_add(ext, "pbae", json_object_new_string(value));
+    free(value);
+
+    value = uint64_to_hex_string_cast(ctrl.f2fs_segment_sectors);
+    json_object_object_add(ext, "size", json_object_new_string(value));
+    free(value);
+
+    json_object_object_add(ext, "ext_nr", json_object_new_int(extent->ext_nr + 1));
+    json_object_object_add(ext, "total_exts", json_object_new_int(get_file_extent_count(extent->file)));
+
+    /* only a single extent in the entire segment */
+    json_object_object_add(root, "1", ext);
+}
+
+static void json_add_consecutive_segments_extent_info(struct extent *extent, uint64_t segment_start, json_object *root) {
+    uint64_t segment_end =
+        ((extent->phy_blk + extent->len) &
+         ctrl.f2fs_segment_mask) >>
+        ctrl.segment_shift;
+    uint64_t num_segments = segment_end - segment_start;
+
+    if (num_segments == 1) {
+        /* The extent starts exactly at the segment beginning and ends somewhere in the next segment then we just want to show the 1st segment */
+        json_add_single_segment_extent_info(extent, segment_start, root);
+    } else {
+        for (uint32_t cur = segment_start; cur < segment_end - 1; cur += ctrl.f2fs_segment_sectors) {
+            json_add_single_segment_extent_info(extent, segment_start, root);
+        }
+    }
+}
+
+static void json_add_remainder_segment_extent_info(struct extent *extent, json_object *root) {
+    uint64_t segment_start =
+        ((extent->phy_blk + extent->len) & ctrl.f2fs_segment_mask) >>
+        ctrl.segment_shift;
+    uint64_t remainder = extent->phy_blk + extent->len -
+                         (segment_start << ctrl.segment_shift);
+    char *value;
+    json_object *ext;
+
+    value = uint32_to_string_cast(segment_start);
+    json_object_object_add(root, value, json_get_segment_info(extent, segment_start));
+    free(value);
+
+    ext = json_object_new_object();
+
+    json_object_object_add(ext, "file", json_object_new_string(extent->file));
+
+    value = uint64_to_hex_string_cast(segment_start << ctrl.segment_shift);
+    json_object_object_add(ext, "pbas", json_object_new_string(value));
+    free(value);
+
+    value = uint64_to_hex_string_cast((segment_start << ctrl.segment_shift) + remainder);
+    json_object_object_add(ext, "pbae", json_object_new_string(value));
+    free(value);
+
+    value = uint64_to_hex_string_cast(remainder);
+    json_object_object_add(ext, "size", json_object_new_string(value));
+    free(value);
+
+    json_object_object_add(ext, "ext_nr", json_object_new_int(extent->ext_nr + 1));
+    json_object_object_add(ext, "total_exts", json_object_new_int(get_file_extent_count(extent->file)));
+
+    /* only a single extent in the entire segment */
+    json_object_object_add(root, "1", ext);
 }
 
 /* F2FS specific report of file mappings similarly results in a different 
@@ -292,15 +404,6 @@ static int json_dump_f2fs_zonemap() {
                 (current->extent->phy_blk & ctrl.f2fs_segment_mask);
             uint64_t extent_end =
                 current->extent->phy_blk + current->extent->len;
-            uint64_t segment_end = ((current->extent->phy_blk +
-                        current->extent->len) &
-                    ctrl.f2fs_segment_mask) >>
-                ctrl.segment_shift;
-
-            /* Can be zero if file starts and ends in same segment therefore + 1 for
-             * current segment */
-            uint64_t num_segments =
-                segment_end - (segment_start >> ctrl.segment_shift) + 1;
 
             /* if the beginning of the extent and the ending of the extent are in
              * the same segment */
@@ -318,42 +421,39 @@ static int json_dump_f2fs_zonemap() {
                 value = uint32_to_string_cast(extents);
                 json_object_object_add(zone_segments, value, json_get_extent_info(current->extent));
                 free(value);
+            } else {
+                /* Else the extent spans across multiple segments, so we need to break it up */
+
+                /* part 1: the beginning of extent to end of that single segment */
+                if (current->extent->phy_blk != segment_start) {
+                    if (segment_id != ctrl.cur_segment) {
+                        uint64_t segment_start =
+                            (current->extent->phy_blk &
+                             ctrl.f2fs_segment_mask) >>
+                            ctrl.segment_shift;
+                        value = uint32_to_string_cast(segment_id);
+                        json_object_object_add(zone_segments, value, json_get_segment_info(current->extent, segment_start));
+                        free(value);
+                    }
+                    value = uint32_to_string_cast(segment_id);
+                    json_object_object_add(zone_segments, value, json_get_beginning_segment_extent_info(current->extent));
+                    free(value);
+                    segment_id++;
+                }
+
+                /* part 2: all in between segments after the 1st segment and the last (in case the last is only partially used by the segment) - checks if there are more than 1 segments after the start */
+                uint64_t segment_end = ((current->extent->phy_blk +
+                            current->extent->len) &
+                        ctrl.f2fs_segment_mask);
+                if ((segment_end - segment_start) >> ctrl.segment_shift > 1)
+                    json_add_consecutive_segments_extent_info(current->extent, segment_id, zone_segments);
+
+                /* part 3: any remaining parts of the last segment, which do not fill the entire last segment only if the segment actually has a remaining fragment */
+                if (segment_end != current->extent->phy_blk +
+                        current->extent->len) {
+                    json_add_remainder_segment_extent_info(current->extent, zone_segments);
+                }
             }
-            /* } else { */
-            /*     /1* Else the extent spans across multiple segments, so we need to break it up *1/ */
-
-            /*     /1* part 1: the beginning of extent to end of that single segment *1/ */
-            /*     if (current->extent->phy_blk != segment_start) { */
-            /*         if (segment_id != ctrl.cur_segment) { */
-            /*             uint64_t segment_start = */
-            /*                 (current->extent->phy_blk & */
-            /*                  ctrl.f2fs_segment_mask) >> */
-            /*                 ctrl.segment_shift; */
-            /*             show_segment_info(current->extent, segment_start); */
-            /*         } */
-            /*         show_beginning_segment(current->extent); */
-            /*         /1* if (ctrl.show_class_stats && ctrl.procfs) { *1/ */
-            /*             set_segment_counters(1, current->extent); */
-            /*         /1* } *1/ */
-            /*         segment_id++; */
-            /*     } */
-
-            /*     /1* part 2: all in between segments after the 1st segment and the last (in case the last is only partially used by the segment) - checks if there are more than 1 segments after the start *1/ */
-            /*     uint64_t segment_end = ((current->extent->phy_blk + */
-            /*                 current->extent->len) & */
-            /*             ctrl.f2fs_segment_mask); */
-            /*     if ((segment_end - segment_start) >> ctrl.segment_shift > 1) */
-            /*         show_consecutive_segments(current->extent, segment_id); */
-
-            /*     /1* part 3: any remaining parts of the last segment, which do not fill the entire last segment only if the segment actually has a remaining fragment *1/ */
-            /*     if (segment_end != current->extent->phy_blk + */
-            /*             current->extent->len) { */
-            /*         show_remainder_segment(current->extent); */
-            /*         /1* if (ctrl.show_class_stats && ctrl.procfs) { *1/ */
-            /*             set_segment_counters(1, current->extent); */
-            /*         /1* } *1/ */
-            /*     } */
-            /* } */
 
             current = current->next;
         }

@@ -386,7 +386,7 @@ static void show_consecutive_segments(struct extent *extent, uint64_t segment_st
 
         // Since segments are in the same zone, they must be of the same type
         // therefore, we can just print the flags of the first one, and since
-        // they are contiguous ranges, they cannot have invalid blocks, for
+        // they are contiguous ranges, they cannot have invalid blocks (otherwise it would be broken into multiple extents), for
         // which the function will print 512 4KiB blocks (all 4KiB blocks in
         // a segment) anyways
         show_segment_info(extent, segment_start);
