@@ -168,17 +168,6 @@ static json_object *json_get_zone_info(uint32_t zone) {
     json_object_object_add(zone_json, "mask", json_object_new_string(value));
     free(value);
 
-    /* MSG("\n============ ZONE %d ============\n", zone); */
-    /* MSG("LBAS: 0x%06llx  LBAE: 0x%06llx  CAP: 0x%06llx  WP: 0x%06llx  SIZE: " */
-    /*     "0x%06llx  STATE: %#-4x  MASK: 0x%06" PRIx32 "\n", */
-    /*     hdr->zones[0].start >> ctrl.zns_sector_shift, */
-    /*     (hdr->zones[0].start >> ctrl.zns_sector_shift) + */
-    /*         (hdr->zones[0].capacity >> ctrl.zns_sector_shift), */
-    /*     hdr->zones[0].capacity >> ctrl.zns_sector_shift, */
-    /*     hdr->zones[0].wp >> ctrl.zns_sector_shift, */
-    /*     hdr->zones[0].len >> ctrl.zns_sector_shift, hdr->zones[0].cond << 4, */
-    /*     ctrl.znsdev.zone_mask); */
-
     close(fd);
 
     free(hdr);
@@ -187,12 +176,80 @@ static json_object *json_get_zone_info(uint32_t zone) {
     return zone_json;
 }
 
+static json_object *json_get_segment_info(struct extent *extent, uint64_t segment_start) {
+    struct segment_info *seg_i = (struct segment_info *) extent->fs_info;
+    char *value;
+    struct json_object *segment = json_object_new_object();
+
+    value = uint64_to_hex_string_cast(segment_start << ctrl.segment_shift);
+    json_object_object_add(segment, "pbas", json_object_new_string(value));
+    free(value);
+
+    value = uint64_to_hex_string_cast((segment_start << ctrl.segment_shift) + ctrl.f2fs_segment_sectors);
+    json_object_object_add(segment, "pbae", json_object_new_string(value));
+    free(value);
+
+    value = uint64_to_hex_string_cast(ctrl.f2fs_segment_sectors);
+    json_object_object_add(segment, "size", json_object_new_string(value));
+    free(value);
+
+    switch(seg_i->type) {
+        case CURSEG_HOT_DATA:
+            json_object_object_add(segment, "type", json_object_new_string("CURSEG_HOT_DATA"));
+            break;
+        case CURSEG_WARM_DATA:
+            json_object_object_add(segment, "type", json_object_new_string("CURSEG_WARM_DATA"));
+            break;
+        case CURSEG_COLD_DATA:
+            json_object_object_add(segment, "type", json_object_new_string("CURSEG_COLD_DATA"));
+            break;
+        case CURSEG_HOT_NODE:
+            json_object_object_add(segment, "type", json_object_new_string("CURSEG_HOT_NODE"));
+            break;
+        case CURSEG_WARM_NODE:
+            json_object_object_add(segment, "type", json_object_new_string("CURSEG_WARM_NODE"));
+            break;
+        case CURSEG_COLD_NODE:
+            json_object_object_add(segment, "type", json_object_new_string("CURSEG_COLD_NODE"));
+            break;
+        case NO_CHECK_TYPE:
+            break;
+    }
+
+    json_object_object_add(segment, "valid_blocks", json_object_new_int(seg_i->valid_blocks << F2FS_BLKSIZE_BITS >> ctrl.sector_shift));
+    
+    return segment;
+}
+
+static json_object *json_get_extent_info(struct extent *extent) {
+    char *value;
+    struct json_object *ext = json_object_new_object();
+
+    json_object_object_add(ext, "file", json_object_new_string(extent->file));
+
+    value = uint64_to_hex_string_cast(extent->phy_blk);
+    json_object_object_add(ext, "pbas", json_object_new_string(value));
+    free(value);
+
+    value = uint64_to_hex_string_cast(extent->phy_blk + extent->len);
+    json_object_object_add(ext, "pbae", json_object_new_string(value));
+    free(value);
+
+    value = uint64_to_hex_string_cast(extent->len);
+    json_object_object_add(ext, "size", json_object_new_string(value));
+    free(value);
+
+    json_object_object_add(ext, "ext_nr", json_object_new_int(extent->ext_nr + 1));
+    json_object_object_add(ext, "total_exts", json_object_new_int(get_file_extent_count(extent->file)));
+
+    return ext;
+}
+
 /* F2FS specific report of file mappings similarly results in a different 
  * json data for the segment info, which is dumped by this function */
 static int json_dump_f2fs_zonemap() {
     struct node *current;
-    uint32_t i = 0;
-    struct segment_info *seg_i; 
+    uint32_t i = 0, extents = 0;
     uint32_t current_zone = 0;
     uint64_t segment_id = 0;
     uint64_t start_lba =
@@ -201,6 +258,8 @@ static int json_dump_f2fs_zonemap() {
         (ctrl.end_zone + 1) * ctrl.znsdev.zone_size - ctrl.znsdev.zone_size;
     json_object *zonemap = json_object_new_object();
     json_object *zone;
+    json_object *zone_segments;
+    char *value;
 
     for (i = 0; i < ctrl.zonemap->nr_zones; i++) {
         if (ctrl.zonemap->zones[i].extent_ctr == 0) {
@@ -209,8 +268,11 @@ static int json_dump_f2fs_zonemap() {
 
         current = ctrl.zonemap->zones[i].extents_head;
         zone = json_object_new_object();
+        zone_segments = json_object_new_object();
+        extents = 0;
 
         while (current) {
+            extents++;
             segment_id = (current->extent->phy_blk & ctrl.f2fs_segment_mask) >>
                 ctrl.segment_shift;
             if ((segment_id << ctrl.segment_shift) >= end_lba) {
@@ -226,50 +288,37 @@ static int json_dump_f2fs_zonemap() {
                 json_object_object_add(zone, "zone_info", json_get_zone_info(current_zone));
             }
 
-            /* uint64_t segment_start = */
-            /*     (current->extent->phy_blk & ctrl.f2fs_segment_mask); */
-            /* uint64_t extent_end = */
-            /*     current->extent->phy_blk + current->extent->len; */
-            /* uint64_t segment_end = ((current->extent->phy_blk + */
-            /*             current->extent->len) & */
-            /*         ctrl.f2fs_segment_mask) >> */
-            /*     ctrl.segment_shift; */
+            uint64_t segment_start =
+                (current->extent->phy_blk & ctrl.f2fs_segment_mask);
+            uint64_t extent_end =
+                current->extent->phy_blk + current->extent->len;
+            uint64_t segment_end = ((current->extent->phy_blk +
+                        current->extent->len) &
+                    ctrl.f2fs_segment_mask) >>
+                ctrl.segment_shift;
 
-            /* /1* Can be zero if file starts and ends in same segment therefore + 1 for */
-            /*  * current segment *1/ */
-            /* uint64_t num_segments = */
-            /*     segment_end - (segment_start >> ctrl.segment_shift) + 1; */
+            /* Can be zero if file starts and ends in same segment therefore + 1 for
+             * current segment */
+            uint64_t num_segments =
+                segment_end - (segment_start >> ctrl.segment_shift) + 1;
 
-            /* /1* Extent can only be a single file so add all segments we have here *1/ */
-            /* /1* if (ctrl.procfs) { *1/ */
-            /*     increase_file_segment_counter(current->extent->file, */
-            /*             num_segments, segment_id, */
-            /*             current->extent->fs_info, */
-            /*             current->extent->zone_cap); */
-            /* /1* } *1/ */
-            
-            /* /1* if the beginning of the extent and the ending of the extent are in */
-            /*  * the same segment *1/ */
-            /* if (segment_start == (extent_end & ctrl.f2fs_segment_mask) || */
-            /*         extent_end == */
-            /*         (segment_start + (F2FS_SEGMENT_BYTES >> ctrl.sector_shift))) { */
-            /*     if (segment_id != ctrl.cur_segment) { */
-            /*         show_segment_info(current->extent, segment_id); */
-            /*         ctrl.cur_segment = segment_id; */
-            /*         /1* if (ctrl.show_class_stats && ctrl.procfs) { *1/ */
-            /*             set_segment_counters(1, current->extent); */
-            /*         /1* } *1/ */
-            /*     } */
+            /* if the beginning of the extent and the ending of the extent are in
+             * the same segment */
+            if (segment_start == (extent_end & ctrl.f2fs_segment_mask) ||
+                    extent_end ==
+                    (segment_start + (F2FS_SEGMENT_BYTES >> ctrl.sector_shift))) {
+                if (segment_id != ctrl.cur_segment) {
+                    value = uint32_to_string_cast(segment_id);
+                    json_object_object_add(zone_segments, value, json_get_segment_info(current->extent, segment_id));
+                    free(value);
 
-            /*     REP(ctrl.show_only_stats, */
-            /*             "***** EXTENT:  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64 */
-            /*             "  SIZE: %#-10" PRIx64 "  FILE: %50s  EXTID:  %d/%-5d\n", */
-            /*             current->extent->phy_blk, */
-            /*             current->extent->phy_blk + */
-            /*             current->extent->len, */
-            /*             current->extent->len, current->extent->file, */
-            /*             current->extent->ext_nr + 1, */
-            /*             get_file_extent_count(current->extent->file)); */
+                    ctrl.cur_segment = segment_id;
+                }
+
+                value = uint32_to_string_cast(extents);
+                json_object_object_add(zone_segments, value, json_get_extent_info(current->extent));
+                free(value);
+            }
             /* } else { */
             /*     /1* Else the extent spans across multiple segments, so we need to break it up *1/ */
 
@@ -306,12 +355,12 @@ static int json_dump_f2fs_zonemap() {
             /*     } */
             /* } */
 
-            /* seg_i = (struct segment_info *) fs_info; */
-
             current = current->next;
         }
 
-        char *value = uint32_to_string_cast(current_zone);
+        json_object_object_add(zone, "segments", zone_segments);
+
+        value = uint32_to_string_cast(current_zone);
         json_object_object_add(zonemap, value, zone);
         free(value);
     }
