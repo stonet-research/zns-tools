@@ -468,7 +468,9 @@ int json_dump_data() {
     if (init_json_file() == EXIT_FAILURE)
         return EXIT_FAILURE;
 
-    json_dump_f2fs_zonemap();
+    if (ctrl.fs_magic == F2FS_MAGIC)
+        json_dump_f2fs_zonemap();
+    // TODO: else just dump the zonemap to json
 
     if (json_object_to_file(ctrl.json_file, ctrl.json_root) == EXIT_FAILURE)
         ERR_MSG("Failed saving json data to %s\n", ctrl.json_file);

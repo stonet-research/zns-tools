@@ -406,6 +406,10 @@ int main(int argc, char *argv[]) {
     uint64_t size = 0;
     uint8_t set_exclusive_or_stream = false;
 
+    // TODO: remove it from docs, build and everywhere else
+    MSG("zns.fpbench has been deprecated and is being removed. Use fio and zns.segmap instead.\n");
+    exit(0);
+
     wl_man.wl = calloc(1, sizeof(struct workload));
     wl_man.wl[0].bsize = BLOCK_SZ;
     wl_man.wl[0].fsize = BLOCK_SZ;

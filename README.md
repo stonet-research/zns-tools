@@ -314,8 +314,7 @@ For development, if using `gdb` to debug, simply configure with (prior to buildi
     --build=x86_64-linux-gnu \
     --host=arm-linux-gnueabihf \
     --target=arm-linux-gnueabihf \
-    --disable-shared \
-    --disable-documentation
+    --disable-shared
 ```
 
 We also recommend to enable the address sanitizer during compilation. For this simply modify the `lib/Makefile.am` and `src/Makefile.am` to have the `CFLAGS` equal to
