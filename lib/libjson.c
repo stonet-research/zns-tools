@@ -275,33 +275,22 @@ static json_object *json_get_beginning_segment_extent_info(struct extent *extent
 /* function is only for an extent that occupies the entire segment (up to the last LBA) */
 static void json_add_single_segment_extent_info(struct extent *extent, uint64_t segment_start, json_object *root) {
     char *value;
-    json_object *ext;
+    json_object *curseg, *curseg_extents, *curext;
+
+
+    curseg = json_object_new_object();
+    json_object_object_add(curseg, "seg_info", json_get_segment_info(extent, segment_start));
+    curseg_extents = json_object_new_array();
+
+    curext = json_object_new_object();
+
+    json_object_object_add(curext, "ext_info", json_get_extent_info(extent));
+    json_object_array_add(curseg_extents, curext);
+    json_object_object_add(curseg, "extents", curseg_extents);
 
     value = uint32_to_string_cast(segment_start);
-    json_object_object_add(root, value, json_get_segment_info(extent, segment_start));
+    json_object_object_add(root, value, curseg);
     free(value);
-
-    ext = json_object_new_object();
-
-    json_object_object_add(ext, "file", json_object_new_string(extent->file));
-
-    value = uint64_to_hex_string_cast(segment_start);
-    json_object_object_add(ext, "pbas", json_object_new_string(value));
-    free(value);
-
-    value = uint64_to_hex_string_cast(segment_start + ctrl.f2fs_segment_sectors);
-    json_object_object_add(ext, "pbae", json_object_new_string(value));
-    free(value);
-
-    value = uint64_to_hex_string_cast(ctrl.f2fs_segment_sectors);
-    json_object_object_add(ext, "size", json_object_new_string(value));
-    free(value);
-
-    json_object_object_add(ext, "ext_nr", json_object_new_int(extent->ext_nr + 1));
-    json_object_object_add(ext, "total_exts", json_object_new_int(get_file_extent_count(extent->file)));
-
-    /* only a single extent in the entire segment */
-    json_object_object_add(root, "1", ext);
 }
 
 static void json_add_consecutive_segments_extent_info(struct extent *extent, uint64_t segment_start, json_object *root) {
@@ -328,33 +317,28 @@ static void json_add_remainder_segment_extent_info(struct extent *extent, json_o
     uint64_t remainder = extent->phy_blk + extent->len -
                          (segment_start << ctrl.segment_shift);
     char *value;
-    json_object *ext;
+    json_object *curext;
 
-    value = uint32_to_string_cast(segment_start);
-    json_object_object_add(root, value, json_get_segment_info(extent, segment_start));
-    free(value);
+    curext = json_object_new_object();
 
-    ext = json_object_new_object();
-
-    json_object_object_add(ext, "file", json_object_new_string(extent->file));
+    json_object_object_add(curext, "file", json_object_new_string(extent->file));
 
     value = uint64_to_hex_string_cast(segment_start << ctrl.segment_shift);
-    json_object_object_add(ext, "pbas", json_object_new_string(value));
+    json_object_object_add(curext, "pbas", json_object_new_string(value));
     free(value);
 
     value = uint64_to_hex_string_cast((segment_start << ctrl.segment_shift) + remainder);
-    json_object_object_add(ext, "pbae", json_object_new_string(value));
+    json_object_object_add(curext, "pbae", json_object_new_string(value));
     free(value);
 
     value = uint64_to_hex_string_cast(remainder);
-    json_object_object_add(ext, "size", json_object_new_string(value));
+    json_object_object_add(curext, "size", json_object_new_string(value));
     free(value);
 
-    json_object_object_add(ext, "ext_nr", json_object_new_int(extent->ext_nr + 1));
-    json_object_object_add(ext, "total_exts", json_object_new_int(get_file_extent_count(extent->file)));
+    json_object_object_add(curext, "ext_nr", json_object_new_int(extent->ext_nr + 1));
+    json_object_object_add(curext, "total_exts", json_object_new_int(get_file_extent_count(extent->file)));
 
-    /* only a single extent in the entire segment */
-    json_object_object_add(root, "1", ext);
+    json_object_array_add(root, curext);
 }
 
 /* F2FS specific report of file mappings similarly results in a different 
@@ -369,8 +353,8 @@ static int json_dump_f2fs_zonemap() {
     uint64_t end_lba =
         (ctrl.end_zone + 1) * ctrl.znsdev.zone_size - ctrl.znsdev.zone_size;
     json_object *zonemap = json_object_new_object();
-    json_object *zone;
-    json_object *zone_segments;
+    json_object *zone, *zone_segments, *curseg = json_object_new_object(), *curseg_extents = json_object_new_array(), *curext;
+    uint32_t curseg_id = 0;
     char *value;
 
     for (i = 0; i < ctrl.zonemap->nr_zones; i++) {
@@ -397,7 +381,23 @@ static int json_dump_f2fs_zonemap() {
 
             if (current_zone != current->extent->zone) {
                 current_zone = current->extent->zone;
-                json_object_object_add(zone, "zone_info", json_get_zone_info(current_zone));
+            }
+
+            if (curseg_id != segment_id) {
+                /* Add all previously collected segments and extents to the zonemap json, only if data has been written. First iteration in the loop this array will be empty. */
+                if (json_object_array_length(curseg_extents) > 0) {
+                    json_object_object_add(curseg, "extents", curseg_extents);
+
+                    value = uint32_to_string_cast(segment_id);
+                    json_object_object_add(zone_segments, value, curseg);
+                    free(value);
+                }
+
+                curseg = json_object_new_object();
+                json_object_object_add(curseg, "seg_info", json_get_segment_info(current->extent, segment_id));
+                curseg_extents = json_object_new_array();
+
+                curseg_id = segment_id;
             }
 
             uint64_t segment_start =
@@ -411,33 +411,26 @@ static int json_dump_f2fs_zonemap() {
                     extent_end ==
                     (segment_start + (F2FS_SEGMENT_BYTES >> ctrl.sector_shift))) {
                 if (segment_id != ctrl.cur_segment) {
-                    value = uint32_to_string_cast(segment_id);
-                    json_object_object_add(zone_segments, value, json_get_segment_info(current->extent, segment_id));
-                    free(value);
+                    curext = json_object_new_object();
+
+                    json_object_object_add(curext, "ext_info", json_get_extent_info(current->extent));
+                    json_object_array_add(curseg_extents, curext);
 
                     ctrl.cur_segment = segment_id;
-                }
+                } else {
+                    curext = json_object_new_object();
 
-                value = uint32_to_string_cast(extents);
-                json_object_object_add(zone_segments, value, json_get_extent_info(current->extent));
-                free(value);
+                    json_object_object_add(curext, "ext_info", json_get_extent_info(current->extent));
+                    json_object_array_add(curseg_extents, curext);
+                }
             } else {
                 /* Else the extent spans across multiple segments, so we need to break it up */
 
                 /* part 1: the beginning of extent to end of that single segment */
                 if (current->extent->phy_blk != segment_start) {
-                    if (segment_id != ctrl.cur_segment) {
-                        uint64_t segment_start =
-                            (current->extent->phy_blk &
-                             ctrl.f2fs_segment_mask) >>
-                            ctrl.segment_shift;
-                        value = uint32_to_string_cast(segment_id);
-                        json_object_object_add(zone_segments, value, json_get_segment_info(current->extent, segment_start));
-                        free(value);
-                    }
-                    value = uint32_to_string_cast(segment_id);
-                    json_object_object_add(zone_segments, value, json_get_beginning_segment_extent_info(current->extent));
-                    free(value);
+                    curext = json_object_new_object();
+                    json_object_object_add(curext, "ext_info", json_get_beginning_segment_extent_info(current->extent));
+                    json_object_array_add(curseg_extents, curext);
                     segment_id++;
                 }
 
@@ -451,13 +444,14 @@ static int json_dump_f2fs_zonemap() {
                 /* part 3: any remaining parts of the last segment, which do not fill the entire last segment only if the segment actually has a remaining fragment */
                 if (segment_end != current->extent->phy_blk +
                         current->extent->len) {
-                    json_add_remainder_segment_extent_info(current->extent, zone_segments);
+                    json_add_remainder_segment_extent_info(current->extent, curseg_extents);
                 }
             }
 
             current = current->next;
         }
 
+        json_object_object_add(zone, "zone_info", json_get_zone_info(current_zone));
         json_object_object_add(zone, "segments", zone_segments);
 
         value = uint32_to_string_cast(current_zone);
