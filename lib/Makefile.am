@@ -12,4 +12,5 @@ libf2fs_la_CPPFLAGS = -I$(top_srcdir)/include
 
 libjson_la_SOURCES = libjson.c
 libjson_la_CFLAGS = -Wall
-libjson_la_CPPFLAGS = -I$(top_srcdir)/include
+libjson_la_CPPFLAGS = -I$(top_srcdir)/include -I/usr/local/include/json-c/
+libjson_la_LDFLAGS = -ljson-c

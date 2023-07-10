@@ -26,6 +26,8 @@
 
 #include <linux/blkzoned.h>
 
+#include <json-c/json.h>
+
 #define F2FS_SEGMENT_BYTES 2097152
 
 #define MAX_FILE_LENGTH 50
@@ -132,9 +134,7 @@ typedef void (*fs_info_show)(void *, uint8_t, unsigned int);
 typedef void (*fs_info_cleanup)();
 
 struct control {
-    /* char *filename;     /1* full file name and path to map *1/ */
-    /* int fd;             /1* file descriptor of the file to be mapped *1/ */
-    /* struct stat *stats; /1* statistics from fstat() call *1/ */
+    char *argv; /* program name being run */
     struct bdev bdev;   /* block device file is located on */
     struct bdev znsdev; /* additional ZNS device if file F2FS reporst file on
                             prior bdev */
@@ -143,7 +143,8 @@ struct control {
     uint8_t show_holes; /* cmd_line flag to show holes */
     uint8_t show_flags; /* cmd_line flag to show extent flags */
     uint8_t json_dump;  /* dump collected data as json */
-    char json_file[MAX_FILE_LENGTH];    /* json file name to output data to */
+    char *json_file;    /* json file name to output data to */
+    json_object *json_root; /* root json object for data output */
     uint8_t info;       /* cmd_line flag to show info */
     uint64_t fs_magic;  /* store the file system magic value */
 

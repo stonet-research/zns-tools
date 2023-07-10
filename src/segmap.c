@@ -1,6 +1,8 @@
 #include "segmap.h"
 #include <stdlib.h>
 
+/* TODO: cleanup to remove segment ranges and todos */
+
 struct segmap_manager segmap_man;
 
 /*
@@ -9,7 +11,7 @@ struct segmap_manager segmap_man;
  * */
 static void show_info() {
     EQUAL_FORMATTER
-    MSG("\t\t\tACRONYM INFO\n");
+    MSG("\t\t\tACRONYM INFO");
     EQUAL_FORMATTER
     MSG("LBAS:   Logical Block Address Start (for the Zone)\n");
     MSG("LBAE:   Logical Block Address End (for the Zone, equal to LBAS + "
@@ -17,7 +19,7 @@ static void show_info() {
     MSG("CAP:    Zone Capacity (in 512B sectors)\n");
     MSG("WP:     Write Pointer of the Zone\n");
     MSG("SIZE:   Size of the Zone (in 512B sectors)\n");
-    MSG("STATE:  State of a zone (e.g, FULL, EMPTY)\n");
+    MSG("STATE:  State of a zone (e.g., FULL, EMPTY)\n");
     MSG("MASK:   The Zone Mask that is used to calculate LBAS of LBA "
         "addresses in a zone\n");
 
@@ -384,7 +386,7 @@ static void show_consecutive_segments(struct extent *extent, uint64_t segment_st
 
         // Since segments are in the same zone, they must be of the same type
         // therefore, we can just print the flags of the first one, and since
-        // they are contiguous ranges, they cannot have invalid blocks, for
+        // they are contiguous ranges, they cannot have invalid blocks (otherwise it would be broken into multiple extents), for
         // which the function will print 512 4KiB blocks (all 4KiB blocks in
         // a segment) anyways
         show_segment_info(extent, segment_start);
@@ -630,8 +632,9 @@ int main(int argc, char *argv[]) {
     memset(&segmap_man, 0, sizeof(struct segmap_manager));
     ctrl.exclude_flags = FIEMAP_EXTENT_DATA_INLINE;
     ctrl.show_holes = 1; /* holes only apply to Btrfs */
+    ctrl.argv = argv[0];
 
-    while ((c = getopt(argc, argv, "d:hil:ws:e:pz:con")) != -1) {
+    while ((c = getopt(argc, argv, "d:hil:ws:e:pz:conj:")) != -1) {
         switch (c) {
         case 'h':
             show_help();
@@ -645,6 +648,10 @@ int main(int argc, char *argv[]) {
             break;
         case 'i':
             ctrl.exclude_flags = 0;
+            break;
+        case 'j':
+            ctrl.json_file = optarg;
+            ctrl.json_dump = 1;
             break;
         case 'w':
             ctrl.show_flags = 1;
@@ -741,8 +748,12 @@ int main(int argc, char *argv[]) {
     }
 
     if (ctrl.fs_magic == F2FS_MAGIC) {
-        show_segment_report();
+        if (ctrl.json_dump)
+            json_dump_data(ctrl.zonemap);
+        else 
+            show_segment_report();
 
+        // TODO: clenaup memory
     /*     free(file_counter_map->file); */
     /*     free(file_counter_map); */
     /*     if (ctrl.show_class_stats) { */

@@ -44,3 +44,5 @@ timeline-gen/*.pdf
 
 confdefs.h
 conftest.dir/
+
+*.json

@@ -3,5 +3,5 @@
 
 #include "zns-tools.h"
 
-extern int json_dump_zonemap();
+extern int json_dump_data();
 #endif
