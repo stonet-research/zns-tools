@@ -5,7 +5,7 @@
 
 BEGIN 
 {
-    @logging = 1;
+    @logging = 0;
 }
 
 /* Reclassifies to cold data - printed independent of the original temperature
@@ -52,16 +52,17 @@ k:f2fs_do_write_data_page
     }
 }
 
-interval:s:1
-{
-	print(@move_data);
-    print(@f2fs_allocate_data_block);
-    print(@f2fs_do_write_data_page);
-
-	clear(@move_data);
-    clear(@f2fs_allocate_data_block);
-    clear(@f2fs_do_write_data_page);
-}
+/* interval:s:1
+* {
+*	print(@move_data);
+*    print(@f2fs_allocate_data_block);
+*    print(@f2fs_do_write_data_page);
+*
+*	clear(@move_data);
+*    clear(@f2fs_allocate_data_block);
+*    clear(@f2fs_do_write_data_page);
+* }
+*/
 
 END
 {
