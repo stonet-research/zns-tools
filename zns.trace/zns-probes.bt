@@ -15,7 +15,7 @@ BEGIN {
     }
 
     @ZONE_MASK = ~($2 - 1);
-    @logging = 1; // Set logging to 1 for debugging
+    @logging = 0; // Set logging to 1 for debugging
 }
 
 k:nvme_setup_cmd / ((struct request *)arg1)->q->disk->disk_name == str($1) / {
@@ -111,8 +111,9 @@ k:nvme_complete_rq / ((struct request *)arg0)->q->disk->disk_name == str($1) / {
     }
 }
 
-// A file that is being deleted
-k:vfs_unlink {
+interval:s:5
+{
+    exit();
 }
 
 END {

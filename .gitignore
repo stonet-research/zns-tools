@@ -47,4 +47,4 @@ conftest.dir/
 
 *.json
 
-util/__pycache__/
+zns.trace/util/__pycache__/

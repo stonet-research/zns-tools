@@ -38,7 +38,7 @@ k:do_fcntl
         $f_inode = (struct inode *) ((struct file *)arg3)->f_inode;
         // annotate rw_hint as uptr, as it is a userspace pointer which bpftrace cannot infer
         $argp = uptr(arg2);
-        @rw_hint[nsecs, pid] = ($f_inode->i_ino, *$argp);
+        @fcntl_set_rw_hint[nsecs, pid] = ($f_inode->i_ino, *$argp);
 
         if (@logging) {
             printf("%s <nsecs, pid, i_ino, rw_hint>: <%lu, %lu, %lu, %lu>\n", func, nsecs, pid, $f_inode->i_ino, *$argp);
@@ -79,12 +79,10 @@ k:vfs_unlink
     }
 }
 
-/* interval:s:1
-* {
-* 	print(@);
-* 	clear(@);
-* }
-*/
+interval:s:5
+{
+    exit();
+}
 
 END 
 {
