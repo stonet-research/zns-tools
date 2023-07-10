@@ -46,3 +46,5 @@ confdefs.h
 conftest.dir/
 
 *.json
+
+util/__pycache__/
