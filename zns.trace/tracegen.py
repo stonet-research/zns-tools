@@ -91,10 +91,14 @@ def parse_zns_bio_probe_data(file):
                 args["cmd"] = get_cmd(vals[0])
                 args["zone"] = vals[1]
                 args["LBA"] = vals[2]
-                args["size"] = str(int(vals[3] * 512) / 1024) + "KiB" # TODO: add variable for block size
+                if 'z_nvme_rq' in map_name:
+                    args["size"] = str(int(vals[3] * 512) / 1024) + "KiB" # TODO: add variable for block size
+                    time = vals[4]
+                else:
+                    time = vals[3]
 
                 event = Event(map_name, timestamp, "B", pid, tid, args)
-                event_end = Event(map_name, vals[4], "E", pid, tid, args)
+                event_end = Event(map_name, time, "E", pid, tid, args)
 
                 timeline.addTimestamp(event)
                 timeline.addTimestamp(event_end)

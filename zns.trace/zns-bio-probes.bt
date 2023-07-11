@@ -16,7 +16,6 @@ BEGIN {
     }
 
     @ZONE_MASK = ~($2 - 1);
-    @logging = 0; // Set logging to 1 for debugging
 }
 
 k:nvme_setup_cmd / ((struct request *)arg1)->q->disk->disk_name == str($1) / {
@@ -57,26 +56,7 @@ k:nvme_setup_cmd / ((struct request *)arg1)->q->disk->disk_name == str($1) / {
         $secnum = $nvme_cmd->rw.slba;
         $zlbas = ($secnum & @ZONE_MASK);
 
-        if(@logging == 1 && $cmd == REQ_OP_DRV_OUT) {
-            printf("reset_cmd (passthrough mode) <LBA, ZONE>: <%ld, %d>\n", $secnum, $zlbas / $2);
-        }
-
-        if(@logging == 1 && $cmd != REQ_OP_DRV_OUT) {
-            printf("reset_cmd <LBA, ZONE>: <%ld, %d>\n", $secnum, $zlbas / $2);
-        }
-
-        @z_reset_ctr_map[$zlbas]++;
-        @reset_z_track_map[$cmdid] = $zlbas;
-        @reset_lat_track_map[$cmdid] = nsecs;
-    }
-
-    // reset all zones
-    if($cmd == REQ_OP_ZONE_RESET_ALL) {
-        @reset_all_ctr++;
-
-        if(@logging == 1) {
-            printf("reset_all_cmd\n");
-        }
+        @z_nvme_rq_reset_trackmap[$cmdid] = ($time, pid, tid, $cmd, $zlbas / $2, $secnum)
     }
 }
 
@@ -99,17 +79,13 @@ k:nvme_complete_rq / ((struct request *)arg0)->q->disk->disk_name == str($1) / {
     }
 
     if($cmd == REQ_OP_ZONE_RESET || (($cmd == REQ_OP_DRV_OUT && $opcode == nvme_cmd_zone_mgmt_send) && $nvme_cmd->zms.zsa == NVME_ZONE_RESET)) {
-        $zlbas = @reset_z_track_map[$cmdid];
-        @z_reset_lat_map[$zlbas, @z_reset_ctr_map[$zlbas]] = nsecs - @reset_lat_track_map[$cmdid];
-
-        // If nvme device is in passthrough (e.g., qemu passthrough) Zone reset has flag REQ_OP_DRV_OUT
-        if(@logging == 1 && $cmd == REQ_OP_DRV_OUT) {
-            printf("completed reset_cmd (passthrough mode) zone %ld in (usec): %d\n", $zlbas / $2, @z_reset_lat_map[$zlbas, @z_reset_ctr_map[$zlbas]] / 1000);
-        }
-
-        if(@logging == 1 && $cmd != REQ_OP_DRV_OUT) {
-            printf("completed reset_cmd zone %ld in (usec): %d\n", $zlbas / $2, @z_reset_lat_map[$zlbas, @z_reset_ctr_map[$zlbas]] / 1000);
-        }
+        $starttime = @z_nvme_rq_reset_trackmap[$cmdid].0;
+        $p = @z_nvme_rq_reset_trackmap[$cmdid].1;
+        $t = @z_nvme_rq_reset_trackmap[$cmdid].2;
+        $c = @z_nvme_rq_reset_trackmap[$cmdid].3;
+        $zlbas_in = @z_nvme_rq_reset_trackmap[$cmdid].4;
+        $secnum_in = @z_nvme_rq_reset_trackmap[$cmdid].5;
+        @z_nvme_reset[$starttime, $p, $t] = ($c, $zlbas_in / $2, $secnum_in, $time);
     }
 }
 
@@ -120,8 +96,6 @@ interval:s:5
 
 END {
     clear(@ZONE_MASK);
-    clear(@logging);
-    clear(@reset_z_track_map);
-    clear(@reset_lat_track_map);
+    clear(@z_nvme_rq_reset_trackmap);
     clear(@z_nvme_setup_cmd_trackmap);
 }
