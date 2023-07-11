@@ -16,15 +16,15 @@ k:move_data_block
 {
     $inode = (struct inode *)arg0;
 
-    @move_data[nsecs, pid] = $inode->i_ino; 
+    @move_data[nsecs, pid, tid] = $inode->i_ino; 
 
     if (@logging) {
-        printf("%s <nsecs, pid, i_ino>: <%lu, %lu, %lu>\n", func, nsecs, pid, $inode->i_ino);
+        printf("%s <nsecs, pid, tid, i_ino>: <%lu, %lu, %lu, %lu>\n", func, nsecs, pid, tid, $inode->i_ino);
     }
 }
 
 /* Map format:
- * func[nanoseconds, pid, inode_nr] = temperature (CURSEG_{HOT/WARM/COLD}_DATA)
+ * func[nanoseconds, pid, tid, inode_nr] = temperature (CURSEG_{HOT/WARM/COLD}_DATA)
  */
 k:f2fs_allocate_data_block
 {
@@ -32,10 +32,10 @@ k:f2fs_allocate_data_block
     $fio = (struct f2fs_io_info *)sarg6;
     $i_ino = $fio->ino;
 
-    @f2fs_allocate_data_block[nsecs, pid, $i_ino] = $type; 
+    @f2fs_allocate_data_block[nsecs, pid, tid, $i_ino] = $type; 
 
     if (@logging) {
-        printf("%s <nsecs, pid, i_ino, type>: <%lu, %lu, %lu, %u>\n", func, nsecs, pid, $i_ino, $type);
+        printf("%s <nsecs, pid, tid, i_ino, type>: <%lu, %lu, %lu, %lu, %u>\n", func, nsecs, pid, tid, $i_ino, $type);
     }
 }
 
@@ -43,12 +43,22 @@ k:f2fs_do_write_data_page
 {
     $fio = (struct f2fs_io_info *)arg0;
     $page = (struct page *)$fio->page;
-    $host = (struct inode *)((struct address_space*)$page->mapping)->host;
 
-    @f2fs_do_write_data_page[nsecs, pid, $host->i_ino] = $fio->type; 
+    @f2fs_do_write_data_page[nsecs, pid, tid, $fio->ino] = $fio->new_blkaddr; 
 
     if (@logging) {
-        printf("%s <nsecs, pid, i_ino, type>: <%lu, %lu, %lu, %u>\n", func, nsecs, pid, $host->i_ino, $fio->type);
+        printf("%s <nsecs, pid, tid, ino, type>: <%lu, %lu, %lu, %u, %u>\n", func, nsecs, pid, tid, $fio->ino, $fio->new_blkaddr);
+    }
+}
+
+k:f2fs_submit_page_write
+{
+    $fio = (struct f2fs_io_info *)arg0;
+
+    @f2fs_submit_page_write[nsecs, pid, tid, $fio->ino] = ($fio->new_blkaddr, $fio->temp); 
+
+    if (@logging) {
+        printf("%s <nsecs, pid, tid, ino, LBA, temp>: <%lu, %lu, %lu, %u, %u, %u>\n", func, nsecs, pid, tid, $fio->ino, $fio->new_blkaddr, $fio->temp);
     }
 }
 

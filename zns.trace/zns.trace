@@ -30,10 +30,11 @@ TRACETIME=3
 
 # TODO: lookup bpftrace install path and use it
 # TODO: we could drop zns probes if zns-bio-probes collects the same in different format (will need a rewrite of the heatmap generation - so for now leaving it)
-echo "Inserting ZNS Probes"
-(sudo /home/user/src/bpftrace/build/src/bpftrace ./zns-probes.bt ${DEV} ${ZONE_SIZE} -o data/zns_data.json) &
+# echo "Inserting ZNS Probes"
+# (sudo /home/user/src/bpftrace/build/src/bpftrace ./zns-probes.bt ${DEV} ${ZONE_SIZE} -o data/zns_data.json) &
 echo "Inserting ZNS-Bio Probes"
-(sudo /home/user/src/bpftrace/build/src/bpftrace ./zns-bio-probes.bt -o data/zns_bio_data.json) &
+# TODO: set the block size of the device (pass as arg probably)
+(sudo /home/user/src/bpftrace/build/src/bpftrace ./zns-bio-probes.bt ${DEV} ${ZONE_SIZE} -o data/zns_bio_data.json) &
 echo "Inserting VFS Probes"
 (sudo /home/user/src/bpftrace/build/src/bpftrace ./vfs-probes.bt -o data/vfs_data.json -f json) &
 echo "Inserting F2FS Probes"

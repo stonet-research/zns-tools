@@ -12,11 +12,36 @@ from util.event import Event
 
 JSON_FILE_NAME = ""
 
-# TODO: need to get all inodes and save them to a file: in bash do "ls -Li /mnt/f2fs" and store in file
+# TODO: need to get all inodes and save them to a file: in bash do "ls -LiR /mnt/f2fs" and store in file
 WATCH_INODES = [29]
 
 # TODO make timeline a standalone class
 timeline = Timeline()
+
+def get_hint(hint):
+    match hint:
+        case 0:
+            return "RWH_WRITE_LIFE_NOT_SET"
+        case 1:
+            return "RWH_WRITE_LIFE_NONE"
+        case 2:
+            return "RWH_WRITE_LIFE_SHORT"
+        case 3:
+            return "RWH_WRITE_LIFE_MEDIUM"
+        case 4:
+            return "RWH_WRITE_LIFE_LONG"
+        case 5:
+            return "RWH_WRITE_LIFE_EXTREME"
+
+# temp in the struct f2fs_io_info is different from rw_hint, it only has HOT/WARM/COLD
+def get_temp(hint):
+    match hint:
+        case 0:
+            return "HOT"
+        case 1:
+            return "WARM"
+        case 2:
+            return "COLD"
 
 def main(argv):
     try:
@@ -40,7 +65,7 @@ if __name__ == "__main__":
     for file in glob.glob(f"{file_path}/data/*"):
         file_name = file.split('/')[-1]
 
-        # already generated timeline.json for this data, skip it
+        # existing timeline.json file for this data dir, overwrite it
         if 'timeline' in file_name:
             continue
 
@@ -51,25 +76,29 @@ if __name__ == "__main__":
                     if 'probes' in map_name:
                         continue
                     for key, value in map_data.items():
+                        args = dict()
                         items = key.split(",")
                         timestamp = items[0]
                         pid = items[1]
+                        tid = items[2]
                         hint = 0
 
                         map_name = re.sub("@", "", map_name)
                         if 'rw_hint' in map_name:
-                            inode = value[0]
-                            hint = value[1]
+                            args["inode"] = int(value[0])
+                            args["rw_hint"] = get_hint(int(value[1]))
+                        elif 'f2fs_submit_page_write' in map_name:
+                            val = list(value)
+                            args["inode"] = items[3]
+                            args["blkaddress"] = int(val[0])
+                            args["temp"] = get_temp(int(val[1]))
                         else:
-                            inode = int(value)
+                            args["inode"] = int(value)
 
                         # if not inode in WATCH_INODES:
                         #     continue
 
-                        if hint == 0:
-                            event = Event(map_name, timestamp, pid, inode, None)
-                        else:
-                            event = Event(map_name, timestamp, pid, inode, hint)
+                        event = Event(map_name, timestamp, pid, tid, args)
 
                         timeline.addTimestamp(event)
                         

@@ -1,0 +1,125 @@
+#include <linux/nvme.h>
+#include <linux/blkdev.h>
+#include <linux/blk-mq.h>
+
+// TODO: set this with the parent script
+/* NOTE, the values are defined as 512B sector size
+ * Change the below define to 12 for 4K sector size
+ */
+
+#define SECTOR_SHIFT 9
+
+BEGIN {
+    if($# != 2) {
+         printf("Invalid args. Requires [dev name] [Zone Size].");
+         exit();
+    }
+
+    @ZONE_MASK = ~($2 - 1);
+    @logging = 0; // Set logging to 1 for debugging
+}
+
+k:nvme_setup_cmd / ((struct request *)arg1)->q->disk->disk_name == str($1) / {
+    $nvme_cmd = (struct nvme_command *)*(arg1+sizeof(struct request));
+    $cmd = (((struct request *)arg1)->cmd_flags & REQ_OP_MASK);
+    $opcode = (uint8)$nvme_cmd->rw.opcode;
+
+    $secnum = ((struct request *)arg1)->__sector;
+    if (!$secnum) {
+        // If not passed in struct request get it from nvme request
+        $secnum = $nvme_cmd->rw.slba;
+    }
+
+    // Bitwise And to get zone starting LBA with zone MASK
+    $zlbas = ($secnum & @ZONE_MASK);
+
+    // Trace Write and Append command counters and I/O sizes
+    if($cmd == REQ_OP_WRITE || $cmd == REQ_OP_ZONE_APPEND) {
+        // Store zone operation counter map under ZLBAS, operation 0x01 for write and append
+        @z_rw_ctr_map[$zlbas, nvme_cmd_write]++;
+
+        // Convert data_len to 512B sectors
+        $data_len = (((struct request *)arg1)->__data_len >> SECTOR_SHIFT);
+        @z_data_map[$zlbas, nvme_cmd_write] = @z_data_map[$zlbas, nvme_cmd_write] + $data_len; 
+
+        if(@logging == 1) {
+            printf("w_cmd at <LBA, ZONE, SIZE>: <%lld, %d, %d>\n", $secnum, $zlbas / $2, $data_len);
+        }
+    }
+
+    // Trace Read command counter and total I/O sizes
+    if($cmd == REQ_OP_READ) {
+        // Store zone operation counter map under ZLBAS, operation 0x01 for write and append
+        @z_rw_ctr_map[$zlbas, nvme_cmd_read]++;
+
+        // Convert data_len to 512B sectors
+        $data_len = (((struct request *)arg1)->__data_len >> SECTOR_SHIFT);
+        @z_data_map[$zlbas, nvme_cmd_read] = @z_data_map[$zlbas, nvme_cmd_read] + $data_len; 
+
+        if(@logging == 1) {
+            printf("r_cmd at <LBA, ZONE, SIZE>: <%ld, %d, %d>\n", $secnum, $zlbas / $2, $data_len);
+        }
+    }
+
+    // If nvme device is in passthrough (e.g., qemu passthrough) Zone reset has flag REQ_OP_DRV_OUT
+    // therefore include more checks on nvme_zone_mgnt_action
+    if($cmd == REQ_OP_ZONE_RESET || (($cmd == REQ_OP_DRV_OUT && $opcode == nvme_cmd_zone_mgmt_send) && $nvme_cmd->zms.zsa == NVME_ZONE_RESET)) {
+        $secnum = $nvme_cmd->rw.slba;
+        $zlbas = ($secnum & @ZONE_MASK);
+
+        if(@logging == 1 && $cmd == REQ_OP_DRV_OUT) {
+            printf("reset_cmd (passthrough mode) <LBA, ZONE>: <%ld, %d>\n", $secnum, $zlbas / $2);
+        }
+
+        if(@logging == 1 && $cmd != REQ_OP_DRV_OUT) {
+            printf("reset_cmd <LBA, ZONE>: <%ld, %d>\n", $secnum, $zlbas / $2);
+        }
+
+        @z_reset_ctr_map[$zlbas]++;
+        $cmdid = ((struct request *)arg1)->tag;
+        @reset_z_track_map[$cmdid] = $zlbas;
+        @reset_lat_track_map[$cmdid] = nsecs;
+    }
+
+    // reset all zones
+    if($cmd == REQ_OP_ZONE_RESET_ALL) {
+        @reset_all_ctr++;
+
+        if(@logging == 1) {
+            printf("reset_all_cmd\n");
+        }
+    }
+}
+
+k:nvme_complete_rq / ((struct request *)arg0)->q->disk->disk_name == str($1) / {
+    $nvme_cmd = (struct nvme_command *)*(arg0+sizeof(struct request));
+    $opcode = (uint8)$nvme_cmd->rw.opcode;
+    $cmd = (((struct request *)arg0)->cmd_flags & REQ_OP_MASK);
+
+    if($cmd == REQ_OP_ZONE_RESET || (($cmd == REQ_OP_DRV_OUT && $opcode == nvme_cmd_zone_mgmt_send) && $nvme_cmd->zms.zsa == NVME_ZONE_RESET)) {
+        $cmdid = ((struct request *)arg0)->tag;
+        $zlbas = @reset_z_track_map[$cmdid];
+        @z_reset_lat_map[$zlbas, @z_reset_ctr_map[$zlbas]] = nsecs - @reset_lat_track_map[$cmdid];
+
+        // If nvme device is in passthrough (e.g., qemu passthrough) Zone reset has flag REQ_OP_DRV_OUT
+        if(@logging == 1 && $cmd == REQ_OP_DRV_OUT) {
+            printf("completed reset_cmd (passthrough mode) zone %ld in (usec): %d\n", $zlbas / $2, @z_reset_lat_map[$zlbas, @z_reset_ctr_map[$zlbas]] / 1000);
+        }
+
+        if(@logging == 1 && $cmd != REQ_OP_DRV_OUT) {
+            printf("completed reset_cmd zone %ld in (usec): %d\n", $zlbas / $2, @z_reset_lat_map[$zlbas, @z_reset_ctr_map[$zlbas]] / 1000);
+        }
+    }
+}
+
+interval:s:5
+{
+    exit();
+}
+
+END {
+    clear(@ZONE_MASK);
+    clear(@logging);
+    clear(@reset_z_track_map);
+    clear(@reset_lat_track_map);
+}
