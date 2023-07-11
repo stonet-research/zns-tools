@@ -17,7 +17,12 @@ fi
 ZONE_SIZE=$(sudo env "PATH=${PATH}" nvme zns report-zones /dev/${DEV} -d 2 | tail -n1 | grep -o 'SLBA:.*$' | awk '{print strtonum($2)}')
 NR_ZONES=$(sudo env "PATH=$PATH" nvme zns report-zones /dev/${DEV} -d 1 | grep 'nr_zones' | awk '{print $2}')
 
+# TODO: can we automate finding this? or specify it in args?
+MNT="/mnt/f2fs"
+
 mkdir -p data
+
+ls -LiR ${MNT} > data/inodes.dat
 
 echo "Tracing ${DEV}"
 echo "Hit Ctrl-C or send INT to stop trace and generate plots"
@@ -26,15 +31,14 @@ echo "Hit Ctrl-C or send INT to stop trace and generate plots"
 DATA_FILE=${DEV}-$(date +"%Y_%m_%d_%I_%M_%p").dat
 
 # TODO: tracetime we need to replace interval in each bpftrace file with sed
-TRACETIME=3
+# TRACETIME=3
 
 # TODO: lookup bpftrace install path and use it
 # TODO: we could drop zns probes if zns-bio-probes collects the same in different format (will need a rewrite of the heatmap generation - so for now leaving it)
 # echo "Inserting ZNS Probes"
 # (sudo /home/user/src/bpftrace/build/src/bpftrace ./zns-probes.bt ${DEV} ${ZONE_SIZE} -o data/zns_data.json) &
 echo "Inserting ZNS-Bio Probes"
-# TODO: set the block size of the device (pass as arg probably)
-(sudo /home/user/src/bpftrace/build/src/bpftrace ./zns-bio-probes.bt ${DEV} ${ZONE_SIZE} -o data/zns_bio_data.json) &
+(sudo /home/user/src/bpftrace/build/src/bpftrace ./zns-bio-probes.bt ${DEV} ${ZONE_SIZE} -o data/zns_bio_data.json -f json) &
 echo "Inserting VFS Probes"
 (sudo /home/user/src/bpftrace/build/src/bpftrace ./vfs-probes.bt -o data/vfs_data.json -f json) &
 echo "Inserting F2FS Probes"

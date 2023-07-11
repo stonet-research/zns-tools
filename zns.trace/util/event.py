@@ -1,10 +1,10 @@
 #! /usr/bin/python3
 
 class Event:
-    def __init__(self, name, timestamp, pid, tid, args):
+    def __init__(self, name, timestamp, phase, pid, tid, args):
         self.name = name
         self.cat = self.get_cat(name) # TODO: what categories would we want? VFS/FS/APP? 
-        self.ph = "i" # phase TODO: we can have durations and such as well for certain events (e.g., zone resets, I/O)
+        self.ph = phase # phase TODO: we can have durations and such as well for certain events (e.g., zone resets, I/O)
         self.ts = int(timestamp) / 1000
         self.pid = pid
         self.tid = tid 

@@ -23,42 +23,14 @@ k:move_data_block
     }
 }
 
-/* Map format:
- * func[nanoseconds, pid, tid, inode_nr] = temperature (CURSEG_{HOT/WARM/COLD}_DATA)
- */
-k:f2fs_allocate_data_block
-{
-    $type = arg5;
-    $fio = (struct f2fs_io_info *)sarg6;
-    $i_ino = $fio->ino;
-
-    @f2fs_allocate_data_block[nsecs, pid, tid, $i_ino] = $type; 
-
-    if (@logging) {
-        printf("%s <nsecs, pid, tid, i_ino, type>: <%lu, %lu, %lu, %lu, %u>\n", func, nsecs, pid, tid, $i_ino, $type);
-    }
-}
-
-k:f2fs_do_write_data_page
-{
-    $fio = (struct f2fs_io_info *)arg0;
-    $page = (struct page *)$fio->page;
-
-    @f2fs_do_write_data_page[nsecs, pid, tid, $fio->ino] = $fio->new_blkaddr; 
-
-    if (@logging) {
-        printf("%s <nsecs, pid, tid, ino, type>: <%lu, %lu, %lu, %u, %u>\n", func, nsecs, pid, tid, $fio->ino, $fio->new_blkaddr);
-    }
-}
-
 k:f2fs_submit_page_write
 {
     $fio = (struct f2fs_io_info *)arg0;
 
-    @f2fs_submit_page_write[nsecs, pid, tid, $fio->ino] = ($fio->new_blkaddr, $fio->temp); 
+    @f2fs_submit_page_write[nsecs, pid, tid, $fio->ino] = ($fio->new_blkaddr, $fio->temp, $fio->type); 
 
     if (@logging) {
-        printf("%s <nsecs, pid, tid, ino, LBA, temp>: <%lu, %lu, %lu, %u, %u, %u>\n", func, nsecs, pid, tid, $fio->ino, $fio->new_blkaddr, $fio->temp);
+        printf("%s <nsecs, pid, tid, ino, LBA, temp, type>: <%lu, %lu, %lu, %u, %u, %u, %u>\n", func, nsecs, pid, tid, $fio->ino, $fio->new_blkaddr, $fio->temp, $fio->type);
     }
 }
 

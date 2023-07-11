@@ -9,39 +9,14 @@ import glob
 
 from util.timeline import Timeline
 from util.event import Event
+from util.helpers import *
 
 JSON_FILE_NAME = ""
 
-# TODO: need to get all inodes and save them to a file: in bash do "ls -LiR /mnt/f2fs" and store in file
-WATCH_INODES = [29]
+watch_inodes = dict()
 
 # TODO make timeline a standalone class
 timeline = Timeline()
-
-def get_hint(hint):
-    match hint:
-        case 0:
-            return "RWH_WRITE_LIFE_NOT_SET"
-        case 1:
-            return "RWH_WRITE_LIFE_NONE"
-        case 2:
-            return "RWH_WRITE_LIFE_SHORT"
-        case 3:
-            return "RWH_WRITE_LIFE_MEDIUM"
-        case 4:
-            return "RWH_WRITE_LIFE_LONG"
-        case 5:
-            return "RWH_WRITE_LIFE_EXTREME"
-
-# temp in the struct f2fs_io_info is different from rw_hint, it only has HOT/WARM/COLD
-def get_temp(hint):
-    match hint:
-        case 0:
-            return "HOT"
-        case 1:
-            return "WARM"
-        case 2:
-            return "COLD"
 
 def main(argv):
     try:
@@ -57,9 +32,86 @@ def main(argv):
             global JSON_FILE_NAME
             JSON_FILE_NAME = arg
 
+def parse_f2fs_and_vfs_probe_data(file):
+    for line in file:
+        data = json.loads(line)
+        for map_name, map_data in data["data"].items():
+            if 'probes' in map_name:
+                continue
+            for key, value in map_data.items():
+                args = dict()
+                items = key.split(",")
+                timestamp = items[0]
+                pid = items[1]
+                tid = items[2]
+                hint = 0
+                inode = -1
+
+                map_name = re.sub("@", "", map_name)
+                if 'rw_hint' in map_name:
+                    args["inode"] = value[0]
+                    inode = value[0]
+                    args["rw_hint"] = get_hint(int(value[1]))
+                elif 'f2fs_submit_page_write' in map_name:
+                    val = list(value)
+                    args["inode"] = items[3]
+                    inode = items[3]
+                    args["LBA"] = int(val[0])
+                    args["temp"] = get_temp(int(val[1]))
+                    args["type"] = get_type(int(val[2]))
+                else:
+                    args["inode"] = value
+                    inode = value
+
+                if inode not in watch_inodes.keys():
+                    continue
+
+                args["file"] = watch_inodes[args["inode"]]
+
+                event = Event(map_name, timestamp, "i", pid, tid, args)
+
+                timeline.addTimestamp(event)
+
+def parse_zns_bio_probe_data(file):
+    for line in file:
+        data = json.loads(line)
+        for map_name, map_data in data["data"].items():
+            if 'probes' in map_name:
+                continue
+            for key, value in map_data.items():
+                args = dict()
+                items = key.split(",")
+                timestamp = items[0]
+                pid = items[1]
+                tid = items[2]
+
+                map_name = re.sub("@", "", map_name)
+                vals = list(value)
+
+                args["cmd"] = get_cmd(vals[0])
+                args["zone"] = vals[1]
+                args["LBA"] = vals[2]
+                args["size"] = str(int(vals[3] * 512) / 1024) + "KiB" # TODO: add variable for block size
+
+                event = Event(map_name, timestamp, "B", pid, tid, args)
+                event_end = Event(map_name, vals[4], "E", pid, tid, args)
+
+                timeline.addTimestamp(event)
+                timeline.addTimestamp(event_end)
+
 if __name__ == "__main__":
     main(sys.argv[1:])
     file_path = '/'.join(os.path.abspath(__file__).split('/')[:-1])
+
+    with open(f"{file_path}/data/inodes.dat") as file:
+        dir = ""
+        for line in file:
+            if not line[0].isdigit():
+                dir = line[:-1]
+                dir = re.sub(":", "/", dir)
+            else:
+                items = line.split(" ")
+                watch_inodes[items[0]] = dir + items[1]
 
     # TODO: we want to have different dirs for different traces coming from different times, parse a flag to specify which dir to use
     for file in glob.glob(f"{file_path}/data/*"):
@@ -69,38 +121,14 @@ if __name__ == "__main__":
         if 'timeline' in file_name:
             continue
 
+        if 'inodes' in file_name:
+            continue
+
         with open(f"{file_path}/data/{file_name}") as file:
-            for line in file:
-                data = json.loads(line)
-                for map_name, map_data in data["data"].items():
-                    if 'probes' in map_name:
-                        continue
-                    for key, value in map_data.items():
-                        args = dict()
-                        items = key.split(",")
-                        timestamp = items[0]
-                        pid = items[1]
-                        tid = items[2]
-                        hint = 0
-
-                        map_name = re.sub("@", "", map_name)
-                        if 'rw_hint' in map_name:
-                            args["inode"] = int(value[0])
-                            args["rw_hint"] = get_hint(int(value[1]))
-                        elif 'f2fs_submit_page_write' in map_name:
-                            val = list(value)
-                            args["inode"] = items[3]
-                            args["blkaddress"] = int(val[0])
-                            args["temp"] = get_temp(int(val[1]))
-                        else:
-                            args["inode"] = int(value)
-
-                        # if not inode in WATCH_INODES:
-                        #     continue
-
-                        event = Event(map_name, timestamp, pid, tid, args)
-
-                        timeline.addTimestamp(event)
+            if 'f2fs' in file_name or 'vfs' in file_name:
+                parse_f2fs_and_vfs_probe_data(file)
+            elif 'zns' in file_name:
+                parse_zns_bio_probe_data(file)
                         
     json_timeline = jsonpickle.encode(timeline, unpicklable=False, keys=True)
 
