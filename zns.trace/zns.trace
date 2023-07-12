@@ -47,7 +47,7 @@ sed -i "s/interval:s:[0-9]\+/interval:s:${TRACETIME}/g" nvme-probes.bt vfs-probe
 # echo "Inserting ZNS Probes"
 # (sudo /home/user/src/bpftrace/build/src/bpftrace ./zns-probes.bt ${DEV} ${ZONE_SIZE} -o data/zns_data.json) &
 echo "Inserting NVMe Probes"
-(sudo env "BPFTRACE_MAP_KEYS_MAX=33554432" /home/user/src/bpftrace/build/src/bpftrace ./nvme-probes.bt ${DEV} ${ZONE_SIZE} -o data/zns_bio_data.json -f json) &
+(sudo env "BPFTRACE_MAP_KEYS_MAX=33554432" /home/user/src/bpftrace/build/src/bpftrace ./nvme-probes.bt ${DEV} ${ZONE_SIZE} -o data/nvme_data.json -f json) &
 echo "Inserting VFS Probes"
 (sudo env "BPFTRACE_MAP_KEYS_MAX=32768" /home/user/src/bpftrace/build/src/bpftrace ./vfs-probes.bt -o data/vfs_data.json -f json) &
 echo "Inserting MM Probes"

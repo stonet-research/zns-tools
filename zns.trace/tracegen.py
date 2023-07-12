@@ -73,7 +73,7 @@ def parse_f2fs_and_vfs_probe_data(file):
 
                 timeline.addTimestamp(event)
 
-def parse_zns_bio_probe_data(file):
+def parse_nvme_probe_data(file):
     for line in file:
         data = json.loads(line)
         for map_name, map_data in data["data"].items():
@@ -97,7 +97,7 @@ def parse_zns_bio_probe_data(file):
                     time = vals[4]
                 else:
                     time = vals[3]
-
+                
                 event = Event(map_name, timestamp, "B", pid, tid, args)
                 event_end = Event(map_name, time, "E", pid, tid, args)
 
@@ -133,8 +133,8 @@ if __name__ == "__main__":
         with open(f"{file_path}/data/{file_name}") as file:
             if 'f2fs' in file_name or 'vfs' in file_name or 'mm' in file_name:
                 parse_f2fs_and_vfs_probe_data(file)
-            elif 'zns' in file_name:
-                parse_zns_bio_probe_data(file)
+            elif 'nvme' in file_name:
+                parse_nvme_probe_data(file)
                         
     json_timeline = jsonpickle.encode(timeline, unpicklable=False, keys=True)
 
