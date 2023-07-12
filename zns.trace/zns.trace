@@ -77,3 +77,4 @@ echo "Stopping ${DEV} tracing"
 # echo "Generating figures"
 
 # python3 plot.py -s ${ZONE_SIZE} -z ${NR_ZONES}
+python3 tracegen.py

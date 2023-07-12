@@ -111,10 +111,10 @@ if __name__ == "__main__":
         dir = ""
         for line in file:
             line = line.lstrip()
-            if not line[0].isdigit():
+            if line and not line[0].isdigit():
                 dir = line[:-1]
                 dir = re.sub(":", "/", dir)
-            else:
+            elif line:
                 items = line.split(" ")
                 watch_inodes[items[0]] = dir + items[1]
 
