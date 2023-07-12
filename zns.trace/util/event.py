@@ -14,8 +14,8 @@ class Event:
     def get_cat(self, name):
         if 'vfs' in name or 'rw_hint' in name:
             return "VFS"
-        elif 'z_' in name:
-            return "ZNS"
+        elif 'nvme' in name:
+            return "NVMe"
         elif 'f2fs' in name:
             return "F2FS"
         elif 'mm' in name:

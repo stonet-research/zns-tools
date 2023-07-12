@@ -8,6 +8,12 @@ k:do_writepages
     @mm_do_writepages[nsecs, pid, tid] = ($inode->i_ino); 
 }
 
+interval:ms:100
+{
+    print(@mm_do_writepages);
+    clear(@mm_do_writepages);
+}
+
 interval:s:5
 {
     exit();

@@ -3,7 +3,7 @@
 
 BEGIN 
 {
-    @logging = 0;
+    @ZONE_MASK = ~($1 - 1);
 }
 
 /* Reclassifies to cold data - printed independent of the original temperature
@@ -15,21 +15,22 @@ k:move_data_block
     $inode = (struct inode *)arg0;
 
     @move_data[nsecs, pid, tid] = $inode->i_ino; 
-
-    if (@logging) {
-        printf("%s <nsecs, pid, tid, i_ino>: <%lu, %lu, %lu, %lu>\n", func, nsecs, pid, tid, $inode->i_ino);
-    }
 }
 
 k:f2fs_submit_page_write
 {
     $fio = (struct f2fs_io_info *)arg0;
+    $zlbas = ($fio->new_blkaddr & @ZONE_MASK);
 
-    @f2fs_submit_page_write[nsecs, pid, tid, $fio->ino] = ($fio->new_blkaddr, $fio->temp, $fio->type); 
+    @f2fs_submit_page_write[nsecs, pid, tid, $fio->ino] = ($fio->new_blkaddr, $zlbas / $1, $fio->temp, $fio->type); 
+}
 
-    if (@logging) {
-        printf("%s <nsecs, pid, tid, ino, LBA, temp, type>: <%lu, %lu, %lu, %u, %u, %u, %u>\n", func, nsecs, pid, tid, $fio->ino, $fio->new_blkaddr, $fio->temp, $fio->type);
-    }
+interval:ms:100
+{
+    print(@f2fs_submit_page_write);
+    clear(@f2fs_submit_page_write);
+    print(@move_data);
+    clear(@move_data);
 }
 
 interval:s:5
@@ -40,5 +41,5 @@ interval:s:5
 
 END
 {
-    clear(@logging);
+    clear(@ZONE_MASK);
 }

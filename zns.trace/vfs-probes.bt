@@ -79,6 +79,22 @@ k:vfs_unlink
     }
 }
 
+interval:ms:100
+{
+    print(@vfs_open);
+    clear(@vfs_open);
+    print(@vfs_create);
+    clear(@vfs_create);
+    print(@fcntl_set_rw_hint);
+    clear(@fcntl_set_rw_hint);
+    print(@vfs_fsync);
+    clear(@vfs_fsync);
+    print(@vfs_rename);
+    clear(@vfs_rename);
+    print(@vfs_unlink);
+    clear(@vfs_unlink);
+}
+
 interval:s:5
 {
     exit();

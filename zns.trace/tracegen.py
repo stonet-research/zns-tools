@@ -57,8 +57,9 @@ def parse_f2fs_and_vfs_probe_data(file):
                     args["inode"] = str(items[3])
                     inode = str(items[3])
                     args["LBA"] = int(val[0])
-                    args["temp"] = get_temp(int(val[1]))
-                    args["type"] = get_type(int(val[2]))
+                    args["zone"] = int(val[1])
+                    args["temp"] = get_temp(int(val[2]))
+                    args["type"] = get_type(int(val[3]))
                 else:
                     args["inode"] = str(value)
                     inode = str(value)
@@ -89,9 +90,9 @@ def parse_zns_bio_probe_data(file):
                 vals = list(value)
 
                 args["cmd"] = get_cmd(vals[0])
-                args["zone"] = vals[1]
+                args["zone"] = vals[1] # only applies to zns, otherwise it will be 0
                 args["LBA"] = vals[2]
-                if 'z_nvme_rq' in map_name:
+                if 'nvme_rq' in map_name:
                     args["size"] = str(int(vals[3] * 512) / 1024) + "KiB" # TODO: add variable for block size
                     time = vals[4]
                 else:

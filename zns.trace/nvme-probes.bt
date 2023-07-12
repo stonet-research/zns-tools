@@ -2,7 +2,7 @@
 #include <linux/blkdev.h>
 #include <linux/blk-mq.h>
 
-// TODO: set this with the parent script
+// TODO: make this apply to zns and non zns, so zone mask may be 0
 /* NOTE, the values are defined as 512B sector size
  * Change the below define to 12 for 4K sector size
  */
@@ -39,7 +39,7 @@ k:nvme_setup_cmd / ((struct request *)arg1)->q->disk->disk_name == str($1) / {
         // Convert data_len to 512B sectors
         $data_len = (((struct request *)arg1)->__data_len >> SECTOR_SHIFT);
         
-        @z_nvme_setup_cmd_trackmap[$cmdid] = ($time, pid, tid, $cmd, $zlbas / $2, $secnum, $data_len);
+        @nvme_setup_cmd_trackmap[$cmdid] = ($time, pid, tid, $cmd, $zlbas / $2, $secnum, $data_len);
     }
 
     // If nvme device is in passthrough (e.g., qemu passthrough) Zone reset has flag REQ_OP_DRV_OUT
@@ -48,7 +48,7 @@ k:nvme_setup_cmd / ((struct request *)arg1)->q->disk->disk_name == str($1) / {
         $secnum = $nvme_cmd->rw.slba;
         $zlbas = ($secnum & @ZONE_MASK);
 
-        @z_nvme_rq_reset_trackmap[$cmdid] = ($time, pid, tid, $cmd, $zlbas / $2, $secnum)
+        @nvme_rq_reset_trackmap[$cmdid] = ($time, pid, tid, $cmd, $zlbas / $2, $secnum)
     }
 }
 
@@ -60,24 +60,32 @@ k:nvme_complete_rq / ((struct request *)arg0)->q->disk->disk_name == str($1) / {
     $time = nsecs;
 
     if($cmd == REQ_OP_WRITE || $cmd == REQ_OP_ZONE_APPEND || $cmd == REQ_OP_READ) {
-        $starttime = @z_nvme_setup_cmd_trackmap[$cmdid].0;
-        $p = @z_nvme_setup_cmd_trackmap[$cmdid].1;
-        $t = @z_nvme_setup_cmd_trackmap[$cmdid].2;
-        $c = @z_nvme_setup_cmd_trackmap[$cmdid].3;
-        $zlbas_in = @z_nvme_setup_cmd_trackmap[$cmdid].4;
-        $secnum_in = @z_nvme_setup_cmd_trackmap[$cmdid].5;
-        $data_len_in = @z_nvme_setup_cmd_trackmap[$cmdid].6;
-        @z_nvme_rq[$starttime, $p, $t] = ($c, $zlbas_in, $secnum_in, $data_len_in, $time);
+        $starttime = @nvme_setup_cmd_trackmap[$cmdid].0;
+
+        /* if bpf map runs out of memory the corresponding setup trace event is dropped and we have to drop the completion event */
+        if ($starttime != 0) {
+            $p = @nvme_setup_cmd_trackmap[$cmdid].1;
+            $t = @nvme_setup_cmd_trackmap[$cmdid].2;
+            $c = @nvme_setup_cmd_trackmap[$cmdid].3;
+            $zlbas_in = @nvme_setup_cmd_trackmap[$cmdid].4;
+            $secnum_in = @nvme_setup_cmd_trackmap[$cmdid].5;
+            $data_len_in = @nvme_setup_cmd_trackmap[$cmdid].6;
+            @nvme_rq[$starttime, $p, $t] = ($c, $zlbas_in, $secnum_in, $data_len_in, $time);
+        }
     }
 
     if($cmd == REQ_OP_ZONE_RESET || (($cmd == REQ_OP_DRV_OUT && $opcode == nvme_cmd_zone_mgmt_send) && $nvme_cmd->zms.zsa == NVME_ZONE_RESET)) {
-        $starttime = @z_nvme_rq_reset_trackmap[$cmdid].0;
-        $p = @z_nvme_rq_reset_trackmap[$cmdid].1;
-        $t = @z_nvme_rq_reset_trackmap[$cmdid].2;
-        $c = @z_nvme_rq_reset_trackmap[$cmdid].3;
-        $zlbas_in = @z_nvme_rq_reset_trackmap[$cmdid].4;
-        $secnum_in = @z_nvme_rq_reset_trackmap[$cmdid].5;
-        @z_nvme_reset[$starttime, $p, $t] = ($c, $zlbas_in, $secnum_in, $time);
+        $starttime = @nvme_rq_reset_trackmap[$cmdid].0;
+
+        /* if bpf map runs out of memory the corresponding setup trace event is dropped and we have to drop the completion event */
+        if ($starttime != 0) {
+            $p = @nvme_rq_reset_trackmap[$cmdid].1;
+            $t = @nvme_rq_reset_trackmap[$cmdid].2;
+            $c = @nvme_rq_reset_trackmap[$cmdid].3;
+            $zlbas_in = @nvme_rq_reset_trackmap[$cmdid].4;
+            $secnum_in = @nvme_rq_reset_trackmap[$cmdid].5;
+            @nvme_reset[$starttime, $p, $t] = ($c, $zlbas_in, $secnum_in, $time);
+        }
     }
 }
 
@@ -88,6 +96,6 @@ interval:s:5
 
 END {
     clear(@ZONE_MASK);
-    clear(@z_nvme_rq_reset_trackmap);
-    clear(@z_nvme_setup_cmd_trackmap);
+    clear(@nvme_rq_reset_trackmap);
+    clear(@nvme_setup_cmd_trackmap);
 }
