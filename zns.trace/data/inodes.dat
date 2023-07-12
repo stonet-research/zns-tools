@@ -1,8 +1,0 @@
-/mnt/f2fs:
-35 bench-dmy2
-29 bench-dummy
-31 bench-dummy2
-33 test
-
-/mnt/f2fs/test:
-34 te

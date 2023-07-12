@@ -48,3 +48,4 @@ conftest.dir/
 *.json
 
 zns.trace/util/__pycache__/
+*.dat

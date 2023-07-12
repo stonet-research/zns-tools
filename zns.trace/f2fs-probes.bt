@@ -1,8 +1,6 @@
 #include <linux/f2fs_fs.h>
 #include "f2fs.h"
 
-// TODO: remove comment, to run in script sudo /home/user/src/bpftrace/build/src/bpftrace -I include/f2fs.h f2fs-probes.bt
-
 BEGIN 
 {
     @logging = 0;

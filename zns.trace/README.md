@@ -68,3 +68,12 @@ reset_lat_map[$zlbas, @z_reset_ctr_map[$zlbas]] = int64 (in nsecs)
 ## Known Issues
 
 - A known issue is that not all zone reset latencies are traced, where the heatmap for the zone reset latencies is missing zones that were reset, as shown by the zone reset counter heatpmaps.
+
+### The timeline has timestamps that are several minutes into execution:
+
+This is due to the fact that perfetto takes the lowest timestamp as a starting point and we dropped events in bpftrace,
+resulting in a timestamp of 0 to be recorded, as the event is non-existent in the data map when tracing
+startup-completion time. bpftrace drops events due to the lack of available memory for the data
+map. Increasing the memory solves this issue which can be done by increasing the `BPFTRACE_MAP_KEYS_MAX` in the
+`zns.trace` script. This is a environment variable for bfptrace, which we increased from the default `4096` to `16777216`, however this can be
+increased further if needed. Note that this increases the memory consumption and startup/exit times for the bpftrace scripts.

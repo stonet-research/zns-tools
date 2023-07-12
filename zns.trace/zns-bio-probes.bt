@@ -35,18 +35,10 @@ k:nvme_setup_cmd / ((struct request *)arg1)->q->disk->disk_name == str($1) / {
     $zlbas = ($secnum & @ZONE_MASK);
 
     // Trace Write and Append command counters and I/O sizes
-    if($cmd == REQ_OP_WRITE || $cmd == REQ_OP_ZONE_APPEND) {
+    if($cmd == REQ_OP_WRITE || $cmd == REQ_OP_ZONE_APPEND || $cmd == REQ_OP_READ) {
         // Convert data_len to 512B sectors
         $data_len = (((struct request *)arg1)->__data_len >> SECTOR_SHIFT);
         
-        @z_nvme_setup_cmd_trackmap[$cmdid] = ($time, pid, tid, $cmd, $zlbas / $2, $secnum, $data_len);
-    }
-
-    // Trace Read command counter and total I/O sizes
-    if($cmd == REQ_OP_READ) {
-
-        // Convert data_len to 512B sectors
-        $data_len = (((struct request *)arg1)->__data_len >> SECTOR_SHIFT);
         @z_nvme_setup_cmd_trackmap[$cmdid] = ($time, pid, tid, $cmd, $zlbas / $2, $secnum, $data_len);
     }
 
@@ -75,7 +67,7 @@ k:nvme_complete_rq / ((struct request *)arg0)->q->disk->disk_name == str($1) / {
         $zlbas_in = @z_nvme_setup_cmd_trackmap[$cmdid].4;
         $secnum_in = @z_nvme_setup_cmd_trackmap[$cmdid].5;
         $data_len_in = @z_nvme_setup_cmd_trackmap[$cmdid].6;
-        @z_nvme_rq[$starttime, $p, $t] = ($c, $zlbas_in / $2, $secnum_in, $data_len_in, $time);
+        @z_nvme_rq[$starttime, $p, $t] = ($c, $zlbas_in, $secnum_in, $data_len_in, $time);
     }
 
     if($cmd == REQ_OP_ZONE_RESET || (($cmd == REQ_OP_DRV_OUT && $opcode == nvme_cmd_zone_mgmt_send) && $nvme_cmd->zms.zsa == NVME_ZONE_RESET)) {
@@ -85,7 +77,7 @@ k:nvme_complete_rq / ((struct request *)arg0)->q->disk->disk_name == str($1) / {
         $c = @z_nvme_rq_reset_trackmap[$cmdid].3;
         $zlbas_in = @z_nvme_rq_reset_trackmap[$cmdid].4;
         $secnum_in = @z_nvme_rq_reset_trackmap[$cmdid].5;
-        @z_nvme_reset[$starttime, $p, $t] = ($c, $zlbas_in / $2, $secnum_in, $time);
+        @z_nvme_reset[$starttime, $p, $t] = ($c, $zlbas_in, $secnum_in, $time);
     }
 }
 

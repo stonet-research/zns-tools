@@ -49,19 +49,19 @@ def parse_f2fs_and_vfs_probe_data(file):
 
                 map_name = re.sub("@", "", map_name)
                 if 'rw_hint' in map_name:
-                    args["inode"] = value[0]
-                    inode = value[0]
+                    args["inode"] = str(value[0])
+                    inode = str(value[0])
                     args["rw_hint"] = get_hint(int(value[1]))
                 elif 'f2fs_submit_page_write' in map_name:
                     val = list(value)
-                    args["inode"] = items[3]
-                    inode = items[3]
+                    args["inode"] = str(items[3])
+                    inode = str(items[3])
                     args["LBA"] = int(val[0])
                     args["temp"] = get_temp(int(val[1]))
                     args["type"] = get_type(int(val[2]))
                 else:
-                    args["inode"] = value
-                    inode = value
+                    args["inode"] = str(value)
+                    inode = str(value)
 
                 if inode not in watch_inodes.keys():
                     continue
@@ -110,6 +110,7 @@ if __name__ == "__main__":
     with open(f"{file_path}/data/inodes.dat") as file:
         dir = ""
         for line in file:
+            line = line.lstrip()
             if not line[0].isdigit():
                 dir = line[:-1]
                 dir = re.sub(":", "/", dir)
@@ -129,7 +130,7 @@ if __name__ == "__main__":
             continue
 
         with open(f"{file_path}/data/{file_name}") as file:
-            if 'f2fs' in file_name or 'vfs' in file_name:
+            if 'f2fs' in file_name or 'vfs' in file_name or 'mm' in file_name:
                 parse_f2fs_and_vfs_probe_data(file)
             elif 'zns' in file_name:
                 parse_zns_bio_probe_data(file)
