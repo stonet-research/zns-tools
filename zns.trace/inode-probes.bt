@@ -1,0 +1,17 @@
+#include <linux/f2fs_fs.h>
+#include "f2fs.h"
+
+k:f2fs_init_inode_metadata
+{
+   $inode = (struct inode *)arg0; 
+   $fname = (struct f2fs_filename *)arg2;
+   $usr_fname = (struct qstr *)$fname->usr_fname;
+
+   @inodes[$inode->i_ino] = str($usr_fname->name);
+}
+
+interval:s:5
+{
+    exit();
+}
+

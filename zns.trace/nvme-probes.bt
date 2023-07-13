@@ -71,6 +71,7 @@ k:nvme_complete_rq / ((struct request *)arg0)->q->disk->disk_name == str($1) / {
             $secnum_in = @nvme_setup_cmd_trackmap[$cmdid].5;
             $data_len_in = @nvme_setup_cmd_trackmap[$cmdid].6;
             @nvme_rq[$starttime, $p, $t] = ($c, $zlbas_in, $secnum_in, $data_len_in, $time);
+            delete(@nvme_rq_reset_trackmap[$cmdid]);
         }
     }
 
@@ -85,11 +86,12 @@ k:nvme_complete_rq / ((struct request *)arg0)->q->disk->disk_name == str($1) / {
             $zlbas_in = @nvme_rq_reset_trackmap[$cmdid].4;
             $secnum_in = @nvme_rq_reset_trackmap[$cmdid].5;
             @nvme_reset[$starttime, $p, $t] = ($c, $zlbas_in, $secnum_in, $time);
+            delete(@nvme_rq_reset_trackmap[$cmdid]);
         }
     }
 }
 
-interval:ms:100
+interval:ms:1
 {
     print(@nvme_rq);
     clear(@nvme_rq);
