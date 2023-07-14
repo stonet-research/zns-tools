@@ -93,7 +93,7 @@ k:nvme_complete_rq / ((struct request *)arg0)->q->disk->disk_name == str($1) / {
     }
 }
 
-interval:ms:1
+interval:ms:10
 {
     print(@nvme_rq);
     clear(@nvme_rq);

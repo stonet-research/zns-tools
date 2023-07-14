@@ -25,12 +25,12 @@ k:f2fs_submit_page_write
     @f2fs_submit_page_write[nsecs, pid, tid, $fio->ino] = ($fio->new_blkaddr, $zlbas / $1, $fio->temp, $fio->type); 
 }
 
-interval:ms:100
+interval:ms:10
 {
     print(@f2fs_submit_page_write);
     clear(@f2fs_submit_page_write);
-    print(@move_data);
-    clear(@move_data);
+    print(@f2fs_move_data);
+    clear(@f2fs_move_data);
 }
 
 interval:s:5

@@ -38,10 +38,13 @@ k:do_fcntl
         $f_inode = (struct inode *) ((struct file *)arg3)->f_inode;
         // annotate rw_hint as uptr, as it is a userspace pointer which bpftrace cannot infer
         $argp = uptr(arg2);
-        @fcntl_set_rw_hint[nsecs, pid, tid] = ($f_inode->i_ino, *$argp);
+        // invalid hints we ignore
+        if (*$argp >=0 && *$argp < 6) {
+            @fcntl_set_rw_hint[nsecs, pid, tid] = ($f_inode->i_ino, *$argp);
 
-        if (@logging) {
-            printf("%s <nsecs, pid, tid, i_ino, rw_hint>: <%lu, %lu, %lu, %lu, %lu>\n", func, nsecs, pid, tid, $f_inode->i_ino, *$argp);
+            if (@logging) {
+                printf("%s <nsecs, pid, tid, i_ino, rw_hint>: <%lu, %lu, %lu, %lu, %lu>\n", func, nsecs, pid, tid, $f_inode->i_ino, *$argp);
+            }
         }
     }
 }
