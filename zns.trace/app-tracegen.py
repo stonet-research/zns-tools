@@ -87,6 +87,9 @@ def parse_nvme_probe_data(file):
         for map_name, map_data in data["data"].items():
             if 'probes' in map_name:
                 continue
+            elif 'events' in map_name:
+                print("Found Lost events! Try rebooting the machine and rerunning the trace.")
+                exit(1)
             for key, value in map_data.items():
                 args = dict()
                 items = key.split(",")

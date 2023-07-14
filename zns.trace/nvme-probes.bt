@@ -77,15 +77,17 @@ k:nvme_complete_rq / ((struct request *)arg0)->q->disk->disk_name == str($1) / {
 
     if($cmd == REQ_OP_ZONE_RESET || (($cmd == REQ_OP_DRV_OUT && $opcode == nvme_cmd_zone_mgmt_send) && $nvme_cmd->zms.zsa == NVME_ZONE_RESET)) {
         $starttime = @nvme_rq_reset_trackmap[$cmdid].0;
+        $p = @nvme_rq_reset_trackmap[$cmdid].1;
 
         /* if bpf map runs out of memory the corresponding setup trace event is dropped and we have to drop the completion event */
-        if ($starttime != 0) {
-            $p = @nvme_rq_reset_trackmap[$cmdid].1;
+        if ($starttime != 0 && $p != 0) {
             $t = @nvme_rq_reset_trackmap[$cmdid].2;
             $c = @nvme_rq_reset_trackmap[$cmdid].3;
             $zlbas_in = @nvme_rq_reset_trackmap[$cmdid].4;
             $secnum_in = @nvme_rq_reset_trackmap[$cmdid].5;
             @nvme_reset[$starttime, $p, $t] = ($c, $zlbas_in, $secnum_in, $time);
+            delete(@nvme_rq_reset_trackmap[$cmdid]);
+        } else {
             delete(@nvme_rq_reset_trackmap[$cmdid]);
         }
     }
