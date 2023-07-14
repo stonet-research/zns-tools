@@ -1,13 +1,13 @@
 #! /usr/bin/python3
 
 class Event:
-    def __init__(self, name, timestamp, phase, pid, tid, args):
+    def __init__(self, name, timestamp, phase, pid, tid, args, tid_map):
         self.name = name
         self.cat = self.get_cat(name) # TODO: what categories would we want? VFS/FS/APP? 
         self.ph = phase
         self.ts = int(timestamp) / 1000 # timestamp in microseconds
         self.pid = self.get_pid(name)
-        self.tid = self.get_pid(name) 
+        self.tid = tid_map[name] 
         self.args = args
         # self.cname # TODO: Color - can highlight contract violations in red here
 

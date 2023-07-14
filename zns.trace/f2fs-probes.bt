@@ -14,7 +14,7 @@ k:move_data_block
 {
     $inode = (struct inode *)arg0;
 
-    @move_data[nsecs, pid, tid] = $inode->i_ino; 
+    @f2fs_move_data[nsecs, pid, tid] = $inode->i_ino; 
 }
 
 k:f2fs_submit_page_write
