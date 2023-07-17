@@ -49,3 +49,4 @@ conftest.dir/
 
 zns.trace/util/__pycache__/
 *.dat
+nvme*

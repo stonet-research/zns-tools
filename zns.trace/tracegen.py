@@ -11,13 +11,14 @@ from util.timeline import Timeline
 from util.event import Event, MetaEvent
 from util.helpers import *
 
-JSON_FILE_NAME = ""
+DIR = ""
 thread_ctr = 0
 
 watch_inodes = dict()
 tid_map = dict()
 timeline = Timeline()
 
+# TODO: we need a better way to get the filename, if a file was created before probe attaches we miss it and ignore that file
 def parse_inodes(file):
     for line in file:
         data = json.loads(line)
@@ -29,17 +30,21 @@ def parse_inodes(file):
  
 def main(argv):
     try:
-        opts, args = getopt.getopt(argv,"hd:",["data_file="])
+        opts, args = getopt.getopt(argv,"hd:",["dir="])
     except getopt.GetoptError:
-        print('Error. Usage: python3 timeline.py -d [relative path to json file of trace data]')
+        print('Error. Usage: python3 tracegen.py -d [relative path to trace data directory]')
         sys.exit(2)
     for opt, arg in opts:
         if opt == '-h':
-            print('Error. Usage: python3 tracegen.py -d [relative path to json file of trace data]')
+            print('Error. Usage: python3 tracegen.py -d [relative path to trace data directory]')
             sys.exit()
-        elif opt in ("-d", "--data_file"):
-            global JSON_FILE_NAME
-            JSON_FILE_NAME = arg
+        elif opt in ("-d", "--dir"):
+            global DIR
+            DIR = arg
+
+    if DIR == "":
+        print('Error missing directory. Usage: python3 tracegen.py -d [relative path to trace data directory]')
+        sys.exit()
 
 def parse_f2fs_and_vfs_probe_data(file):
     for line in file:
@@ -112,7 +117,7 @@ def parse_nvme_probe_data(file):
                     time = vals[4]
                 else:
                     time = vals[3]
-                
+
                 event = Event(name, timestamp, "B", pid, tid, args, tid_map)
                 event_end = Event(name, time, "E", pid, tid, args, tid_map)
 
@@ -207,14 +212,14 @@ if __name__ == "__main__":
     main(sys.argv[1:])
     file_path = '/'.join(os.path.abspath(__file__).split('/')[:-1])
 
-    with open(f"{file_path}/data/inodes.json") as file:
+    with open(f"{file_path}/{DIR}/inodes.json") as file:
         parse_inodes(file)
 
     init_tid_map(tid_map)
     set_metadata_events()
 
     # TODO: we want to have different dirs for different traces coming from different times, parse a flag to specify which dir to use
-    for file in glob.glob(f"{file_path}/data/*"):
+    for file in glob.glob(f"{file_path}/{DIR}/*"):
         file_name = file.split('/')[-1]
 
         # existing timeline.json file for this data dir, overwrite it
@@ -224,7 +229,7 @@ if __name__ == "__main__":
         if 'inodes' in file_name:
             continue
 
-        with open(f"{file_path}/data/{file_name}") as file:
+        with open(f"{file_path}/{DIR}/{file_name}") as file:
             if 'f2fs' in file_name or 'vfs' in file_name or 'mm' in file_name:
                 parse_f2fs_and_vfs_probe_data(file)
             elif 'nvme' in file_name:
@@ -234,5 +239,5 @@ if __name__ == "__main__":
                         
     json_timeline = jsonpickle.encode(timeline, unpicklable=False, keys=True)
 
-    with open(f"{file_path}/data/timeline.json", 'w') as outfile:
+    with open(f"{file_path}/{DIR}/timeline.json", 'w') as outfile:
         outfile.write(json_timeline + '\n')

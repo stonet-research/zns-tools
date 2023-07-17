@@ -77,4 +77,3 @@ def get_type(type):
             return "META"
         case 3:
             return "META_FLUSH"
-
