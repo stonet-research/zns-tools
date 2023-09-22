@@ -331,7 +331,7 @@ In the `zns.trace/` directory, we provide a framework to trace activity on zns d
 
 ## Evaluation
 
-In the `evaluation/` directory we provide a benchmarking setup for evaluating the performance of the zns-tools, and an end-to-end visualization framework for RocksDB to analyze and visualize the data movement of flush/compaction operations, as well as F2FS Zone management operations. 
+In the `evaluation/` directory we provide a benchmarking setup for evaluating the performance of the zns-tools, and an end-to-end visualization framework for RocksDB to analyze and visualize the data movement of flush/compaction operations, as well as F2FS Zone management operations.
 
 ### Setup
 
@@ -350,6 +350,8 @@ To run the RocksDB workload, a script is provided that executes all necessary to
 ```
 sh ./timeline_data_rocksdb_gen.sh
 ```
+
+Afterwards data should be preprocessed for plotting by running the notebook `preprocess.ipynb`  (`jupyter notebook` to start the notebook). It should create `data.json` in  `../timeline-gen`.
 
 To then visualize the data, copy it to the `../timeline-gen/` directory and execute the cells in the `plot.ipynb` notebook (`jupyter notebook` to start the notebook).
 
