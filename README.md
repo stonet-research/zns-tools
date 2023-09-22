@@ -42,8 +42,6 @@ make
 sudo make install
 ```
 
-Note, `zns.fpbench` has the possibility to run with multi-streams, which requires our F2FS Kernel build with multi-streams to be installed (see more [here](https://github.com/nicktehrany/f2fs)). By default this support is disabled in the tools, to enabled it run `./configure --enable-multi-streams` instead.
-
 ## How to use the tools
 
 The tools aim to further the understanding of the storage, identify how file placement decisions are made, and how I/O is done. We provide several examples how the tools can help our understanding of file systems and ZNS SSD.
