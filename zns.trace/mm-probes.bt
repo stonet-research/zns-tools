@@ -1,0 +1,20 @@
+#include <linux/fs.h>
+
+k:do_writepages
+{
+    $mapping = (struct address_space *)arg0;
+    $inode = (struct inode *)$mapping->host;
+
+    @mm_do_writepages[nsecs, pid, tid] = ($inode->i_ino); 
+}
+
+interval:ms:100
+{
+    print(@mm_do_writepages);
+    clear(@mm_do_writepages);
+}
+
+interval:s:5
+{
+    exit();
+}

@@ -1,0 +1,47 @@
+// TODO: not hardcoding db_bench path and function sig, can use sed to replace and find sigs
+
+#define FLUSH 0
+#define COMPACTION 1
+
+/* FlushJob::Run */
+uprobe:/home/user/src/rocksdb/db_bench:_ZN7rocksdb8FlushJob3RunEPNS_19LogsWithPrepTrackerEPNS_12FileMetaDataEPb
+{
+    @flush_track_map[FLUSH] = nsecs;
+}
+
+/* FlushJob::Run */
+uretprobe:/home/user/src/rocksdb/db_bench:_ZN7rocksdb8FlushJob3RunEPNS_19LogsWithPrepTrackerEPNS_12FileMetaDataEPb
+{
+    $time = nsecs;
+    $starttime = @flush_track_map[FLUSH];
+
+    @flush[$starttime, pid, tid] = $time - $starttime;
+}
+
+/* NotifyOnCompactionBegin */
+uprobe:/home/user/src/rocksdb/db_bench:_ZN7rocksdb6DBImpl23NotifyOnCompactionBeginEPNS_16ColumnFamilyDataEPNS_10CompactionERKNS_6StatusERKNS_18CompactionJobStatsEi
+{
+    $jobid = arg4;
+
+    @compaction_track_map[COMPACTION, $jobid] = nsecs;
+}
+
+/* NotifyOnCompactionCompleted */
+uprobe:/home/user/src/rocksdb/db_bench:_ZN7rocksdb6DBImpl27NotifyOnCompactionCompletedEPNS_16ColumnFamilyDataEPNS_10CompactionERKNS_6StatusERKNS_18CompactionJobStatsEi
+{
+    $jobid = arg4;
+    $time = nsecs;
+    $starttime = @compaction_track_map[COMPACTION, $jobid];
+
+    @compaction[$starttime, pid, tid] = $time - $starttime;
+}
+
+interval:s:5
+{
+    exit();
+}
+
+END {
+    clear(@flush_track_map);
+    clear(@compaction_track_map);
+}

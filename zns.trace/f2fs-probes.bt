@@ -1,0 +1,45 @@
+#include <linux/f2fs_fs.h>
+#include "f2fs.h"
+
+BEGIN 
+{
+    @ZONE_MASK = ~($1 - 1);
+}
+
+/* Reclassifies to cold data - printed independent of the original temperature
+ * post-processing can identify if it was a reclassification
+ */
+k:move_data_page,
+k:move_data_block
+{
+    $inode = (struct inode *)arg0;
+
+    @f2fs_move_data[nsecs, pid, tid] = $inode->i_ino; 
+}
+
+k:f2fs_submit_page_write
+{
+    $fio = (struct f2fs_io_info *)arg0;
+    $zlbas = ($fio->new_blkaddr & @ZONE_MASK);
+
+    @f2fs_submit_page_write[nsecs, pid, tid, $fio->ino] = ($fio->new_blkaddr, $zlbas / $1, $fio->temp, $fio->type); 
+}
+
+interval:ms:10
+{
+    print(@f2fs_submit_page_write);
+    clear(@f2fs_submit_page_write);
+    print(@f2fs_move_data);
+    clear(@f2fs_move_data);
+}
+
+interval:s:5
+{
+    exit();
+}
+
+
+END
+{
+    clear(@ZONE_MASK);
+}

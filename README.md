@@ -6,9 +6,28 @@ The blow figures visualizes the organization of the `zns-tools`, with the intera
 F2FS file system, Linux kernel, and the ZNS device.
 ![zns-tools-visual](meta/zns-tools.png)
 
+## What's New
+
+- Introduce `zns.apptrace` to generate full timeline visualization of the different storage layers by inserting probes into the various Linux storage stack layers, allowing to visualize how user-space operations generate requests throughout the storage stack.
+- Improve the performance of the tools by reducing time complexity to O(n), with decreased memory consumption.
+- Increase file system support to `Btrfs` and `F2FS`.
+- Expand LBAF support to 512B and 4KiB for the tools.
+- Stable Release V1.0.0
+
+## Resources
+
+See the below papers for publications of this work, further reading from us on understanding the ecosystem around ZNS and Flash SSDs.
+
+- [Understanding (Un)Written Contracts of NVMe ZNS Devices with zns-tools](https://arxiv.org/abs/2307.11860)
+- [Understanding NVMe Zoned Namespace (ZNS) Flash SSD Storage Devices](https://arxiv.org/abs/2206.01547)
+- [Performance Characterization of NVMe Flash Devices with Zoned Namespaces (ZNS)](https://atlarge-research.com/pdfs/2023-cluster-zns-performance-kdoekemeijer.pdf)
+- [A Survey on the Integration of NAND Flash Storage in the Design of File Systems and the Host Storage Software Stack](https://arxiv.org/abs/2307.11866)
+- [msF2FS: Design and Implementation of an NVMe ZNS SSD Optimized F2FS File System](https://repository.tudelft.nl/islandora/object/uuid:3c2b3e73-6aff-45f3-af43-31a50314b547)
+
 ## Requirements
 
-// TODO: need json-c and bpf 
+- [json-c](https://github.com/json-c/json-c)
+- [bpftrace](https://github.com/iovisor/bpftrace)
 
 ## Compiling and Running
 
@@ -24,6 +43,37 @@ sudo make install
 ```
 
 Note, `zns.fpbench` has the possibility to run with multi-streams, which requires our F2FS Kernel build with multi-streams to be installed (see more [here](https://github.com/nicktehrany/f2fs)). By default this support is disabled in the tools, to enabled it run `./configure --enable-multi-streams` instead.
+
+## How to use the tools
+
+The tools aim to further the understanding of the storage, identify how file placement decisions are made, and how I/O is done. We provide several examples how the tools can help our understanding of file systems and ZNS SSD.
+
+### How can the addresses of files be located on the ZNS SSD?
+
+It may be important to understand how and where file systems allocate space for the file data to be stored. For this, the tools interact with the file system to retrieve relevant information on physical block addresses of files, and provide these to the user in a comprehensible manner. For instance, locating a file called `to_be_located_file.txt` can be done as follows:
+
+```bash
+user@stosys:~/src/zns-tools/src$ sudo ./zns.fiemap -f to_be_located_file.txt
+====================================================================
+                        EXTENT MAPPINGS
+====================================================================
+
+**** ZONE 13 ****
+LBAS: 0x3000000  LBAE: 0x321a800  CAP: 0x21a800  WP: 0x3400000  SIZE: 0x400000  STATE: 0xe0  MASK: 0xffc00000
+
+EXTID: 33    PBAS: 0x30e2938   PBAE: 0x30e2980   SIZE: 0x48
+EXTID: 34    PBAS: 0x30ebe00   PBAE: 0x30ebe10   SIZE: 0x10
+```
+
+which provides the information of the file extents (representing the physical regions of the data on the ZNS SSD), and maps these to information on which zones it is, alongside further statistics. This furthermore aids in answering the question of how the file system allocates different files.
+
+### How can we identify the utilization of applications and the Linux storage stack of ZNS SSDs?
+
+Understanding the utilization of a storage device is vital to identify shortcomings/bottlenecks within systems. For this purpose, we developed a tracing framework to collect data on all ongoing I/O requests to the device and generate a set of heatmaps to visualize the distribution of I/O activity on the ZNS SSD. The below figure illustrates the number of zone reset commands issued to the respective zones on the ZNS device.
+
+![example-fig](zns.trace/example/figs/nvme0n2-2022_09_07_10_20_AM.dat/z_reset_ctr_map-heatmap.png)
+
+For further examples of all the tools, see also the examples below [here](#examples).
 
 ## Examples
 
@@ -240,7 +290,7 @@ next_blkaddr:           1572896
 .
 ```
 
-### zns.fpbench
+### zns.fpbench (DEPRECATED - ONLY SUPPORTED IN V1.0.0)
 
 **Currently supported:** F2FS
 
@@ -277,9 +327,7 @@ The benchmark is simple and is meant for only testing the adherence of F2FS with
 
 **Currently supported:** Any application on ZNS with Linux kernel and BPF support
 
-In the `zns.trace/` directory, we provide a framework to trace activity on zns devices across its different zones using BPF, collecting information on number of read/write operations to each zone, amount of data read/written in each zone, and reset statistics, including reset latency per zone. After collecting tracing statistics, zns.trace automatically generates heatmaps for each collected statistic, depicting the information for each zone in a comprehensible manner. The below figure illustrates the number of zone reset commands issued to the respective zones on the ZNS device.
-
-![example-fig](zns.trace/example/figs/nvme0n2-2022_09_07_10_20_AM.dat/z_reset_ctr_map-heatmap.png)
+In the `zns.trace/` directory, we provide a framework to trace activity on zns devices across its different zones using BPF, collecting information on number of read/write operations to each zone, amount of data read/written in each zone, and reset statistics, including reset latency per zone. After collecting tracing statistics, zns.trace automatically generates heatmaps for each collected statistic, depicting the information for each zone in a comprehensible manner.
 
 ## Evaluation
 
