@@ -272,7 +272,6 @@ typedef void (*fs_info_init)();
 typedef void (*fs_info_show)(void *, uint8_t, unsigned int);
 typedef void (*fs_info_cleanup)();
 
-
 static_assert(sizeof(struct f2fs_inode) == 4072, "");
 
 #define DEF_ADDRS_PER_BLOCK 1018 /* Address Pointers in a Direct Block */

@@ -169,7 +169,8 @@ static void write_file(struct workload workload) {
  * 1, but for segment ranges this options allows different values.
  *
  * */
-/* static void set_segment_counters(uint32_t segment_id, uint32_t num_segments) { */
+/* static void set_segment_counters(uint32_t segment_id, uint32_t num_segments)
+ * { */
 /*     wl_man.segment_ctr += num_segments; */
 /*     get_procfs_single_segment_bits(ctrl.bdev.dev_name, segment_id); */
 
@@ -228,7 +229,8 @@ static void print_report(struct workload workload, struct extent_map *extents) {
 
             // part 1: the beginning of extent to end of that single segment
             if (extents->extents[i].phy_blk != segment_start) {
-                /* set_segment_counters(segment_start >> ctrl.segment_shift, 1); */
+                /* set_segment_counters(segment_start >> ctrl.segment_shift, 1);
+                 */
                 segment_id++;
             }
 
@@ -249,7 +251,8 @@ static void print_report(struct workload workload, struct extent_map *extents) {
                  ctrl.f2fs_segment_mask);
             if (segment_end !=
                 extents->extents[i].phy_blk + extents->extents[i].len) {
-                /* set_segment_counters(segment_end >> ctrl.segment_shift, 1); */
+                /* set_segment_counters(segment_end >> ctrl.segment_shift, 1);
+                 */
             }
         }
     }
@@ -369,7 +372,8 @@ static void prepare_report() {
     /* struct extent_map *extents; */
 
     /* FORMATTER */
-    /* MSG("%-50s | Number of Extents | Number of Occupied Segments | Number of " */
+    /* MSG("%-50s | Number of Extents | Number of Occupied Segments | Number of
+     * " */
     /*     "Occupied Zones | Cold Segments | Warm Segments | Hot Segments\n", */
     /*     "Filename"); */
     /* FORMATTER */
@@ -407,7 +411,8 @@ int main(int argc, char *argv[]) {
     uint8_t set_exclusive_or_stream = false;
 
     // TODO: remove it from docs, build and everywhere else
-    MSG("zns.fpbench has been deprecated and is being removed. Use fio and zns.segmap instead.\n");
+    MSG("zns.fpbench has been deprecated and is being removed. Use fio and "
+        "zns.segmap instead.\n");
     exit(0);
 
     wl_man.wl = calloc(1, sizeof(struct workload));

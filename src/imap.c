@@ -85,8 +85,7 @@ int main(int argc, char *argv[]) {
         f2fs_show_checkpoint();
     }
 
-    INFO(1, "File %s has inode number %lu\n", filename,
-         stats->st_ino);
+    INFO(1, "File %s has inode number %lu\n", filename, stats->st_ino);
     inode = (struct f2fs_inode *)calloc(1, sizeof(struct f2fs_inode));
 
     do {
@@ -98,8 +97,7 @@ int main(int argc, char *argv[]) {
             free(node_block);
         }
 
-        nat_entry =
-            f2fs_get_inode_nat_entry(ctrl.bdev.dev_path, stats->st_ino);
+        nat_entry = f2fs_get_inode_nat_entry(ctrl.bdev.dev_path, stats->st_ino);
 
         // nat_entry is NULL -> no block address found for the inode
         if (!nat_entry) {

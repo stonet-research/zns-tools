@@ -2,8 +2,10 @@
 #include <stdint.h>
 #include <string.h>
 
-struct f2fs_super_block f2fs_sb; // TODO move this to the void * to store the super block
-struct f2fs_checkpoint f2fs_cp; // TODO: the superblock can hold this info or we can union it
+struct f2fs_super_block
+    f2fs_sb; // TODO move this to the void * to store the super block
+struct f2fs_checkpoint
+    f2fs_cp; // TODO: the superblock can hold this info or we can union it
 uint32_t nat_block_offset = 0; /* tracking the nat block traversal */
 uint32_t nat_entry_offset = 0; /* tracking offset to start at in nat_blocks */
 
@@ -439,7 +441,8 @@ void f2fs_show_inode_info(struct f2fs_inode *inode) {
  * TODO: update docs
  *
  * */
-static int init_procfs_segment_bits(char *dev_name, uint32_t highest_segment, struct segment_manager *segman) {
+static int init_procfs_segment_bits(char *dev_name, uint32_t highest_segment,
+                                    struct segment_manager *segman) {
     FILE *fp;
     char path[50];
     char *device, *dev_string, *dev, *line;
@@ -480,7 +483,8 @@ static int init_procfs_segment_bits(char *dev_name, uint32_t highest_segment, st
                     if (strcmp(split_string, "|") == 0) {
                         continue;
                     } else if (!set_first) {
-                        segman->segments[segman->nr_segments].type = atoi(split_string);
+                        segman->segments[segman->nr_segments].type =
+                            atoi(split_string);
                         set_first = 1;
                     } else {
                         segman->segments[segman->nr_segments].valid_blocks =
@@ -512,9 +516,12 @@ finish:
 extern void *f2fs_fs_manager_init(char *dev_name) {
     struct segment_manager *segman;
 
-    segman = calloc(1, sizeof(struct segment_manager) + sizeof (struct segment_info) * f2fs_sb.segment_count_main);
+    segman =
+        calloc(1, sizeof(struct segment_manager) +
+                      sizeof(struct segment_info) * f2fs_sb.segment_count_main);
 
-    if (init_procfs_segment_bits(dev_name, f2fs_sb.segment_count_main, segman) == EXIT_FAILURE) {
+    if (init_procfs_segment_bits(dev_name, f2fs_sb.segment_count_main,
+                                 segman) == EXIT_FAILURE) {
         goto cleanup;
     }
 
@@ -532,24 +539,27 @@ static void f2fs_fs_manager_clean(void *fs_info) {
         goto finish;
     }
 
-    segman = (struct segment_manager *) fs_info;
+    segman = (struct segment_manager *)fs_info;
 
     free(segman);
 
 finish:
-   return;
+    return;
 }
 
-extern fs_manager_cleanup f2fs_fs_manager_cleanup() { return &f2fs_fs_manager_clean; }
+extern fs_manager_cleanup f2fs_fs_manager_cleanup() {
+    return &f2fs_fs_manager_clean;
+}
 
 extern uint32_t get_fs_info_bytes() { return sizeof(struct segment_info); }
 
-static void fs_info_initialize(void *fs_manager, void *fs_info, uint32_t segment) {
+static void fs_info_initialize(void *fs_manager, void *fs_info,
+                               uint32_t segment) {
     struct segment_manager *segman = NULL;
     struct segment_info *seg_i = NULL;
 
-    segman = (struct segment_manager *) fs_manager;
-    seg_i = (struct segment_info *) fs_info;
+    segman = (struct segment_manager *)fs_manager;
+    seg_i = (struct segment_info *)fs_info;
 
     seg_i->id = segman->segments[segment].id;
     seg_i->type = segman->segments[segment].type;
@@ -558,8 +568,9 @@ static void fs_info_initialize(void *fs_manager, void *fs_info, uint32_t segment
 
 extern fs_info_init f2fs_fs_info_init() { return &fs_info_initialize; }
 
-static void f2fs_show_segment(void *fs_info, uint8_t show_only_stats, unsigned int sector_shift) {
-    struct segment_info *seg_i = (struct segment_info *) fs_info;
+static void f2fs_show_segment(void *fs_info, uint8_t show_only_stats,
+                              unsigned int sector_shift) {
+    struct segment_info *seg_i = (struct segment_info *)fs_info;
 
     REP(show_only_stats, "+++++ TYPE: ");
     if (seg_i->type == CURSEG_HOT_DATA) {
@@ -577,9 +588,9 @@ static void f2fs_show_segment(void *fs_info, uint8_t show_only_stats, unsigned i
     }
 
     REP(show_only_stats, "  VALID BLOCKS: %3u\n",
-        seg_i->valid_blocks << F2FS_BLKSIZE_BITS >>
-            sector_shift);
-    // TODO: REMOVE RANGE SEGMENTS, just show each segment, should simplify segmap while loop as well
+        seg_i->valid_blocks << F2FS_BLKSIZE_BITS >> sector_shift);
+    // TODO: REMOVE RANGE SEGMENTS, just show each segment, should simplify
+    // segmap while loop as well
     /* if (is_range) { */
     /*     REP(show_only_stats, " per segment\n"); */
     /* } else { */
@@ -597,7 +608,7 @@ static void fs_info_clean(void *fs_info) {
     free(fs_info);
 
 finish:
-   return;
+    return;
 }
 
 extern fs_info_cleanup f2fs_fs_info_cleanup() { return &fs_info_clean; }

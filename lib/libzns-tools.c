@@ -121,7 +121,8 @@ static void init_zone_map() {
         return;
     }
 
-    hdr = calloc(1, sizeof(struct blk_zone_report) + sizeof(struct blk_zone) * ctrl.znsdev.nr_zones);
+    hdr = calloc(1, sizeof(struct blk_zone_report) +
+                        sizeof(struct blk_zone) * ctrl.znsdev.nr_zones);
     hdr->sector = 0;
     hdr->nr_zones = ctrl.znsdev.nr_zones;
 
@@ -130,7 +131,8 @@ static void init_zone_map() {
         return;
     }
 
-    ctrl.zonemap = calloc(1, sizeof(struct zone_map) + sizeof(struct zone) * ctrl.znsdev.nr_zones);
+    ctrl.zonemap = calloc(1, sizeof(struct zone_map) +
+                                 sizeof(struct zone) * ctrl.znsdev.nr_zones);
     // TODO: later we want multi zns device support
     ctrl.zonemap->nr_zones = ctrl.znsdev.nr_zones;
 
@@ -268,7 +270,7 @@ uint32_t get_nr_zones() {
  * Cleanup control struct - free memory
  *
  * */
-void cleanup_ctrl() { 
+void cleanup_ctrl() {
     cleanup_zonemap();
 
     free(ctrl.file_counter_map);
@@ -278,8 +280,8 @@ void cleanup_ctrl() {
  * Cleanup zonemap struct - free memory
  *
  * */
-void cleanup_zonemap() { 
-    struct node *head; 
+void cleanup_zonemap() {
+    struct node *head;
     struct node *next;
 
     for (uint32_t i = 0; i < ctrl.zonemap->nr_zones; i++) {
@@ -366,10 +368,11 @@ static void insert_zone_list_head(struct node **head, struct node *node) {
 static void sorted_zone_list_insert(struct node **head, struct node *node) {
     struct node **current = head;
 
-    while (*current != NULL && (*current)->extent->phy_blk < node->extent->phy_blk) {
+    while (*current != NULL &&
+           (*current)->extent->phy_blk < node->extent->phy_blk) {
         current = &((*current)->next);
     }
- 
+
     node->next = *current;
     *current = node;
 }
@@ -378,14 +381,15 @@ static void add_extent_to_zone_list(struct extent extent) {
     struct node *node = create_zone_extent_node(&extent);
 
     if (ctrl.zonemap->zones[extent.zone].extent_ctr == 0) {
-        insert_zone_list_head(&ctrl.zonemap->zones[extent.zone].extents_head, node);
+        insert_zone_list_head(&ctrl.zonemap->zones[extent.zone].extents_head,
+                              node);
     } else {
-        sorted_zone_list_insert(&ctrl.zonemap->zones[extent.zone].extents_head, node);
+        sorted_zone_list_insert(&ctrl.zonemap->zones[extent.zone].extents_head,
+                                node);
     }
 
     ctrl.zonemap->zones[extent.zone].extent_ctr++;
 }
-
 
 /*
  * Calculate the zone number of an LBA
@@ -542,7 +546,10 @@ static void increase_file_extent_counter(char *file) {
         }
     }
 
-    strncpy(ctrl.file_counter_map->files[ctrl.file_counter_map->file_ctr].file, file, sizeof(ctrl.file_counter_map->files[ctrl.file_counter_map->file_ctr].file));
+    strncpy(ctrl.file_counter_map->files[ctrl.file_counter_map->file_ctr].file,
+            file,
+            sizeof(ctrl.file_counter_map->files[ctrl.file_counter_map->file_ctr]
+                       .file));
     ctrl.file_counter_map->files[ctrl.file_counter_map->file_ctr].ext_ctr = 1;
     ctrl.file_counter_map->file_ctr++;
 }
@@ -563,15 +570,21 @@ int get_extents(char *filename, int fd, struct stat *stats) {
 
     fiemap->fm_flags = FIEMAP_FLAG_SYNC;
     fiemap->fm_start = 0;
-    fiemap->fm_extent_count = stats->st_blocks; /* set to max number of blocks in file */
-    fiemap->fm_length = (stats->st_blocks << 3); /* st_blocks is always 512B units, shift to bytes */
+    fiemap->fm_extent_count =
+        stats->st_blocks; /* set to max number of blocks in file */
+    fiemap->fm_length =
+        (stats->st_blocks
+         << 3); /* st_blocks is always 512B units, shift to bytes */
 
-    /* (re)allocate the file_counter_map here as this function is always called for a single file */
+    /* (re)allocate the file_counter_map here as this function is always called
+     * for a single file */
     if (ctrl.file_counter_map == NULL) {
-        ctrl.file_counter_map = calloc(1, sizeof(struct file_counter_map) + sizeof(struct file_counter));
+        ctrl.file_counter_map = calloc(1, sizeof(struct file_counter_map) +
+                                              sizeof(struct file_counter));
     } else {
-        temp = realloc(ctrl.file_counter_map, sizeof(struct file_counter_map) +
-                sizeof(struct file_counter) * (ctrl.nr_files + 1));
+        temp = realloc(ctrl.file_counter_map,
+                       sizeof(struct file_counter_map) +
+                           sizeof(struct file_counter) * (ctrl.nr_files + 1));
         if (temp == NULL) {
             /* mem realloc failed */
             free(ctrl.file_counter_map);
@@ -580,7 +593,8 @@ int get_extents(char *filename, int fd, struct stat *stats) {
         }
         ctrl.file_counter_map = temp;
         temp = NULL;
-        memset(&ctrl.file_counter_map->files[ctrl.file_counter_map->file_ctr], 0, sizeof(struct file_counter));
+        memset(&ctrl.file_counter_map->files[ctrl.file_counter_map->file_ctr],
+               0, sizeof(struct file_counter));
     }
 
     do {
@@ -594,8 +608,8 @@ int get_extents(char *filename, int fd, struct stat *stats) {
         }
 
         /* If data is on the bdev (empty files that have space allocated but
-        * nothing written) or there are flags we want to ignore (inline data)
-        * Disregard this extent but print warning (if logging is set) */
+         * nothing written) or there are flags we want to ignore (inline data)
+         * Disregard this extent but print warning (if logging is set) */
         if (fiemap->fm_extents[0].fe_physical < ctrl.offset) {
             INFO(2,
                  "FILE %s\nExtent Reported on %s  PBAS: "
@@ -632,17 +646,16 @@ int get_extents(char *filename, int fd, struct stat *stats) {
                 ctrl.sector_shift;
             extent->logical_blk =
                 fiemap->fm_extents[0].fe_logical >> ctrl.sector_shift;
-            extent->len =
-                fiemap->fm_extents[0].fe_length >> ctrl.sector_shift;
-            extent->zone_size =
-                ctrl.znsdev.zone_size;
-            extent->ext_nr = ext_ctr; /* individual extent counter for each get_extents() scope -> each file */
-            extent->flags =
-                fiemap->fm_extents[0].fe_flags;
+            extent->len = fiemap->fm_extents[0].fe_length >> ctrl.sector_shift;
+            extent->zone_size = ctrl.znsdev.zone_size;
+            extent->ext_nr = ext_ctr; /* individual extent counter for each
+                                         get_extents() scope -> each file */
+            extent->flags = fiemap->fm_extents[0].fe_flags;
 
             ctrl.zonemap->cum_extent_size += extent->len;
 
-            extent->zone = get_zone_number((extent->phy_blk << ctrl.zns_sector_shift));
+            extent->zone =
+                get_zone_number((extent->phy_blk << ctrl.zns_sector_shift));
 
             strncpy(extent->file, filename, sizeof(extent->file) - 1);
             extent->file[sizeof(extent->file) - 1] = '\0';
@@ -654,8 +667,11 @@ int get_extents(char *filename, int fd, struct stat *stats) {
                 /* only init if file system has fs_info setup */
                 extent->fs_info = calloc(1, ctrl.fs_info_bytes);
 
-                /* must init the fs_info before adding extent to the zone list, it does a memcpy() */
-                ctrl.fs_info_init(ctrl.fs_manager, extent->fs_info, (extent->phy_blk & ctrl.f2fs_segment_mask) >> ctrl.segment_shift);
+                /* must init the fs_info before adding extent to the zone list,
+                 * it does a memcpy() */
+                ctrl.fs_info_init(ctrl.fs_manager, extent->fs_info,
+                                  (extent->phy_blk & ctrl.f2fs_segment_mask) >>
+                                      ctrl.segment_shift);
                 add_extent_to_zone_list(*extent);
 
                 /* free extent fs_info as it has been memcpy() */
@@ -747,7 +763,7 @@ void increase_file_segment_counter(char *file, unsigned int num_segments,
                                    uint64_t zone_cap) {
     uint32_t i;
 
-    struct segment_info *seg_i = (struct segment_info *) fs_info;
+    struct segment_info *seg_i = (struct segment_info *)fs_info;
     enum type type = seg_i->type;
 
     for (i = 0; i < ctrl.file_counter_map->file_ctr; i++) {
@@ -916,7 +932,6 @@ void print_fiemap_report() {
     uint64_t pbae = 0;
     struct node *current, *prev = NULL;
 
-
     MSG("================================================================="
         "===\n");
     MSG("\t\t\tEXTENT MAPPINGS\n");
@@ -1037,4 +1052,3 @@ void print_fiemap_report() {
         MSG("NOH: 0\n");
     }
 }
-
