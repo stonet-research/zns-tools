@@ -1,4 +1,41 @@
-# zns.trace
+## zns.apptrace
+
+This tool provides a timeline generation across the layers of the storage stack, with support for F2FS and ZNS devices.
+
+TODO: example fig
+
+### Running
+
+To run, simply execute `./zns.apptrace nvme0n2` for the respective ZNS device to trace.
+The script will insert the relevant probes. The RocksDB probes are derived from the binaries and require user space probes to be inserted for the relevant function signatures.
+This is currently not automated and requires modifications to the tracing script for RocksDB (`rocksdb-probes.by`). Either remove the utilzation of these user space probes to only trace block layer events.
+
+#### Remove RocksDB Probes:
+
+Simply remove (or comment) from `zns.apptrace` the following lines:
+
+```bash
+sed -i "s/interval:s:[0-9]\+/interval:s:${TRACETIME}/g" nvme-probes.bt rocksdb-probes.bt vfs-probes.bt mm-probes.bt f2fs-probes.bt
+sed -i "s/interval:s:[0-9]\+/interval:s:${INODE_TRACETIME}/g" inode-probes.bt
+```
+
+#### Setting RocksDB probe Signatures
+
+If using the RocksDB probes, the funtion signatures need to be updates to that of your compiled binaries. To retrieve the signatures, use `objdump` as illustrated below and replace all probe functions in the `rocksdb-probes.bt` with your signatures. Each probe contains a comment of the RocksDB function that it traces, replace your grep command below to find that function signature.
+
+```bash
+user@stosys:~/src/rocksdb$ objdump -CSrtT /home/user/src/rocksdb/db_bench | grep "rocksdb::Compaction::~Compaction()"
+00000000004a4930 g     F .text  0000000000000264              rocksdb::Compaction::~Compaction()
+
+user@stosys:~/src/rocksdb$ objdump -tT /home/user/src/rocksdb/db_bench | grep "00000000004a4930"
+00000000004a4930 g     F .text  0000000000000264              _ZN7rocksdb10CompactionD2Ev
+```
+
+### Visualizing
+
+The tracing will parse all data and generate a `timeline.json` file. To visualize this either user [perfetto](https://ui.perfetto.dev/) or if using google chrome, the `chrome://tracing` can be used. We recommend perfetto, as its a newer and more intuitive UI. Simply select the `Open trace file` option and select the generated `timeline.json` file, or drag the file into the UI.
+
+## zns.trace
 
 This directory contains the tools for tracing a particular ZNS device, and generating heatmaps for various access aspects for each zone. The below figure illustrates the tracing of the number of individual zone reset commands issued during a workload with F2FS and RocksDB.
 
