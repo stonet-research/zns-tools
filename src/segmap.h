@@ -1,6 +1,7 @@
 #ifndef _SEGMAP_H_
 #define _SEGMAP_H_
 
+#include "json.h"
 #include "zns-tools.h"
 
 #include <dirent.h>
@@ -28,7 +29,7 @@ struct segmap_manager {
     uint32_t warm_ctr;     /* segment type counter: warm */
     uint32_t hot_ctr;      /* segment type counter: hot */
     struct file_stats *fs; /* file segment stats */
-    uint32_t ctr;          /* ctr for initialized fs entries */
+    uint32_t ctr;          /* number of initialized fs entries */
 };
 
 extern struct segmap_manager segmap_man;
@@ -63,11 +64,6 @@ extern struct extent_map extent_map;
 #define REP_EQUAL_FORMATTER                                                    \
     REP(ctrl.show_only_stats, "==============================================" \
                               "======================\n");
-
-#define HOLE_FORMATTER                                                         \
-    MSG("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++" \
-        "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++" \
-        "+++\n");
 
 #define FORMATTER_SHORT                                                        \
     MSG("--------------------------------------------------------------------" \

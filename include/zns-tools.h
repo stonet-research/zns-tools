@@ -26,6 +26,8 @@
 
 #include <linux/blkzoned.h>
 
+#include <json-c/json.h>
+
 #define F2FS_SEGMENT_BYTES 2097152
 
 #define MAX_FILE_LENGTH 50
@@ -43,14 +45,98 @@ struct bdev {
     char link_name[MAX_PATH_LEN]; /* linkname from /dev/block/<major>:<minor> */
     uint8_t is_zoned;             /* flag if device is a zoned device */
     uint32_t nr_zones;            /* Number of zones on the ZNS device */
-    uint64_t zone_size;           /* the size of a zone on the device ZNS in 512B or 4KiB depending on LBAF*/
-    uint32_t zone_mask;   /* zone mask for bitwise AND */
+    uint64_t zone_size; /* the size of a zone on the device ZNS in 512B or 4KiB
+                           depending on LBAF*/
+    uint32_t zone_mask; /* zone mask for bitwise AND */
 };
 
+struct extent {
+    uint32_t zone;   /* zone index of the extent */
+    uint32_t flags;  /* Flags given by ioctl() FIEMAP call */
+    uint32_t ext_nr; /* Extent number as returned in the order by ioctl */
+    uint32_t
+        fileID; /* Unique ID of the file to simplify statistics collection */
+    uint64_t logical_blk; /* LBA starting address of the extent */
+    uint64_t phy_blk;     /* PBA starting address of the extent */
+    uint64_t zone_lbas;   /* LBAS of the zone the extent is in */
+    uint64_t zone_cap;    /* Zone capacity */
+    uint64_t len;         /* Length of the extent in 512B sectors */
+    uint64_t zone_size;   /* Size of the zone the extent is in */
+    uint64_t zone_wp;     /* Write Pointer of this current zone */
+    uint64_t zone_lbae;   /* LBA that can be written up to (LBAS + ZONE CAP) */
+    void *fs_info; /* file system specific information - segment information for
+                    * F2FS NOTE: must be the last field of the struct, as the
+                    * size can vary */
+    char file[MAX_FILE_LENGTH]; /* file path to which the extent belongs */
+};
+
+struct extent_map {
+    uint32_t ext_ctr;  /* Number of extents in struct extents[] */
+    uint32_t zone_ctr; /* Number of zones in which extents are */
+    uint64_t
+        cum_extent_size; /* Cumulative size of all extents in 512B sectors */
+    struct extent extents[]; /* Array of struct extent for each extent */
+};
+
+struct node {
+    struct extent *extent;
+    struct node *next;
+};
+
+struct zone {
+    uint32_t zone_number;      /* number of the zone */
+    uint64_t start;            /* PBAS of the zone */
+    uint64_t end;              /* PBAE of the zone */
+    uint64_t capacity;         /* capacity of the zone */
+    uint64_t wp;               /* write pointer of the zone */
+    uint8_t state;             /* capacity of the zone */
+    uint32_t mask;             /* mask of the zone */
+    uint32_t extent_ctr;       /* number of extents in the zone */
+    struct node *extents_head; /* pointer to head of sorted singly linked list
+                                  of the extents in the zone */
+};
+
+struct zone_map {
+    uint32_t nr_zones;   /* number of zones in struct zone *zones */
+    uint64_t extent_ctr; /* counter for total number of extents */
+    uint64_t
+        cum_extent_size; /* Cumulative size of all extents in 512B sectors */
+    uint32_t zone_ctr;   /* number of zones that hold extents */
+    struct zone zones[];
+};
+
+/* count for each file the number of extents */
+struct file_counter {
+    char file[MAX_FILE_LENGTH]; /* file name, fix maximum file length to avoid
+                                   messy reallocs */
+    uint32_t ext_ctr;           /* extent counter for the file */
+    uint32_t segment_ctr;       /* number of segments the file contained in */
+    uint32_t zone_ctr;          /* number of zones the file is contained in */
+    /* For F2FS */
+    uint32_t cold_ctr; /* number of the segments that are CURSEG_COLD_DATA */
+    uint32_t warm_ctr; /* number of the segments that are CURSEG_WARM_DATA*/
+    uint32_t hot_ctr;  /* number of the segments that are CURSEG_HOT_DATA */
+    uint64_t last_segment_id; /* track the last segment id so we don't increase
+                                 counters for extents in the same segment for a
+                                 file */
+    uint32_t last_zone;       /* track the last zone number so we don't increase
+                                 counters for extents in the same zone */
+    /* void *fs_info; /1* other file system dependent data can be put here *1/
+     */
+};
+
+struct file_counter_map {
+    uint32_t file_ctr; /* indicate the number of file entries in *files */
+    struct file_counter files[]; /* track the file counters */
+};
+
+typedef void (*fs_manager_cleanup)();
+typedef void (*fs_info_init)();
+typedef void (*fs_info_show)(void *, uint8_t, unsigned int);
+typedef void (*fs_info_cleanup)();
+
 struct control {
-    char *filename;     /* full file name and path to map */
-    int fd;             /* file descriptor of the file to be mapped */
-    struct stat *stats; /* statistics from fstat() call */
+    char *argv;         /* program name being run */
     struct bdev bdev;   /* block device file is located on */
     struct bdev znsdev; /* additional ZNS device if file F2FS reporst file on
                             prior bdev */
@@ -58,12 +144,17 @@ struct control {
     uint8_t log_level;  /* Logging level */
     uint8_t show_holes; /* cmd_line flag to show holes */
     uint8_t show_flags; /* cmd_line flag to show extent flags */
-    uint8_t info;       /* cmd_line flag to show info */
-    uint64_t fs_magic;  /* store the file system magic value */
+    uint8_t json_dump;  /* dump collected data as json */
+    char *json_file;    /* json file name to output data to */
+    json_object *json_root; /* root json object for data output */
+    uint8_t info;           /* cmd_line flag to show info */
+    uint64_t fs_magic;      /* store the file system magic value */
 
     unsigned int sector_size;  /* Size of sectors on the ZNS device */
     unsigned int sector_shift; /* bit shift for sector conversion */
-    unsigned int zns_sector_shift; /* if using 4KiB LBAF, ZNS still reports values in 512B, so need to shift by 3 all values */
+    unsigned int
+        zns_sector_shift; /* if using 4KiB LBAF, ZNS still reports values in
+                             512B, so need to shift by 3 all values */
 
     uint64_t f2fs_segment_sectors; /* how many logical sectors a segment has,
                                       depending on device LBA size */
@@ -103,58 +194,29 @@ struct control {
     uint8_t excl_streams;          /* zns.fpbench use exclusive streams */
     uint8_t fpbench_streammap;     /* zns.fpbench stream to map file to */
     uint8_t fpbench_streammap_set; /* zns.fpbench indicate if streammap set */
-};
 
-struct extent {
-    uint32_t zone;   /* zone index (starting with 1) of the extent */
-    uint32_t flags;  /* Flags given by ioctl() FIEMAP call */
-    uint32_t ext_nr; /* Extent number as returned in the order by ioctl */
-    uint32_t
-        fileID; /* Unique ID of the file to simplify statistics collection */
-    uint64_t logical_blk; /* LBA starting address of the extent */
-    uint64_t phy_blk;     /* PBA starting address of the extent */
-    uint64_t zone_lbas;   /* LBAS of the zone the extent is in */
-    uint64_t zone_cap;    /* Zone capacity */
-    uint64_t len;         /* Length of the extent in 512B sectors */
-    uint64_t zone_size;   /* Size of the zone the extent is in */
-    uint64_t zone_wp;     /* Write Pointer of this current zone */
-    uint64_t zone_lbae;   /* LBA that can be written up to (LBAS + ZONE CAP) */
-    char *file;           /* file path to which the extent belongs */
-};
-
-struct extent_map {
-    uint32_t ext_ctr;  /* Number of extents in struct extent[] */
-    uint32_t zone_ctr; /* Number of zones in which extents are */
-    uint64_t
-        cum_extent_size;    /* Cumulative size of all extents in 512B sectors */
-    struct extent extent[]; /* Array of struct extent for each extent */
-};
-
-// count for each file the number of extents
-struct file_counter {
-    char file[MAX_FILE_LENGTH]; /* file name, fix maximum file length to avoid
-                                   messy reallocs */
-    uint32_t ext_ctr;           /* extent counter for the file */
-    uint32_t segment_ctr;       /* number of segments the file contained in */
-    uint32_t zone_ctr;          /* number of zones the file is contained in */
-    uint32_t cold_ctr; /* number of the segments that are CURSEG_COLD_DATA */
-    uint32_t warm_ctr; /* number of the segments that are CURSEG_WARM_DATA*/
-    uint32_t hot_ctr;  /* number of the segments that are CURSEG_HOT_DATA */
-    uint64_t last_segment_id; /* track the last segment id so we don't increase
-                                 counters for extents in the same segment for a
-                                 file */
-    uint32_t last_zone;       /* track the last zone number so we don't increase
-                                 counters for extents in the same zone */
-};
-
-struct file_counter_map {
-    struct file_counter *file; /* track the file counters */
-    uint32_t cur_ctr;          /* track how many we have initialized */
+    struct zone_map *zonemap; /* track extents in zones with zone information */
+    struct file_counter_map
+        *file_counter_map; /* tracking extent counters per file */
+    void *fs_super_block;  /* if parsed by the fs lib, can store the super block
+                              in the control */
+    void *fs_manager; /* any global file system related info can be set by the
+                         fs lib */
+    fs_manager_cleanup
+        fs_manager_cleanup;    /* cleanup call to clean any fs manager related
+                                  manager by the fs lib */
+    fs_info_init fs_info_init; /* function pointer to set the fs_info in each
+                                  extent by the respective FS lib */
+    fs_info_show fs_info_show; /* function pointer to print the fs_info fields
+                                  by the FS lib */
+    uint32_t fs_info_bytes;    /* the FS lib must set the size in bytes of the
+                                  fs_info in order for memory allocation and copyig
+                                  to work correctly */
+    fs_info_cleanup fs_info_cleanup; /* function pointer to cleanup the fs_info
+                                        - free its memory */
 };
 
 extern struct control ctrl;
-extern struct file_counter_map
-    *file_counter_map; /* tracking extent counters per file */
 
 extern uint8_t is_zoned(char *);
 extern void init_dev(struct stat *);
@@ -164,18 +226,19 @@ extern uint64_t get_zone_size();
 extern uint32_t get_nr_zones();
 extern uint32_t get_zone_number(uint64_t);
 extern void cleanup_ctrl();
+extern void cleanup_zonemap();
 extern void print_zone_info(uint32_t);
-extern struct extent_map *get_extents();
+extern int get_extents(char *, int, struct stat *);
 extern int contains_element(uint32_t[], uint32_t, uint32_t);
-extern void sort_extents(struct extent_map *);
+extern void map_extents(struct extent_map *);
 extern void show_extent_flags(uint32_t);
-extern uint32_t get_file_counter(char *);
-extern void set_file_extent_counters(struct extent_map *);
+extern uint32_t get_file_extent_count(char *);
 extern void increase_file_segment_counter(char *, unsigned int, unsigned int,
-                                          enum type, uint64_t);
+                                          void *, uint64_t);
 extern void set_super_block_info(struct f2fs_super_block);
 extern void set_fs_magic(char *);
-extern void init_ctrl();
+extern void init_ctrl(char *, int, struct stat *);
+extern void print_fiemap_report();
 
 #define INFO(n, fmt, ...)                                                      \
     do {                                                                       \
@@ -195,5 +258,10 @@ extern void init_ctrl();
     MSG("--------------------------------------------------------------------" \
         "--------------------------------------------------------------------" \
         "----------------------------------------\n");
+
+#define HOLE_FORMATTER                                                         \
+    MSG("-----------------------------------------"                            \
+        "--------------------------------------------------------"             \
+        "--------\n")
 
 #endif

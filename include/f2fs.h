@@ -267,6 +267,11 @@ struct f2fs_inode {
                              double_indirect(1) node id */
 };
 
+typedef void (*fs_manager_cleanup)();
+typedef void (*fs_info_init)();
+typedef void (*fs_info_show)(void *, uint8_t, unsigned int);
+typedef void (*fs_info_cleanup)();
+
 static_assert(sizeof(struct f2fs_inode) == 4072, "");
 
 #define DEF_ADDRS_PER_BLOCK 1018 /* Address Pointers in a Direct Block */
@@ -315,13 +320,12 @@ struct segment_info {
 };
 
 struct segment_manager {
-    struct segment_info *sm_info;
-    uint32_t nr_segments;
+    uint32_t nr_segments; /* number of segments in segments[] */
+    struct segment_info segments[];
 };
 
 extern struct f2fs_super_block f2fs_sb;
 extern struct f2fs_checkpoint f2fs_cp;
-extern struct segment_manager segman;
 
 extern void f2fs_read_super_block(char *);
 extern void f2fs_show_super_block();
@@ -330,8 +334,12 @@ extern void f2fs_show_checkpoint();
 struct f2fs_nat_entry *f2fs_get_inode_nat_entry(char *, uint32_t);
 struct f2fs_node *f2fs_get_node_block(char *, uint32_t);
 extern void f2fs_show_inode_info(struct f2fs_inode *);
-extern int get_procfs_segment_bits(char *, uint32_t);
-extern int get_procfs_single_segment_bits(char *, uint32_t);
+extern fs_manager_cleanup f2fs_fs_manager_cleanup();
+extern fs_info_init f2fs_fs_info_init();
+extern fs_info_show f2fs_fs_info_show();
+extern fs_info_cleanup f2fs_fs_info_cleanup();
+extern uint32_t get_fs_info_bytes();
+extern void *f2fs_fs_manager_init();
 
 static inline int IS_INODE(struct f2fs_node *node) {
     return ((node)->footer.nid == (node)->footer.ino);
@@ -357,6 +365,13 @@ static inline int IS_INODE(struct f2fs_node *node) {
 #define MSG(fmt, ...)                                                          \
     do {                                                                       \
         printf(fmt, ##__VA_ARGS__);                                            \
+    } while (0)
+
+#define REP(n, fmt, ...)                                                       \
+    do {                                                                       \
+        if (n == 0) {                                                          \
+            printf(fmt, ##__VA_ARGS__);                                        \
+        }                                                                      \
     } while (0)
 
 #endif

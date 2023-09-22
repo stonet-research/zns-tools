@@ -1,138 +1,6 @@
 #include "fiemap.h"
 
 /*
- * Print the report summary of extent_map.
- *
- * @extent_map: struct extent_map * to the extent maps
- *
- * */
-static void print_filemap_report(struct extent_map *extent_map) {
-    uint32_t current_zone = 0;
-    uint32_t hole_ctr = 0;
-    uint64_t hole_cum_size = 0;
-    uint64_t hole_size = 0;
-    uint64_t hole_end = 0;
-    uint64_t pbae = 0;
-
-    MSG("================================================================="
-        "===\n");
-    MSG("\t\t\tEXTENT MAPPINGS\n");
-    MSG("==================================================================="
-        "=\n");
-
-    for (uint32_t i = 0; i < extent_map->ext_ctr; i++) {
-        if (current_zone != extent_map->extent[i].zone) {
-            current_zone = extent_map->extent[i].zone;
-            extent_map->zone_ctr++;
-            print_zone_info(current_zone);
-            MSG("\n");
-        }
-
-        // Track holes in between extents in the same zone
-        if (ctrl.show_holes && i > 0 &&
-            (extent_map->extent[i - 1].phy_blk +
-                 extent_map->extent[i - 1].len !=
-             extent_map->extent[i].phy_blk)) {
-
-            if (extent_map->extent[i - 1].zone == extent_map->extent[i].zone) {
-                // Hole in the same zone between segments
-
-                hole_size = extent_map->extent[i].phy_blk -
-                            (extent_map->extent[i - 1].phy_blk +
-                             extent_map->extent[i - 1].len);
-                hole_cum_size += hole_size;
-                hole_ctr++;
-
-                HOLE_FORMATTER;
-                MSG("--- HOLE:    PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
-                    "  SIZE: %#-10" PRIx64 "\n",
-                    extent_map->extent[i - 1].phy_blk +
-                        extent_map->extent[i - 1].len,
-                    extent_map->extent[i].phy_blk, hole_size);
-                HOLE_FORMATTER;
-            }
-        }
-        if (ctrl.show_holes && i > 0 && i < extent_map->ext_ctr - 1 &&
-            extent_map->extent[i].zone_lbas != extent_map->extent[i].phy_blk &&
-            extent_map->extent[i - 1].zone != extent_map->extent[i].zone) {
-            // Hole between LBAS of zone and PBAS of the extent
-
-            hole_size =
-                extent_map->extent[i].phy_blk - extent_map->extent[i].zone_lbas;
-            hole_cum_size += hole_size;
-            hole_ctr++;
-
-            HOLE_FORMATTER;
-            MSG("---- HOLE:    PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
-                "  SIZE: %#-10" PRIx64 "\n",
-                extent_map->extent[i].zone_lbas, extent_map->extent[i].phy_blk,
-                hole_size);
-            HOLE_FORMATTER;
-        }
-
-        MSG("EXTID: %-4d  PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
-            "  SIZE: %#-10" PRIx64 "\n",
-            extent_map->extent[i].ext_nr + 1, extent_map->extent[i].phy_blk,
-            (extent_map->extent[i].phy_blk + extent_map->extent[i].len),
-            extent_map->extent[i].len);
-
-        if (extent_map->extent[i].flags != 0 && ctrl.show_flags) {
-            show_extent_flags(extent_map->extent[i].flags);
-        }
-
-        pbae = extent_map->extent[i].phy_blk + extent_map->extent[i].len;
-        if (ctrl.show_holes && i > 0 && i < extent_map->ext_ctr &&
-            pbae != extent_map->extent[i].zone_lbae &&
-            extent_map->extent[i].zone_wp > pbae &&
-            extent_map->extent[i].zone != extent_map->extent[i + 1].zone) {
-            // Hole between PBAE of the extent and the zone LBAE (since WP can
-            // be next zone LBAS if full) e.g. extent ends before the write
-            // pointer of its zone but the next extent is in a different zone
-            // (hence hole between PBAE and WP)
-
-            if (extent_map->extent[i].zone_wp <
-                extent_map->extent[i].zone_lbae) {
-                hole_end = extent_map->extent[i].zone_wp;
-            } else {
-                hole_end = extent_map->extent[i].zone_lbae;
-            }
-
-            hole_size = hole_end - pbae;
-            hole_cum_size += hole_size;
-            hole_ctr++;
-
-            HOLE_FORMATTER;
-            MSG("--- HOLE:    PBAS: %#-10" PRIx64 "  PBAE: %#-10" PRIx64
-                "  SIZE: %#-10" PRIx64 "\n",
-                extent_map->extent[i].phy_blk + extent_map->extent[i].len,
-                hole_end, hole_size);
-            HOLE_FORMATTER;
-        }
-    }
-
-    MSG("\n\n==============================================================="
-        "=====\n");
-    MSG("\t\t\tSTATS SUMMARY\n");
-    MSG("==================================================================="
-        "=\n");
-    MSG("\nNOE: %-4u  TES: %#-10" PRIx64 "  AES: %#-10" PRIx64 "  EAES: %-10f"
-        "  NOZ: %-4u\n",
-        extent_map->ext_ctr, extent_map->cum_extent_size,
-        extent_map->cum_extent_size / (extent_map->ext_ctr),
-        (double)extent_map->cum_extent_size / (double)(extent_map->ext_ctr),
-        extent_map->zone_ctr);
-
-    if (ctrl.show_holes && hole_ctr > 0) {
-        MSG("NOH: %-4u  THS: %#-10" PRIx64 "  AHS: %#-10" PRIx64
-            "  EAHS: %-10f\n",
-            hole_ctr, hole_cum_size, hole_cum_size / hole_ctr,
-            (double)hole_cum_size / (double)hole_ctr);
-    } else if (ctrl.show_holes && hole_ctr == 0) {
-        MSG("NOH: 0\n");
-    }
-}
-
-/*
  * Show the acronym information
  *
  * */
@@ -188,6 +56,7 @@ static void show_help() {
     MSG("-f [file]\tInput file to map [Required]\n");
     MSG("-h\t\tShow this help\n");
     MSG("-w\t\tShow Extent FLAGS\n");
+    MSG("-s\t\tShow file holes\n");
     MSG("-l [Int]\tLog Level to print\n");
     MSG("-s\t\tShow file holes\n");
 
@@ -196,9 +65,11 @@ static void show_help() {
 }
 
 int main(int argc, char *argv[]) {
-    int c;
+    struct stat *stats;
+    int c, ret = 0;
     uint8_t set_file = 0;
-    struct extent_map *extent_map;
+    char *filename;
+    int fd = 0;
 
     memset(&ctrl, 0, sizeof(struct control));
 
@@ -208,7 +79,7 @@ int main(int argc, char *argv[]) {
             show_help();
             break;
         case 'f':
-            ctrl.filename = optarg;
+            filename = optarg;
             set_file = 1;
             break;
         case 'w':
@@ -231,22 +102,35 @@ int main(int argc, char *argv[]) {
         show_help();
     }
 
-    init_ctrl();
-    fsync(ctrl.fd);
+    fd = open(filename, O_RDONLY);
+    if (fd < 0) {
+        ERR_MSG("Failed opening fd on %s.\n", filename);
+        return EXIT_FAILURE;
+    }
 
-    extent_map = (struct extent_map *)get_extents();
+    fsync(fd);
 
-    if (!extent_map) {
-        ERR_MSG("retrieving extents for %s\n", ctrl.filename);
-    } else if (extent_map->ext_ctr == 0) {
+    stats = calloc(1, sizeof(struct stat));
+    if (fstat(fd, stats) < 0) {
+        ERR_MSG("Failed stat on file %s\n", filename);
+    }
+
+    init_ctrl(filename, fd, stats);
+
+    ret = get_extents(filename, fd, stats);
+
+    if (ret == EXIT_FAILURE) {
+        ERR_MSG("retrieving extents for %s\n", filename);
+    } else if (ctrl.zonemap->extent_ctr == 0) {
         ERR_MSG("No extents found on device\n");
     }
 
-    sort_extents(extent_map);
-    print_filemap_report(extent_map);
+    close(fd);
 
-    close(ctrl.fd);
-    free(extent_map);
+    print_fiemap_report();
 
-    return 0;
+    cleanup_ctrl();
+    free(stats);
+
+    return EXIT_SUCCESS;
 }
