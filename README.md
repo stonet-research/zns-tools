@@ -8,7 +8,7 @@ F2FS file system, Linux kernel, and the ZNS device.
 
 ## What's New
 
-- Introduce `zns.apptrace` to generate full timeline visualization of the different storage layers by inserting probes into the various Linux storage stack layers, allowing to visualize how user-space operations generate requests throughout the storage stack.
+- Introduce [`zns.apptrace`](zns.apptrace) to generate full timeline visualization of the different storage layers by inserting probes into the various Linux storage stack layers, allowing to visualize how user-space operations generate requests throughout the storage stack.
 - Improve the performance of the tools by reducing time complexity to O(n), with decreased memory consumption.
 - Increase file system support to `Btrfs` and `F2FS`.
 - Expand LBAF support to 512B and 4KiB for the tools.
