@@ -31,16 +31,18 @@ def get_pid(name):
 
 def get_cmd(cmd):
     match str(cmd):
+        case "0":
+            return "nvme_cmd_read"
         case "1":
             return "nvme_cmd_write"
         case "2":
-            return "nvme_cmd_write"
+            return "nvme_cmd_flush"
         case "15":
             return "nvme_zone_reset" # set for a zone reset from nvme_cmd_resv_release
         case "7d":
             return "nvme_cmd_zone_append"
         case _:
-            return None
+            return "UNKNOWN"
 
 def get_hint(hint):
     match hint:
