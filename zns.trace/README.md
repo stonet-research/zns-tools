@@ -3,7 +3,7 @@
 This tool provides a timeline generation across the layers of the storage stack, with support for F2FS and ZNS devices.
 An example of a timeline for RocksDB flush and compaction events, and the Linux storage stack layers is shown below.
 
-[!example-timeline](data-db_bench/example-timeline.jpeg)
+![example-timeline](data-db_bench/example-timeline.jpeg)
 
 ### Running
 
