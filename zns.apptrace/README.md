@@ -35,3 +35,14 @@ user@stosys:~/src/rocksdb$ objdump -tT /home/user/src/rocksdb/db_bench | grep "0
 ### Visualizing
 
 The tracing will parse all data and generate a `timeline.json` file. To visualize this either user [perfetto](https://ui.perfetto.dev/) or if using google chrome, the `chrome://tracing` can be used. We recommend perfetto, as its a newer and more intuitive UI. Simply select the `Open trace file` option and select the generated `timeline.json` file, or drag the file into the UI.
+
+## Known Issues
+
+### The timeline has timestamps that are several minutes into execution:
+
+This is due to the fact that perfetto takes the lowest timestamp as a starting point and we dropped events in bpftrace,
+resulting in a timestamp of 0 to be recorded, as the event is non-existent in the data map when tracing
+startup-completion time. bpftrace drops events due to the lack of available memory for the data
+map. Increasing the memory solves this issue which can be done by increasing the `BPFTRACE_MAP_KEYS_MAX` in the
+`zns.trace` script. This is a environment variable for bfptrace, which we increased from the default `4096` to `16777216`, however this can be
+increased further if needed. Note that this increases the memory consumption and startup/exit times for the bpftrace scripts. The scripts that measure event durations have a larger memory configuration to maintain multiple data maps. Scripts only tracking events without duration have their data maps dumped and cleared every 1msec to reduce the memory consumption and loss of events. If however, during the duration tracing of events a map loses an event due to the lack of memory, the resulting completion event is also dropped.
