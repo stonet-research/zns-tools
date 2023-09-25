@@ -28,6 +28,7 @@ See the below papers for publications of this work, further reading from us on u
 
 - [json-c](https://github.com/json-c/json-c)
 - [bpftrace](https://github.com/iovisor/bpftrace)
+- [nvme-clie](https://github.com/linux-nvme/nvme-cli)
 
 ## Compiling and Running
 
