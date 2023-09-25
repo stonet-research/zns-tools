@@ -36,19 +36,18 @@ sed -i "s/interval:s:[0-9]\+/interval:s:${INODE_TRACETIME}/g" inode-probes.bt
 
 # TODO: lookup bpftrace install path and use it
 echo "Inserting NVMe Probes"
-(sudo env "BPFTRACE_MAP_KEYS_MAX=262144" /home/user/src/bpftrace/build/src/bpftrace ./nvme-probes.bt ${DEV} ${ZONE_SIZE} -o ${DATA_DIR}/nvme_data.json -f json) &
+(sudo env "BPFTRACE_MAP_KEYS_MAX=262144" bpftrace ./nvme-probes.bt ${DEV} ${ZONE_SIZE} -o ${DATA_DIR}/nvme_data.json -f json) &
 echo "Inserting F2FS Probes"
-(sudo env "BPFTRACE_MAP_KEYS_MAX=262144" /home/user/src/bpftrace/build/src/bpftrace -I include/f2fs.h ./f2fs-probes.bt ${ZONE_SIZE} -o ${DATA_DIR}/f2fs_data.json -f json) &
+(sudo env "BPFTRACE_MAP_KEYS_MAX=262144" bpftrace -I include/f2fs.h ./f2fs-probes.bt ${ZONE_SIZE} -o ${DATA_DIR}/f2fs_data.json -f json) &
 
-# TODO: need to sleep here to avoid delay of nvme probes due to bpf setting up memory which takes some time (10-20secs)
 echo "Inserting VFS Probes"
-(sudo env "BPFTRACE_MAP_KEYS_MAX=32768" /home/user/src/bpftrace/build/src/bpftrace ./vfs-probes.bt -o ${DATA_DIR}/vfs_data.json -f json) &
+(sudo env "BPFTRACE_MAP_KEYS_MAX=32768" bpftrace ./vfs-probes.bt -o ${DATA_DIR}/vfs_data.json -f json) &
 echo "Inserting MM Probes"
-(sudo env "BPFTRACE_MAP_KEYS_MAX=32768" /home/user/src/bpftrace/build/src/bpftrace ./mm-probes.bt -o ${DATA_DIR}/mm_data.json -f json) &
+(sudo env "BPFTRACE_MAP_KEYS_MAX=32768" bpftrace ./mm-probes.bt -o ${DATA_DIR}/mm_data.json -f json) &
 echo "Inserting RocksDB Probes"
-(sudo env "BPFTRACE_MAP_KEYS_MAX=4096" /home/user/src/bpftrace/build/src/bpftrace ./rocksdb-probes.bt -o ${DATA_DIR}/rocksdb.json -f json) &
+(sudo env "BPFTRACE_MAP_KEYS_MAX=4096" bpftrace ./rocksdb-probes.bt -o ${DATA_DIR}/rocksdb.json -f json) &
 echo "Inserting inode Trace Probes"
-(sudo env "BPFTRACE_MAP_KEYS_MAX=4096" /home/user/src/bpftrace/build/src/bpftrace -I include/f2fs.h ./inode-probes.bt -o ${DATA_DIR}/inodes.json -f json) &
+(sudo env "BPFTRACE_MAP_KEYS_MAX=4096" bpftrace -I include/f2fs.h ./inode-probes.bt -o ${DATA_DIR}/inodes.json -f json) &
 
 printf "\nTracing for ${TRACETIME} seconds\n"
 
