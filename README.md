@@ -400,3 +400,7 @@ We aim to maintain a cleanly formatted code, so before we merge a PR, we ask you
 # example of how to format all C code in-place in src/
 clang-format -i src/*.c
 ```
+
+## Acknownledgements
+
+This code is being developed and run on ZNS SSDs generously donated by Western Digital.
