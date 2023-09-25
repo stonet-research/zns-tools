@@ -28,7 +28,7 @@ See the below papers for publications of this work, further reading from us on u
 
 - [json-c](https://github.com/json-c/json-c)
 - [bpftrace](https://github.com/iovisor/bpftrace)
-- [nvme-clie](https://github.com/linux-nvme/nvme-cli)
+- [nvme-cli](https://github.com/linux-nvme/nvme-cli)
 
 ## Compiling and Running
 
@@ -328,6 +328,12 @@ The benchmark is simple and is meant for only testing the adherence of F2FS with
 
 In the `zns.trace/` directory, we provide a framework to trace activity on zns devices across its different zones using BPF, collecting information on number of read/write operations to each zone, amount of data read/written in each zone, and reset statistics, including reset latency per zone. After collecting tracing statistics, zns.trace automatically generates heatmaps for each collected statistic, depicting the information for each zone in a comprehensible manner.
 
+## zns.apptrace
+
+**Currently supported:** RocksDB with F2FS on ZNS with Linux kernel and BPF support
+
+In the `zns.apptrace/` directory, we provide a framework to trace activity on zns devices across the different layers of the Linux storage stack, and visualizing the collected events in a timeline. See [zns.apptrace](zns.apptrace/README.md) for more details and full examples.
+
 ## Evaluation
 
 In the `evaluation/` directory we provide a benchmarking setup for evaluating the performance of the zns-tools, and an end-to-end visualization framework for RocksDB to analyze and visualize the data movement of flush/compaction operations, as well as F2FS Zone management operations.
@@ -375,7 +381,6 @@ libzns_tools_la_CFLAGS = -Wall -fsanitize=address -fno-sanitize=vptr
 libf2fs_la_CFLAGS = -Wall -fsanitize=address -fno-sanitize=vptr
 
 libjson_la_CFLAGS = -Wall -fsanitize=address -fno-sanitize=vptr
-
 
 # In src/Makefile.am
 AM_CFLAGS = -O0 -Wall -Wextra -g -Wunused-parameter -fsanitize=address -fno-sanitize=vptr
