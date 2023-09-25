@@ -388,3 +388,7 @@ libjson_la_CFLAGS = -Wall -fsanitize=address -fno-sanitize=vptr
 # In src/Makefile.am
 AM_CFLAGS = -O0 -Wall -Wextra -g -Wunused-parameter -fsanitize=address -fno-sanitize=vptr
 ```
+
+## Acknownledgements
+
+This code is being developed and run on ZNS SSDs generously donated by Western Digital.
