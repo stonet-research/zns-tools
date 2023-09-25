@@ -389,6 +389,18 @@ libjson_la_CFLAGS = -Wall -fsanitize=address -fno-sanitize=vptr
 AM_CFLAGS = -O0 -Wall -Wextra -g -Wunused-parameter -fsanitize=address -fno-sanitize=vptr
 ```
 
+## Contributing
+
+For any bugs or new feature requests, you can open an issue and we will attempt to resolve this as soon as possible.
+Or fork the repository and submit any fixes you have with pull requests!
+
+We aim to maintain a cleanly formatted code, so before we merge a PR, we ask you to run `clang-format` with the provided format file for any source code.
+
+```bash
+# example of how to format all C code in-place in src/
+clang-format -i src/*.c
+```
+
 ## Acknownledgements
 
 This code is being developed and run on ZNS SSDs generously donated by Western Digital.
