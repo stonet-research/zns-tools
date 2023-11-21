@@ -15,12 +15,14 @@ BEGIN {
     }
 
     @ZONE_MASK = ~($2 - 1);
+    @REQ_OP_BITS = 8;
+    @REQ_OP_MASK = ((1 << @REQ_OP_BITS) - 1);
     @logging = 0; // Set logging to 1 for debugging
 }
 
 k:nvme_setup_cmd / ((struct request *)arg1)->q->disk->disk_name == str($1) / {
     $nvme_cmd = (struct nvme_command *)*(arg1+sizeof(struct request));
-    $cmd = (((struct request *)arg1)->cmd_flags & REQ_OP_MASK);
+    $cmd = (((struct request *)arg1)->cmd_flags & @REQ_OP_MASK);
     $opcode = (uint8)$nvme_cmd->rw.opcode;
 
     $secnum = ((struct request *)arg1)->__sector;
@@ -93,7 +95,7 @@ k:nvme_setup_cmd / ((struct request *)arg1)->q->disk->disk_name == str($1) / {
 k:nvme_complete_rq / ((struct request *)arg0)->q->disk->disk_name == str($1) / {
     $nvme_cmd = (struct nvme_command *)*(arg0+sizeof(struct request));
     $opcode = (uint8)$nvme_cmd->rw.opcode;
-    $cmd = (((struct request *)arg0)->cmd_flags & REQ_OP_MASK);
+    $cmd = (((struct request *)arg0)->cmd_flags & @REQ_OP_MASK);
 
     if($cmd == REQ_OP_ZONE_RESET || (($cmd == REQ_OP_DRV_OUT && $opcode == nvme_cmd_zone_mgmt_send) && $nvme_cmd->zms.zsa == NVME_ZONE_RESET)) {
         $cmdid = ((struct request *)arg0)->tag;
@@ -116,4 +118,6 @@ END {
     clear(@logging);
     clear(@reset_z_track_map);
     clear(@reset_lat_track_map);
+    clear(@REQ_OP_BITS);
+    clear(@REQ_OP_MASK);
 }
