@@ -7,11 +7,11 @@ F2FS file system, Linux kernel, and the ZNS device.
 ![zns-tools-visual](meta/zns-tools.png)
 
 Below we illustrate an example timeline that the tools can generate to visualize events across the Linux storage stack.
-![zns.apptrace](zns.apptrace/data-db_bench/example-timeline.jpeg)
+![zns-tools.app](zns-tools.app/data-db_bench/example-timeline.jpeg)
 
 ## What's New
 
-- Introduce [`zns.apptrace`](zns.apptrace) to generate full timeline visualization of the different storage layers by inserting probes into the various Linux storage stack layers, allowing to visualize how user-space operations generate requests throughout the storage stack.
+- Introduce [`zns-tools.app`](zns-tools.app) to generate full timeline visualization of the different storage layers by inserting probes into the various Linux storage stack layers, allowing to visualize how user-space operations generate requests throughout the storage stack.
 - Improve the performance of the tools by reducing time complexity to O(n), with decreased memory consumption.
 - Increase file system support to `Btrfs` and `F2FS`.
 - Expand LBAF support to 512B and 4KiB for the tools.
@@ -333,11 +333,11 @@ The benchmark is simple and is meant for only testing the adherence of F2FS with
 
 In the `zns-tools.nvme/` directory, we provide a framework to trace activity on zns devices across its different zones using BPF, collecting information on number of read/write operations to each zone, amount of data read/written in each zone, and reset statistics, including reset latency per zone. After collecting tracing statistics, zns-tools.nvme automatically generates heatmaps for each collected statistic, depicting the information for each zone in a comprehensible manner.
 
-## zns.apptrace
+## zns-tools.app
 
 **Currently supported:** RocksDB with F2FS on ZNS with Linux kernel and BPF support
 
-In the `zns.apptrace/` directory, we provide a framework to trace activity on zns devices across the different layers of the Linux storage stack, and visualizing the collected events in a timeline. See [zns.apptrace](zns.apptrace/README.md) for more details and full examples.
+In the `zns-tools.app/` directory, we provide a framework to trace activity on zns devices across the different layers of the Linux storage stack, and visualizing the collected events in a timeline. See [zns-tools.app](zns-tools.app/README.md) for more details and full examples.
 
 ## Evaluation
 

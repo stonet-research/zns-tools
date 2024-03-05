@@ -6,7 +6,7 @@ class Timeline:
         self.displayTimeUnit = "ns"
         self.systemTraceEvents = "SystemTraceData"
         self.otherData = dict()
-        self.otherData["name"] = "zns.trace: ZNS SSD Contract Tracing Framework"
+        self.otherData["name"] = "zns-tools.app: ZNS SSD Application Tracing Framework"
         self.otherData["version"] = "v0.1" # TODO: assign versions here
 
     def addTimestamp(self, timestamp):

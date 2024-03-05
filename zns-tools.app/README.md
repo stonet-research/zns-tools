@@ -1,4 +1,4 @@
-# zns.apptrace
+# zns-tools.app
 
 This tool provides a timeline generation across the layers of the storage stack, with support for F2FS and ZNS devices.
 An example of a timeline for RocksDB flush and compaction events, and the Linux storage stack layers is shown below.
@@ -7,13 +7,19 @@ An example of a timeline for RocksDB flush and compaction events, and the Linux 
 
 ### Running
 
-To run, simply execute `./zns.apptrace nvme0n2` for the respective ZNS device to trace.
+To run, simply execute for the respective ZNS device to trace.
+
+```bash
+cd zns-tools.app
+./zns-tools.app nvme0n2
+```
+
 The script will insert the relevant probes. The RocksDB probes are derived from the binaries and require user space probes to be inserted for the relevant function signatures.
 This is currently not automated and requires modifications to the tracing script for RocksDB (`rocksdb-probes.by`). Either remove the utilzation of these user space probes to only trace block layer events.
 
 #### Remove RocksDB Probes:
 
-Simply remove (or comment) from `zns.apptrace` the following lines:
+Simply remove (or comment) from `zns-tools.app` the following lines:
 
 ```bash
 sed -i "s/interval:s:[0-9]\+/interval:s:${TRACETIME}/g" nvme-probes.bt rocksdb-probes.bt vfs-probes.bt mm-probes.bt f2fs-probes.bt
@@ -44,5 +50,5 @@ This is due to the fact that perfetto takes the lowest timestamp as a starting p
 resulting in a timestamp of 0 to be recorded, as the event is non-existent in the data map when tracing
 startup-completion time. bpftrace drops events due to the lack of available memory for the data
 map. Increasing the memory solves this issue which can be done by increasing the `BPFTRACE_MAP_KEYS_MAX` in the
-`zns.trace` script. This is a environment variable for bfptrace, which we increased from the default `4096` to `16777216`, however this can be
+`zns-tools.app` script. This is a environment variable for bfptrace, which we increased from the default `4096` to `16777216`, however this can be
 increased further if needed. Note that this increases the memory consumption and startup/exit times for the bpftrace scripts. The scripts that measure event durations have a larger memory configuration to maintain multiple data maps. Scripts only tracking events without duration have their data maps dumped and cleared every 1msec to reduce the memory consumption and loss of events. If however, during the duration tracing of events a map loses an event due to the lack of memory, the resulting completion event is also dropped.
