@@ -73,7 +73,7 @@ which provides the information of the file extents (representing the physical re
 
 Understanding the utilization of a storage device is vital to identify shortcomings/bottlenecks within systems. For this purpose, we developed a tracing framework to collect data on all ongoing I/O requests to the device and generate a set of heatmaps to visualize the distribution of I/O activity on the ZNS SSD. The below figure illustrates the number of zone reset commands issued to the respective zones on the ZNS device.
 
-![example-fig](zns.trace/example/figs/nvme0n2-2022_09_07_10_20_AM.dat/z_reset_ctr_map-heatmap.png)
+![example-fig](zns-tools.nvme/example/figs/nvme0n2-2022_09_07_10_20_AM.dat/z_reset_ctr_map-heatmap.png)
 
 For further examples of all the tools, see also the examples below [here](#examples).
 
@@ -325,11 +325,11 @@ Possible flags are:
 
 The benchmark is simple and is meant for only testing the adherence of F2FS with write hints if I/O is buffered and an `fsync()` is called on each file. For more advanced benchmarks, with asynchronous I/O, different engines and more possible configuration, use `fio` (which also supports write hints with the `--write_hint=short` flag).
 
-## zns.trace
+## zns-tools.nvme
 
 **Currently supported:** Any application on ZNS with Linux kernel and BPF support
 
-In the `zns.trace/` directory, we provide a framework to trace activity on zns devices across its different zones using BPF, collecting information on number of read/write operations to each zone, amount of data read/written in each zone, and reset statistics, including reset latency per zone. After collecting tracing statistics, zns.trace automatically generates heatmaps for each collected statistic, depicting the information for each zone in a comprehensible manner.
+In the `zns-tools.nvme/` directory, we provide a framework to trace activity on zns devices across its different zones using BPF, collecting information on number of read/write operations to each zone, amount of data read/written in each zone, and reset statistics, including reset latency per zone. After collecting tracing statistics, zns-tools.nvme automatically generates heatmaps for each collected statistic, depicting the information for each zone in a comprehensible manner.
 
 ## zns.apptrace
 

@@ -45,7 +45,7 @@ timeline-gen/*.pdf
 confdefs.h
 conftest.dir/
 
-zns.trace/util/__pycache__/
+zns-tools.nvme/util/__pycache__/
 *.dat
 nvme*
 
