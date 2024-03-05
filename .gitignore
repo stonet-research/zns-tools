@@ -1,40 +1,40 @@
-src/zns.fiemap
-src/zns.segmap
-src/zns.imap
-src/zns.fpbench
+zns-tools.fs/src/zns.fiemap
+zns-tools.fs/src/zns.segmap
+zns-tools.fs/src/zns.imap
+zns-tools.fs/src/zns.fpbench
 
-Makefile
-configure
-aclocal.m4
-autom4te.cache/*
-build-aux/*
-config.h
-config.h.in
-config.status
-config.log
-configure~
-libtool
-Makefile.in
-config.h.in~
-stamp-h1
+zns-tools.fs/Makefile
+zns-tools.fs/configure
+zns-tools.fs/aclocal.m4
+zns-tools.fs/autom4te.cache/*
+zns-tools.fs/build-aux/*
+zns-tools.fs/config.h
+zns-tools.fs/config.h.in
+zns-tools.fs/config.status
+zns-tools.fs/config.log
+zns-tools.fs/configure~
+zns-tools.fs/libtool
+zns-tools.fs/Makefile.in
+zns-tools.fs/config.h.in~
+zns-tools.fs/stamp-h1
 
-src/.libs
-src/.deps
-src/Makefile
+zns-tools.fs/src/.libs
+zns-tools.fs/src/.deps
+zns-tools.fs/src/Makefile
 
-m4/*
-!m4/.gitkeep
+zns-tools.fs/m4/*
+!zns-tools.fs/m4/.gitkeep
 
-lib/.libs
-lib/.deps
-lib/*.lo
-lib/*la
+zns-tools.fs/lib/.libs
+zns-tools.fs/lib/.deps
+zns-tools.fs/lib/*.lo
+zns-tools.fs/lib/*la
 
-man/Makefile
-man/Makefile.in
+zns-tools.fs/man/Makefile
+zns-tools.fs/man/Makefile.in
 
-compile_commands.json
-.cache/
+zns-tools.fs/compile_commands.json
+zns-tools.fs/.cache/
 *.o
 
 *.swp

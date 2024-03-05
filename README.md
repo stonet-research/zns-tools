@@ -33,11 +33,13 @@ See the below papers for publications of this work, further reading from us on u
 - [bpftrace](https://github.com/iovisor/bpftrace)
 - [nvme-cli](https://github.com/linux-nvme/nvme-cli)
 
-## Compiling and Running
+## Compiling and Running zns-tools.fs
 
 Compiling will check system requirements and notify of any missing/unsupported header files.
+**Note**, all these tools for `zns-tools.fs` are present in the `zns-tools.fs/` directory.
 
 ```bash
+cd zns-tools.fs/
 sh ./autogen.sh
 ./configure
 make
@@ -55,7 +57,7 @@ The tools aim to further the understanding of the storage, identify how file pla
 It may be important to understand how and where file systems allocate space for the file data to be stored. For this, the tools interact with the file system to retrieve relevant information on physical block addresses of files, and provide these to the user in a comprehensible manner. For instance, locating a file called `to_be_located_file.txt` can be done as follows:
 
 ```bash
-user@stosys:~/src/zns-tools/src$ sudo ./zns.fiemap -f to_be_located_file.txt
+user@stosys:~/src/zns-tools/zns-tools.fs/src$ sudo ./zns.fiemap -f to_be_located_file.txt
 ====================================================================
                         EXTENT MAPPINGS
 ====================================================================
@@ -115,7 +117,7 @@ sudo ./zns.fiemap [flags]
 Below is an example output of running `zns.fiemap`. For illustrative purposes the output is shortened.
 
 ```bash
-user@stosys:~/src/zns-tools/src$ sudo ./zns.fiemap -f /mnt/f2fs/db0/LOG -s
+user@stosys:~/src/zns-tools/zns-tools.fs/src$ sudo ./zns.fiemap -f /mnt/f2fs/db0/LOG -s
 ====================================================================
                         EXTENT MAPPINGS
 ====================================================================
@@ -183,7 +185,7 @@ The `-i` flag is meant for very small files that have their data inlined into th
 Below is an example output of running the `zns.segmap` tool. For illustrative purposes the output is shortened.
 
 ```bash
-user@stosys:~/src/zns-tools$ sudo ./src/zns.segmap -d /mnt/f2fs/ -p -i -s 7 -e 9
+user@stosys:~/src/zns-tools$ sudo ./zns-tools.fs/src/zns.segmap -d /mnt/f2fs/ -p -i -s 7 -e 9
 ====================================================================
                         SEGMENT MAPPINGS
 ====================================================================
@@ -231,7 +233,7 @@ db0/000047.sst  | 5         | 113        | 3                 | 112           | 0
 `zns.imap` is meant to get some information from the F2FS setup. It locates and prints the inode a file, and can furthermore print the contents of the F2FS superblock and checkpoint area. We recommend running this in the verbose logging to get more information, as this tool is merely meant for information on F2FS layout.
 
 ```bash
-sudo ./src/zns.imap -f /mnt/f2fs/LOG -l 1
+sudo ./zns-tools.fs/src/zns.imap -f /mnt/f2fs/LOG -l 1
 ```
 
 Possible flags are:
@@ -248,7 +250,7 @@ Possible flags are:
 Below is an example output of running the `zns.imap` tool. For illustrative purposes the output is shortened.
 
 ```bash
-user@stosys:~/src/zns-tools$ sudo ./src/zns.imap -f /mnt/f2fs/LOG -l 1 -s -c
+user@stosys:~/src/zns-tools$ sudo ./zns-tools.fs/src/zns.imap -f /mnt/f2fs/LOG -l 1 -s -c
 =================================================================
                         SUPERBLOCK
 =================================================================
@@ -299,7 +301,7 @@ next_blkaddr:           1572896
 `zns.fpbench` is a benchmarking framework that is used for identifying the F2FS placement decisions based on the provided write hint from the benchmark. It writes the file with the specified size, in units of the specified block size, and sets the write hint with `fcntl()`. Concurrently repeating the workload is possible to run the same exact workload on different file names, hence allowing lockless concurrent writing. After writing, all files have extents located, the extents mapped to segments, and segment information retrieved, focusing on the heat classification that the segment was assigned.
 
 ```bash
-sudo ./src/zns.fpbench -f /mnt/f2fs/bench_file -s 2M -b 4K -w 5 -n 3
+sudo ./src/zns-tools.fs/zns.fpbench -f /mnt/f2fs/bench_file -s 2M -b 4K -w 5 -n 3
 ```
 
 Possible flags are:
