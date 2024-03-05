@@ -308,29 +308,8 @@ In the `zns-tools.app/` directory, we provide a framework to trace activity on z
 
 ## Evaluation
 
-In the `evaluation/` directory we provide a benchmarking setup for evaluating the performance of the zns-tools, and an end-to-end visualization framework for RocksDB to analyze and visualize the data movement of flush/compaction operations, as well as F2FS Zone management operations.
-
-### Setup
-
-The end-to-end mapping tool requires minor modifications to RocksDB (commit `ccaa3225b`), and the zns-tools (commit `673f665`). The zns-tools patch provides json output instead of terminal output, for the post-processing visualization. We provide respective patches for both, which can be applied with
-
-```bash
-# RocksDB patch
-patch -p1 < rocksdb.ccaa3225b.patch
-patch -p1 < zns-tools.673f665.patch
-```
-
-### Running
-
-To run the RocksDB workload, a script is provided that executes all necessary tools, scripts, and data transformation.
-
-```
-bash ./timeline_data_rocksdb_gen.sh
-```
-
-Afterwards data should be preprocessed for plotting by running the notebook `preprocess.ipynb`  (`jupyter notebook` to start the notebook). It should create `data.json` in  `../timeline-gen`.
-
-To then visualize the data, copy it to the `../timeline-gen/` directory and execute the cells in the `plot.ipynb` notebook (`jupyter notebook` to start the notebook).
+In the `evaluation/zns-tools-bench` directory we provide a benchmarking for evaluating the performance of zns-tools.
+See the README in that directory on how to use the benchmarks.
 
 ## Development
 
