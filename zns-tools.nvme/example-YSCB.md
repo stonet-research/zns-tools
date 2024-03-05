@@ -70,7 +70,7 @@ sudo umount /mnt/f2fs
 Just point RocksDB to the directory where F2FS with 
 ```bash
 # On a seperate terminal
-./zns.trace nvme6n1 
+./zns-tools.nvme nvme6n1 
 # On main terminal
 sudo ./bin/ycsb load rocksdb -s -P workloads/workloada -p rocksdb.dir=/mnt/f2fs/yscb -p recordcount=$((200_000)) -p operationcount=$((5_000_000)) -p requestdistribution=zipfian
 sudo ./bin/ycsb run rocksdb -s -P workloads/workloada -p rocksdb.dir=/mnt/f2fs/yscb -p recordcount=$((200_000)) -p operationcount=$((5_000_000)) -p requestdistribution=zipfian
@@ -88,7 +88,7 @@ sudo mongod --dbpath /mnt/f2fs/mongodb
 The run with:
 ```bash
 # On a seperate terminal
-./zns.trace nvme6n1 
+./zns-tools.nvme nvme6n1 
 # On main terminal
 sudo ./bin/ycsb load mongodb -P ./workloads/workloada -p recordcount=$((200_000)) -p operationcount=$((5_000_000)) -p requestdistribution=zipfian
 sudo ./bin/ycsb run mongodb -P ./workloads/workloada -p recordcount=$((200_000)) -p operationcount=$((5_000_000)) -p requestdistribution=zipfian
@@ -130,7 +130,7 @@ CREATE TABLE usertable (ycsb_key VARCHAR(255) PRIMARY KEY not NULL, ycsb_value J
 Run workload:
 ```bash
 # On a seperate terminal
-./zns.trace nvme6n1 
+./zns-tools.nvme nvme6n1 
 # On main terminal
 sudo ./bin/ycsb load postgrenosql -P ./workloads/workloada -P ./postgrenosql/conf/postgrenosql.properties -p recordcount=$((200_000)) -p operationcount=$((5_000_000)) -p requestdistribution=zipfian
 sudo ./bin/ycsb run postgrenosql -P ./workloads/workloada -P ./postgrenosql/conf/postgrenosql.properties -p recordcount=$((200_000)) -p operationcount=$((5_000_000)) -p requestdistribution=zipfian

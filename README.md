@@ -1,17 +1,17 @@
 # zns-tools
 
-This repository contains several tools for evaluating file system usage of ZNS devices. The tools generally apply to ZNS devices and file systems on ZNS (F2FS and Btrfs), we mention which applications/file systems apply for each tool. We provide an example for each of the tools in the `examples/` directory, showing how to run each tool and what information will be available in the output.
+This repository contains several tools for evaluating the usage of applications and file systems on ZNS devices. The tools generally apply to ZNS devices and file systems on ZNS (currently F2FS and Btrfs), we mention which applications/file systems apply for each tool. We provide an example for each of the tools in the `examples/` directory, showing how to run each tool and what information will be available in the output.
 
-The blow figures visualizes the organization of the `zns-tools`, with the interaction of the various components and the
-F2FS file system, Linux kernel, and the ZNS device.
+The figures below visualize the organization of the `zns-tools`, with the interaction of the various components and the
+file system, Linux kernel, and ZNS device.
 ![zns-tools-visual](meta/zns-tools.png)
 
 Below we illustrate an example timeline that the tools can generate to visualize events across the Linux storage stack.
-![zns.apptrace](zns.apptrace/data-db_bench/example-timeline.jpeg)
+![zns-tools.app](zns-tools.app/data-db_bench/example-timeline.jpeg)
 
 ## What's New
 
-- Introduce [`zns.apptrace`](zns.apptrace) to generate full timeline visualization of the different storage layers by inserting probes into the various Linux storage stack layers, allowing to visualize how user-space operations generate requests throughout the storage stack.
+- Introduce [`zns-tools.app`](zns-tools.app) to generate full timeline visualization of the different storage layers by inserting probes into the various Linux storage stack layers, allowing to visualize how user-space operations generate requests throughout the storage stack.
 - Improve the performance of the tools by reducing time complexity to O(n), with decreased memory consumption.
 - Increase file system support to `Btrfs` and `F2FS`.
 - Expand LBAF support to 512B and 4KiB for the tools.
@@ -21,11 +21,11 @@ Below we illustrate an example timeline that the tools can generate to visualize
 
 See the below papers for publications of this work, further reading from us on understanding the ecosystem around ZNS and Flash SSDs.
 
-- **Understanding (Un)Written Contracts of NVMe ZNS Devices with zns-tools** Nick Tehrany, Krijn Doekemeijer, and Animesh Trivedi, https://arxiv.org/abs/2307.11860, (2023). [PDF](https://arxiv.org/pdf/2307.11860.pdf)
-- **Performance Characterization of NVMe Flash Devices with Zoned Namespaces (ZNS)** Krijn Doekemeijer, Nick Tehrany, Balakrishnan Chandrasekaran, Matias Bjørling, and Animesh Trivedi, https://arxiv.org/abs/2206.01547, (2023). [PDF](https://atlarge-research.com/pdfs/2023-cluster-zns-performance-kdoekemeijer.pdf)
-- **Understanding NVMe Zoned Namespace (ZNS) Flash SSD Storage Devices** Nick Tehrany and Animesh Trivedi, https://arxiv.org/abs/2206.01547, (2022). [PDF](https://arxiv.org/pdf/2206.01547.pdf)
-- **A Survey on the Integration of NAND Flash Storage in the Design of File Systems and the Host Storage Software Stack** Nick Tehrany, Krijn Doekemeijer, and Animesh Trivedi, https://arxiv.org/pdf/2307.11866, (2023). [PDF](https://arxiv.org/pdf/2307.11866.pdf)
-- **msF2FS: Design and Implementation of an NVMe ZNS SSD Optimized F2FS File System** Nick Tehrany, https://repository.tudelft.nl/islandora/object/uuid:3c2b3e73-6aff-45f3-af43-31a50314b547, MSc. Thesis, (2023). [PDF](https://repository.tudelft.nl/islandora/object/uuid:3c2b3e73-6aff-45f3-af43-31a50314b547/datastream/OBJ/download)
+- **Understanding (Un)Written Contracts of NVMe ZNS Devices with zns-tools** Nick Tehrany, Krijn Doekemeijer, and Animesh Trivedi, <https://arxiv.org/abs/2307.11860>, (2023). [PDF](https://arxiv.org/pdf/2307.11860.pdf)
+- **Performance Characterization of NVMe Flash Devices with Zoned Namespaces (ZNS)** Krijn Doekemeijer, Nick Tehrany, Balakrishnan Chandrasekaran, Matias Bjørling, and Animesh Trivedi, <https://arxiv.org/abs/2206.01547>, (2023). [PDF](https://atlarge-research.com/pdfs/2023-cluster-zns-performance-kdoekemeijer.pdf)
+- **Understanding NVMe Zoned Namespace (ZNS) Flash SSD Storage Devices** Nick Tehrany and Animesh Trivedi, <https://arxiv.org/abs/2206.01547>, (2022). [PDF](https://arxiv.org/pdf/2206.01547.pdf)
+- **A Survey on the Integration of NAND Flash Storage in the Design of File Systems and the Host Storage Software Stack** Nick Tehrany, Krijn Doekemeijer, and Animesh Trivedi, <https://arxiv.org/pdf/2307.11866>, (2023). [PDF](https://arxiv.org/pdf/2307.11866.pdf)
+- **msF2FS: Design and Implementation of an NVMe ZNS SSD Optimized F2FS File System** Nick Tehrany, <https://repository.tudelft.nl/islandora/object/uuid:3c2b3e73-6aff-45f3-af43-31a50314b547>, MSc. Thesis, (2023). [PDF](https://repository.tudelft.nl/islandora/object/uuid:3c2b3e73-6aff-45f3-af43-31a50314b547/datastream/OBJ/download)
 
 ## Requirements
 
@@ -33,11 +33,13 @@ See the below papers for publications of this work, further reading from us on u
 - [bpftrace](https://github.com/iovisor/bpftrace)
 - [nvme-cli](https://github.com/linux-nvme/nvme-cli)
 
-## Compiling and Running
+## Compiling and Running zns-tools.fs
 
-Compiling will check system requirements and notify of any missing/unsupported header files.
+Compiling will check the system requirements and notify the user of any missing/unsupported header files.
+**Note**, all these tools for `zns-tools.fs` are present in the `zns-tools.fs/` directory.
 
 ```bash
+cd zns-tools.fs/
 sh ./autogen.sh
 ./configure
 make
@@ -55,7 +57,7 @@ The tools aim to further the understanding of the storage, identify how file pla
 It may be important to understand how and where file systems allocate space for the file data to be stored. For this, the tools interact with the file system to retrieve relevant information on physical block addresses of files, and provide these to the user in a comprehensible manner. For instance, locating a file called `to_be_located_file.txt` can be done as follows:
 
 ```bash
-user@stosys:~/src/zns-tools/src$ sudo ./zns.fiemap -f to_be_located_file.txt
+user@stosys:~/src/zns-tools/zns-tools.fs/src$ sudo ./zns.fiemap -f to_be_located_file.txt
 ====================================================================
                         EXTENT MAPPINGS
 ====================================================================
@@ -73,13 +75,13 @@ which provides the information of the file extents (representing the physical re
 
 Understanding the utilization of a storage device is vital to identify shortcomings/bottlenecks within systems. For this purpose, we developed a tracing framework to collect data on all ongoing I/O requests to the device and generate a set of heatmaps to visualize the distribution of I/O activity on the ZNS SSD. The below figure illustrates the number of zone reset commands issued to the respective zones on the ZNS device.
 
-![example-fig](zns.trace/example/figs/nvme0n2-2022_09_07_10_20_AM.dat/z_reset_ctr_map-heatmap.png)
+![example-fig](zns-tools.nvme/example/figs/nvme0n2-2022_09_07_10_20_AM.dat/z_reset_ctr_map-heatmap.png)
 
-For further examples of all the tools, see also the examples below [here](#examples).
+For further examples of all the tools, also see the examples below [here](#examples).
 
 ## Examples
 
-In the `examples/` directory we provide an execution for each of the tools, and detail what the output will look like. For more detail on running and understanding output, consult the respective manuals in `man` (or using man `zns.<tool_name>` if installed on system).
+In the `examples/` directory we provide an execution for each of the tools, and detail what the output will look like. For more detail on running and understanding output, consult the respective manuals in `man` (or using man `zns.<tool_name>` if zns-tools are installed globally on system).
 
 ## File Mapping Tools
 
@@ -115,7 +117,7 @@ sudo ./zns.fiemap [flags]
 Below is an example output of running `zns.fiemap`. For illustrative purposes the output is shortened.
 
 ```bash
-user@stosys:~/src/zns-tools/src$ sudo ./zns.fiemap -f /mnt/f2fs/db0/LOG -s
+user@stosys:~/src/zns-tools/zns-tools.fs/src$ sudo ./zns.fiemap -f /mnt/f2fs/db0/LOG -s
 ====================================================================
                         EXTENT MAPPINGS
 ====================================================================
@@ -183,7 +185,7 @@ The `-i` flag is meant for very small files that have their data inlined into th
 Below is an example output of running the `zns.segmap` tool. For illustrative purposes the output is shortened.
 
 ```bash
-user@stosys:~/src/zns-tools$ sudo ./src/zns.segmap -d /mnt/f2fs/ -p -i -s 7 -e 9
+user@stosys:~/src/zns-tools$ sudo ./zns-tools.fs/src/zns.segmap -d /mnt/f2fs/ -p -i -s 7 -e 9
 ====================================================================
                         SEGMENT MAPPINGS
 ====================================================================
@@ -231,7 +233,7 @@ db0/000047.sst  | 5         | 113        | 3                 | 112           | 0
 `zns.imap` is meant to get some information from the F2FS setup. It locates and prints the inode a file, and can furthermore print the contents of the F2FS superblock and checkpoint area. We recommend running this in the verbose logging to get more information, as this tool is merely meant for information on F2FS layout.
 
 ```bash
-sudo ./src/zns.imap -f /mnt/f2fs/LOG -l 1
+sudo ./zns-tools.fs/src/zns.imap -f /mnt/f2fs/LOG -l 1
 ```
 
 Possible flags are:
@@ -248,7 +250,7 @@ Possible flags are:
 Below is an example output of running the `zns.imap` tool. For illustrative purposes the output is shortened.
 
 ```bash
-user@stosys:~/src/zns-tools$ sudo ./src/zns.imap -f /mnt/f2fs/LOG -l 1 -s -c
+user@stosys:~/src/zns-tools$ sudo ./zns-tools.fs/src/zns.imap -f /mnt/f2fs/LOG -l 1 -s -c
 =================================================================
                         SUPERBLOCK
 =================================================================
@@ -292,76 +294,22 @@ next_blkaddr:           1572896
 .
 ```
 
-### zns.fpbench (DEPRECATED - ONLY SUPPORTED IN V1.0.0)
-
-**Currently supported:** F2FS
-
-`zns.fpbench` is a benchmarking framework that is used for identifying the F2FS placement decisions based on the provided write hint from the benchmark. It writes the file with the specified size, in units of the specified block size, and sets the write hint with `fcntl()`. Concurrently repeating the workload is possible to run the same exact workload on different file names, hence allowing lockless concurrent writing. After writing, all files have extents located, the extents mapped to segments, and segment information retrieved, focusing on the heat classification that the segment was assigned.
-
-```bash
-sudo ./src/zns.fpbench -f /mnt/f2fs/bench_file -s 2M -b 4K -w 5 -n 3
-```
-
-Possible flags are:
-
-```bash
--f [file]:       Filename for the benchmark [Required]
--l [Int, 0-3]:   Log Level to print (Default 0)
--s:              File size (Default 4096B)
--b:              Block size in which to submit I/Os (Default 4096B)
--w:              Read/Write Hint (Default 0)
-                     RWH_WRITE_LIFE_NOT_SET = 0
-                     RWH_WRITE_LIFE_NONE = 1
-                     RWH_WRITE_LIFE_SHORT = 2
-                     RWH_WRITE_LIFE_MEDIUM = 3
-                     RWH_WRITE_LIFE_LONG = 4
-                     RWH_WRITE_LIFE_EXTREME = 5
--h:              Show this help
--n:              Number of jobs to concurrently execute the benchmark
--c:              Call fsync() after each block written
--d:              Use O_DIRECT for file writes
--m               Map the file to a particular stream
-```
-
-The benchmark is simple and is meant for only testing the adherence of F2FS with write hints if I/O is buffered and an `fsync()` is called on each file. For more advanced benchmarks, with asynchronous I/O, different engines and more possible configuration, use `fio` (which also supports write hints with the `--write_hint=short` flag).
-
-## zns.trace
+## zns-tools.nvme
 
 **Currently supported:** Any application on ZNS with Linux kernel and BPF support
 
-In the `zns.trace/` directory, we provide a framework to trace activity on zns devices across its different zones using BPF, collecting information on number of read/write operations to each zone, amount of data read/written in each zone, and reset statistics, including reset latency per zone. After collecting tracing statistics, zns.trace automatically generates heatmaps for each collected statistic, depicting the information for each zone in a comprehensible manner.
+In the `zns-tools.nvme/` directory, we provide a framework to trace activity on zns devices across its different zones using BPF, collecting information on number of read/write operations to each zone, amount of data read/written in each zone, and reset statistics, including reset latency per zone. After collecting tracing statistics, zns-tools.nvme automatically generates heatmaps for each collected statistic, depicting the information for each zone in a comprehensible manner.
 
-## zns.apptrace
+## zns-tools.app
 
 **Currently supported:** RocksDB with F2FS on ZNS with Linux kernel and BPF support
 
-In the `zns.apptrace/` directory, we provide a framework to trace activity on zns devices across the different layers of the Linux storage stack, and visualizing the collected events in a timeline. See [zns.apptrace](zns.apptrace/README.md) for more details and full examples.
+In the `zns-tools.app/` directory, we provide a framework to trace activity on zns devices across the different layers of the Linux storage stack, and visualizing the collected events in a timeline. See [zns-tools.app](zns-tools.app/README.md) for more details and full examples.
 
 ## Evaluation
 
-In the `evaluation/` directory we provide a benchmarking setup for evaluating the performance of the zns-tools, and an end-to-end visualization framework for RocksDB to analyze and visualize the data movement of flush/compaction operations, as well as F2FS Zone management operations.
-
-### Setup
-
-The end-to-end mapping tool requires minor modifications to RocksDB (commit `ccaa3225b`), and the zns-tools (commit `673f665`). The zns-tools patch provides json output instead of terminal output, for the post-processing visualization. We provide respective patches for both, which can be applied with
-
-```bash
-# RocksDB patch
-patch -p1 < rocksdb.ccaa3225b.patch
-patch -p1 < zns-tools.673f665.patch
-```
-
-### Running
-
-To run the RocksDB workload, a script is provided that executes all necessary tools, scripts, and data transformation.
-
-```
-sh ./timeline_data_rocksdb_gen.sh
-```
-
-Afterwards data should be preprocessed for plotting by running the notebook `preprocess.ipynb`  (`jupyter notebook` to start the notebook). It should create `data.json` in  `../timeline-gen`.
-
-To then visualize the data, copy it to the `../timeline-gen/` directory and execute the cells in the `plot.ipynb` notebook (`jupyter notebook` to start the notebook).
+In the `evaluation/zns-tools-bench` directory we provide a benchmarking for evaluating the performance of zns-tools.
+See the README in that directory on how to use the benchmarks.
 
 ## Development
 
@@ -398,9 +346,9 @@ We aim to maintain a cleanly formatted code, so before we merge a PR, we ask you
 
 ```bash
 # example of how to format all C code in-place in src/
-clang-format -i src/*.c
+clang-format -i ./zns-tools.fs/src/*.c
 ```
 
-## Acknownledgements
+## Acknowledgements
 
 This code is being developed and run on ZNS SSDs generously donated by Western Digital.

@@ -1,4 +1,4 @@
-# zns.trace
+# zns-tools.nvme
 
 This directory contains the tools for tracing a particular ZNS device, and generating heatmaps for various access aspects for each zone. The below figure illustrates the tracing of the number of individual zone reset commands issued during a workload with F2FS and RocksDB.
 
@@ -9,7 +9,7 @@ This directory contains the tools for tracing a particular ZNS device, and gener
 To run the tracing, simply provide the script with a ZNS device to trace, and press `Ctrl-C` when to stop tracing (or send a SIGINT). The script will stop the `bpftrace`, prepare the data, and generate the plots in the `figs/` directory, containing the device name and a timestamp (the exact same naming is used for the collected data file and the generated figures). Later we explain what type of data we collect, which correspond to the respective generated heatmaps. After stopping the tracing of a particular device, it will ask if there are comments to embed in the data file. We recommend adding comments here of the command that was being run and traced, as it becomes difficult in the future to remember the exact command and device configuration for a particular data file. These comments are then added into the data file and in a `README.md` file of the generated figures in its respective `figs/<data>/` directory. If there are no comments, simply hit enter when prompted, and if comments are multi-line, simply add `\n` in the prompt (or other formatters such as tabs with `\t`, the comment is redirected with `printf` to the output files).
 
 ```bash
-./zns.trace nvme2n1
+./zns-tools.nvme nvme2n1
 ```
 
 The python plotting script will directly be called, however if for some reason you have data that has not been plotted you can run the python script itself with `python3 plot.py`. **Note** however, that it takes the zone size and number of zones as arguments, and therefore attempts to create figures for all data with these values. If a figure for a particular data file already exists, this data will be skipped an no new figure is generated. Therefore, in the case there are multiple data files without figures, and with different ZNS devices, simply move the files from different devices to a temporary directory and plot only data for one device at a time. Since it does not regenerate existing figures, this way you can iteratively generate figures for all data files. Or move generated data and files to different directories, we do not have an effective way to integrate this for everyone, therefore this part involves individual configuration.
