@@ -1,6 +1,7 @@
 #! /usr/bin/python3
 
-import sys, getopt
+import sys
+import getopt
 import os
 import glob
 import math
@@ -8,7 +9,7 @@ import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-plt.rc('font', size=12)          # controls default text sizes
+plt.rc('font', size=20)          # controls default text sizes
 plt.rc('axes', titlesize=12)     # fontsize of the axes title
 plt.rc('axes', labelsize=12)     # fontsize of the x and y labels
 plt.rc('xtick', labelsize=12)    # fontsize of the tick labels
@@ -17,17 +18,22 @@ plt.rc('legend', fontsize=12)    # legend fontsize
 
 ZONE_SIZE = 0
 NR_ZONES = 0
-LAT_CONV=10**3 # Latency is stored in nsec, convert to μsec (change to 10**6 for msec)
+# Latency is stored in nsec, convert to μsec (change to 10**6 for msec)
+LAT_CONV = 10**3
+VMAX = 30
+
 
 def main(argv):
     try:
-        opts, args = getopt.getopt(argv,"hs:z:",["zone_size=","nr_zones"])
+        opts, args = getopt.getopt(argv, "hs:z:", ["zone_size=", "nr_zones"])
     except getopt.GetoptError:
-        print('Error. Usage: plot.py -s [ZONE_SIZE (in 512B sectors)] [-z NR_ZONES]')
+        print(
+            'Error. Usage: plot.py -s [ZONE_SIZE (in 512B sectors)] [-z NR_ZONES]')
         sys.exit(2)
     for opt, arg in opts:
         if opt == '-h':
-            print('Error. Usage: plot.py -s [ZONE_SIZE (in 512B sectors)] [-z NR_ZONES]')
+            print(
+                'Error. Usage: plot.py -s [ZONE_SIZE (in 512B sectors)] [-z NR_ZONES]')
             sys.exit()
         elif opt in ("-s", "--zone_size"):
             global ZONE_SIZE
@@ -35,6 +41,7 @@ def main(argv):
         elif opt in ("-z", "--nr_zones"):
             global NR_ZONES
             NR_ZONES = int(arg)
+
 
 def plot_z_op_map(data, type):
     """
@@ -67,48 +74,57 @@ def plot_z_op_map(data, type):
         if key >= dimension ** 2:
             pass
         else:
-            x_ind = key % dimension 
+            x_ind = key % dimension
             read_data[math.floor(key/dimension)][x_ind] = entry["read"]
             write_data[math.floor(key/dimension)][x_ind] = entry["write"]
- 
+
     cmap = sns.color_palette('rocket_r', as_cmap=True).copy()
     cmap.set_under('#88CCEE')
 
     if type == "z_data_map":
-        ax = sns.heatmap(read_data, linewidth=0.1, xticklabels=False, cmap=cmap, mask=(read_data == None), yticklabels=False, clip_on=False, cbar_kws={'shrink': 0.8, 'extend': 'min', 'extendrect': True, 'format': '%d Blocks (512B)'}, square=True, cbar=True, vmin=0)
+        ax = sns.heatmap(read_data, linewidth=0.1, xticklabels=False, cmap=cmap, mask=(read_data == None), yticklabels=False, clip_on=False, cbar_kws={
+                         'shrink': 0.8, 'extend': 'min', 'extendrect': True, 'format': '%d Blocks (512B)'}, square=True, cbar=True, vmin=0)
     else:
-        ax = sns.heatmap(read_data, linewidth=0.1, xticklabels=False, cmap=cmap, mask=(read_data == None), yticklabels=False, clip_on=False, cbar_kws={'shrink': 0.8, 'extend': 'min', 'extendrect': True}, square=True, cbar=True, vmin=0)
+        ax = sns.heatmap(read_data, linewidth=0.1, xticklabels=False, cmap=cmap, mask=(read_data == None), yticklabels=False,
+                         clip_on=False, cbar_kws={'shrink': 0.8, 'extend': 'min', 'extendrect': True}, square=True, cbar=True, vmin=0)
 
     ax.set_facecolor("white")
     plt.ylim(0, dimension)
     plt.xlim(0, dimension)
 
-    plt.savefig(f"{file_path}/figs/{file_name}/read-{type}-heatmap.pdf", bbox_inches="tight")
+    plt.savefig(
+        f"{file_path}/figs/{file_name}/read-{type}-heatmap.pdf", bbox_inches="tight")
     plt.title(f"{type} read")
-    plt.savefig(f"{file_path}/figs/{file_name}/read-{type}-heatmap.png", bbox_inches="tight")
+    plt.savefig(
+        f"{file_path}/figs/{file_name}/read-{type}-heatmap.png", bbox_inches="tight")
     plt.clf()
 
     cmap = sns.color_palette('rocket_r', as_cmap=True).copy()
     cmap.set_under('#88CCEE')
 
     if type == "z_data_map":
-        ax = sns.heatmap(write_data, linewidth=0.1, xticklabels=False, cmap=cmap, mask=(write_data == None), yticklabels=False, clip_on=False, cbar_kws={'shrink': 0.8, 'extend': 'min', 'extendrect': True, 'format': '%d LBAs'}, square=True, cbar=True, vmin=0)
+        ax = sns.heatmap(write_data, linewidth=0.1, xticklabels=False, cmap=cmap, mask=(write_data == None), yticklabels=False, clip_on=False, cbar_kws={
+                         'shrink': 0.8, 'extend': 'min', 'extendrect': True, 'format': '%d LBAs'}, square=True, cbar=True, vmin=0)
     else:
-        ax = sns.heatmap(write_data, linewidth=0.1, xticklabels=False, cmap=cmap, mask=(write_data == None), yticklabels=False, clip_on=False, cbar_kws={'shrink': 0.8, 'extend': 'min', 'extendrect': True}, square=True, cbar=True, vmin=0)
+        ax = sns.heatmap(write_data, linewidth=0.1, xticklabels=False, cmap=cmap, mask=(write_data == None), yticklabels=False,
+                         clip_on=False, cbar_kws={'shrink': 0.8, 'extend': 'min', 'extendrect': True}, square=True, cbar=True, vmin=0)
 
     ax.set_facecolor("white")
     plt.ylim(0, dimension)
     plt.xlim(0, dimension)
 
-    plt.savefig(f"{file_path}/figs/{file_name}/write-{type}-heatmap.pdf", bbox_inches="tight")
+    plt.savefig(
+        f"{file_path}/figs/{file_name}/write-{type}-heatmap.pdf", bbox_inches="tight")
     plt.title(f"{type} write")
-    plt.savefig(f"{file_path}/figs/{file_name}/write-{type}-heatmap.png", bbox_inches="tight")
+    plt.savefig(
+        f"{file_path}/figs/{file_name}/write-{type}-heatmap.png", bbox_inches="tight")
     plt.clf()
+
 
 def plot_z_reset_ctr_map(data):
     dimension = math.floor(NR_ZONES ** 0.5)
     remainder = NR_ZONES - (dimension ** 2)
-    
+
     if remainder == 0:
         plt_data = np.zeros(shape=(dimension, dimension))
         plt_data[plt_data == 0] = -1
@@ -120,30 +136,40 @@ def plot_z_reset_ctr_map(data):
 
         for val in range(difference):
             plt_data[-1, -1 - val] = None
-    
+
     for key, entry in data.items():
         if key >= dimension ** 2:
             pass
         else:
-            x_ind = key % dimension 
+            x_ind = key % dimension
             plt_data[math.floor(key/dimension)][x_ind] = entry
+
+    print(data)
+    print(plt_data)
 
     cmap = sns.color_palette('rocket_r', as_cmap=True).copy()
     cmap.set_under('#88CCEE')
-    ax = sns.heatmap(plt_data, linewidth=0.1, xticklabels=False, cmap=cmap, mask=(plt_data == None), yticklabels=False, clip_on=False, cbar_kws={'shrink': 0.8, 'extend': 'min', 'extendrect': True}, square=True, cbar=True, vmin=0)
+    ax = sns.heatmap(plt_data, linewidth=0.1, xticklabels=False, cmap=cmap, mask=(plt_data == None), yticklabels=False,
+                     clip_on=False, cbar_kws={'shrink': 0.8, 'extend': 'min', 'extendrect': True}, square=True, cbar=True, vmin=0, vmax=VMAX)
     ax.set_facecolor("white")
     plt.ylim(0, dimension)
     plt.xlim(0, dimension)
 
-    plt.savefig(f"{file_path}/figs/{file_name}/z_reset_ctr_map-heatmap.pdf", bbox_inches="tight")
+    plt.text(0.3, 0.4, "0", weight="bold", color="white")
+    plt.text(7.2, 7.4, "63", weight="bold", color="white")
+
+    plt.savefig(
+        f"{file_path}/figs/{file_name}/z_reset_ctr_map-heatmap.pdf", bbox_inches="tight")
     plt.title("z_reset_ctr_map")
-    plt.savefig(f"{file_path}/figs/{file_name}/z_reset_ctr_map-heatmap.png", bbox_inches="tight")
+    plt.savefig(
+        f"{file_path}/figs/{file_name}/z_reset_ctr_map-heatmap.png", bbox_inches="tight")
     plt.clf()
+
 
 def plot_z_reset_lat_map(data):
     dimension = math.floor(NR_ZONES ** 0.5)
     remainder = NR_ZONES - (dimension ** 2)
-    
+
     if remainder == 0:
         plt_data = np.zeros(shape=(dimension, dimension))
         plt_data[plt_data == 0] = -1
@@ -156,7 +182,7 @@ def plot_z_reset_lat_map(data):
 
         for val in range(difference):
             plt_data[-1, -1 - val] = None
-    
+
     for key, entry in data.items():
         if key >= dimension ** 2:
             pass
@@ -167,28 +193,35 @@ def plot_z_reset_lat_map(data):
                 total += val
                 counter += 1
 
-            x_ind = key % dimension 
+            x_ind = key % dimension
             if LAT_CONV == 10**3:
-                plt_data[math.floor(key/dimension)][x_ind] = total/counter/10**3 # convert to μsec
+                plt_data[math.floor(key/dimension)][x_ind] = total / \
+                    counter/10**3  # convert to μsec
             elif LAT_CONV == 10**6:
-                plt_data[math.floor(key/dimension)][x_ind] = total/counter/10**6 # convert to msec
+                plt_data[math.floor(key/dimension)][x_ind] = total / \
+                    counter/10**6  # convert to msec
 
     cmap = sns.color_palette('rocket_r', as_cmap=True).copy()
     cmap.set_under('#88CCEE')
 
     if LAT_CONV == 10**3:
-        ax = sns.heatmap(plt_data, linewidth=0.1, xticklabels=False, cmap=cmap, mask=(plt_data == None), yticklabels=False, clip_on=False, cbar_kws={'shrink': 0.8, 'extend': 'min', 'extendrect': True, 'format': '%d μsec'}, square=True, cbar=True, vmin=0)
+        ax = sns.heatmap(plt_data, linewidth=0.1, xticklabels=False, cmap=cmap, mask=(plt_data == None), yticklabels=False, clip_on=False, cbar_kws={
+                         'shrink': 0.8, 'extend': 'min', 'extendrect': True, 'format': '%d μsec'}, square=True, cbar=True, vmin=0)
     else:
-        ax = sns.heatmap(plt_data, linewidth=0.1, xticklabels=False, cmap=cmap, mask=(plt_data == None), yticklabels=False, clip_on=False, cbar_kws={'shrink': 0.8, 'extend': 'min', 'extendrect': True, 'format': '%d msec'}, square=True, cbar=True, vmin=0)
+        ax = sns.heatmap(plt_data, linewidth=0.1, xticklabels=False, cmap=cmap, mask=(plt_data == None), yticklabels=False, clip_on=False, cbar_kws={
+                         'shrink': 0.8, 'extend': 'min', 'extendrect': True, 'format': '%d msec'}, square=True, cbar=True, vmin=0)
 
     ax.set_facecolor("white")
     plt.ylim(0, dimension)
     plt.xlim(0, dimension)
 
-    plt.savefig(f"{file_path}/figs/{file_name}/z_reset_lat_map-heatmap.pdf", bbox_inches="tight")
+    plt.savefig(
+        f"{file_path}/figs/{file_name}/z_reset_lat_map-heatmap.pdf", bbox_inches="tight")
     plt.title("z_reset_ctr_map")
-    plt.savefig(f"{file_path}/figs/{file_name}/z_reset_lat_map-heatmap.png", bbox_inches="tight")
+    plt.savefig(
+        f"{file_path}/figs/{file_name}/z_reset_lat_map-heatmap.png", bbox_inches="tight")
     plt.clf()
+
 
 def plot_avg_io_size(data, counter):
     """
@@ -197,7 +230,7 @@ def plot_avg_io_size(data, counter):
 
     dimension = math.floor(NR_ZONES ** 0.5)
     remainder = NR_ZONES - (dimension ** 2)
-    
+
     if remainder == 0:
         read_data = np.zeros(shape=(dimension, dimension))
         write_data = np.zeros(shape=(dimension, dimension))
@@ -220,33 +253,42 @@ def plot_avg_io_size(data, counter):
         if key >= dimension ** 2:
             pass
         else:
-            x_ind = key % dimension 
+            x_ind = key % dimension
             if entry["read"] != 0:
-                read_data[math.floor(key/dimension)][x_ind] = int(entry["read"])/int(counter[key]["read"])
+                read_data[math.floor(
+                    key/dimension)][x_ind] = int(entry["read"])/int(counter[key]["read"])
             if entry["write"] != 0:
-                write_data[math.floor(key/dimension)][x_ind] = int(entry["write"])/int(counter[key]["write"])
+                write_data[math.floor(
+                    key/dimension)][x_ind] = int(entry["write"])/int(counter[key]["write"])
 
     cmap = sns.color_palette('rocket_r', as_cmap=True).copy()
     cmap.set_under('#88CCEE')
 
-    ax = sns.heatmap(read_data, linewidth=0.1, xticklabels=False, cmap=cmap, mask=(read_data == None), yticklabels=False, clip_on=False, cbar_kws={'shrink': 0.8, 'extend': 'min', 'extendrect': True, 'format': '%d LBAs'}, square=True, cbar=True, vmin=0)
+    ax = sns.heatmap(read_data, linewidth=0.1, xticklabels=False, cmap=cmap, mask=(read_data == None), yticklabels=False, clip_on=False, cbar_kws={
+                     'shrink': 0.8, 'extend': 'min', 'extendrect': True, 'format': '%d LBAs'}, square=True, cbar=True, vmin=0)
 
     plt.ylim(0, dimension)
     plt.xlim(0, dimension)
 
-    plt.savefig(f"{file_path}/figs/{file_name}/read-avg_io_size-heatmap.pdf", bbox_inches="tight")
+    plt.savefig(
+        f"{file_path}/figs/{file_name}/read-avg_io_size-heatmap.pdf", bbox_inches="tight")
     plt.title(f"avg I/O size read")
-    plt.savefig(f"{file_path}/figs/{file_name}/read-avg_io_size-heatmap.png", bbox_inches="tight")
+    plt.savefig(
+        f"{file_path}/figs/{file_name}/read-avg_io_size-heatmap.png", bbox_inches="tight")
     plt.clf()
 
-    ax = sns.heatmap(write_data, linewidth=0.1, xticklabels=False, cmap=cmap, mask=(write_data == None), yticklabels=False, clip_on=False, cbar_kws={'shrink': 0.8, 'extend': 'min', 'extendrect': True, 'format': '%d LBAs'}, square=True, cbar=True, vmin=0)
+    ax = sns.heatmap(write_data, linewidth=0.1, xticklabels=False, cmap=cmap, mask=(write_data == None), yticklabels=False, clip_on=False, cbar_kws={
+                     'shrink': 0.8, 'extend': 'min', 'extendrect': True, 'format': '%d LBAs'}, square=True, cbar=True, vmin=0)
     plt.ylim(0, dimension)
     plt.xlim(0, dimension)
 
-    plt.savefig(f"{file_path}/figs/{file_name}/write-avg_io_size-heatmap.pdf", bbox_inches="tight")
+    plt.savefig(
+        f"{file_path}/figs/{file_name}/write-avg_io_size-heatmap.pdf", bbox_inches="tight")
     plt.title(f"avg I/O size write")
-    plt.savefig(f"{file_path}/figs/{file_name}/write-avg_io_size-heatmap.png", bbox_inches="tight")
+    plt.savefig(
+        f"{file_path}/figs/{file_name}/write-avg_io_size-heatmap.png", bbox_inches="tight")
     plt.clf()
+
 
 if __name__ == "__main__":
     main(sys.argv[1:])
@@ -263,9 +305,14 @@ if __name__ == "__main__":
         z_counter = 0
         file_name = file.split('/')[-1]
 
+        if 'aged' in file:
+            VMAX = 100
+        else:
+            VMAX = 30
+
         os.makedirs(f"{file_path}/figs/{file_name}", exist_ok=True)
         with open(f"{file_path}/data/{file_name}") as data_file:
-            # bpftrace sorts based on the value in ascending order, 
+            # bpftrace sorts based on the value in ascending order,
             # therefore our dict will be out of order, which will be
             # irrelevant for plotting if we use a their keys as indices
             data = dict()
@@ -298,7 +345,8 @@ if __name__ == "__main__":
                     else:
                         print('Error. Invalid opeartion in z_data_map')
                         sys.exit()
-                    data["z_data_map"][zone_index][OP] = line[1].split(" ")[2].strip()
+                    data["z_data_map"][zone_index][OP] = line[1].split(" ")[
+                        2].strip()
                 elif "z_rw_ctr_map" in line:
                     line = line[13:]
                     line = line.split(",")
@@ -317,17 +365,21 @@ if __name__ == "__main__":
                     else:
                         print('Error. Invalid opeartion in z_data_map')
                         sys.exit()
-                    data["z_rw_ctr_map"][zone_index][OP] = line[1].split(" ")[2].strip()
+                    data["z_rw_ctr_map"][zone_index][OP] = line[1].split(" ")[
+                        2].strip()
                 elif "z_reset_ctr_map" in line:
                     line = line[16:]
                     line = line.split(",")
-                    zone_index = math.floor(int(line[0].split("]")[0])/ZONE_SIZE)
-                    data["z_reset_ctr_map"][zone_index] = line[0].split(" ")[1].strip()
+                    zone_index = math.floor(
+                        int(line[0].split("]")[0])/ZONE_SIZE)
+                    data["z_reset_ctr_map"][zone_index] = line[0].split(" ")[
+                        1].strip()
                     z_counter += int(line[0].split(" ")[1].strip())
                 elif "z_reset_lat_map" in line:
                     line = line[16:]
                     line = line.split(",")
-                    zone_index = math.floor(int(line[0].split("]")[0])/ZONE_SIZE)
+                    zone_index = math.floor(
+                        int(line[0].split("]")[0])/ZONE_SIZE)
                     if zone_index not in data["z_reset_lat_map"]:
                         data["z_reset_lat_map"][zone_index] = dict()
 
