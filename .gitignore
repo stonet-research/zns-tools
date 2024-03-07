@@ -49,3 +49,5 @@ zns-tools.nvme/util/__pycache__/
 nvme*
 
 */venv/*
+
+*.dat
