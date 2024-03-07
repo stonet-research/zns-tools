@@ -46,7 +46,6 @@ confdefs.h
 conftest.dir/
 
 zns-tools.nvme/util/__pycache__/
-*.dat
 nvme*
 
 */venv/*

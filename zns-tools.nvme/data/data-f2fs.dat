@@ -1,0 +1,186 @@
+
+Attaching 4 probes...
+
+
+
+
+
+@z_data_map[393216, 2]: 8
+@z_data_map[0, 1]: 312
+@z_data_map[262144, 1]: 496
+@z_data_map[131072, 1]: 17680
+@z_data_map[393216, 1]: 131064
+@z_data_map[6291456, 1]: 131072
+@z_data_map[7208960, 1]: 131072
+@z_data_map[6029312, 1]: 131072
+@z_data_map[5242880, 1]: 131072
+@z_data_map[4980736, 1]: 131072
+@z_data_map[6553600, 1]: 131072
+@z_data_map[4849664, 1]: 131072
+@z_data_map[7602176, 1]: 131072
+@z_data_map[7864320, 1]: 131072
+@z_data_map[6422528, 1]: 131072
+@z_data_map[7340032, 1]: 131072
+@z_data_map[5636096, 1]: 131072
+@z_data_map[5373952, 1]: 131072
+@z_data_map[8257536, 1]: 131072
+@z_data_map[5767168, 1]: 131072
+@z_data_map[6684672, 1]: 131072
+@z_data_map[1048576, 1]: 131072
+@z_data_map[7077888, 1]: 131072
+@z_data_map[5898240, 1]: 131072
+@z_data_map[6946816, 1]: 131072
+@z_data_map[6815744, 1]: 131072
+@z_data_map[5505024, 1]: 131072
+@z_data_map[6160384, 1]: 131072
+@z_data_map[5111808, 1]: 131072
+@z_data_map[7995392, 1]: 131072
+@z_data_map[7471104, 1]: 131072
+@z_data_map[7733248, 1]: 131072
+@z_data_map[8126464, 1]: 131072
+@z_data_map[4718592, 1]: 171176
+@z_data_map[4456448, 1]: 182408
+@z_data_map[524288, 1]: 262144
+@z_data_map[917504, 1]: 262144
+@z_data_map[3145728, 1]: 262144
+@z_data_map[786432, 1]: 262144
+@z_data_map[1572864, 1]: 262144
+@z_data_map[3407872, 1]: 262144
+@z_data_map[4587520, 1]: 262144
+@z_data_map[3276800, 1]: 262144
+@z_data_map[3932160, 1]: 262144
+@z_data_map[1835008, 1]: 262144
+@z_data_map[4325376, 1]: 262144
+@z_data_map[2359296, 1]: 262144
+@z_data_map[2883584, 1]: 262144
+@z_data_map[3538944, 1]: 262144
+@z_data_map[2621440, 1]: 262144
+@z_data_map[2490368, 1]: 262144
+@z_data_map[2752512, 1]: 262144
+@z_data_map[3014656, 1]: 262144
+@z_data_map[4194304, 1]: 262144
+@z_data_map[3801088, 1]: 262144
+@z_data_map[1441792, 1]: 262144
+@z_data_map[1966080, 1]: 262144
+@z_data_map[3670016, 1]: 262144
+@z_data_map[2097152, 1]: 262144
+@z_data_map[4063232, 1]: 262144
+@z_data_map[1703936, 1]: 262144
+@z_data_map[2228224, 1]: 262144
+@z_data_map[1310720, 1]: 393216
+@z_data_map[1179648, 1]: 393216
+@z_reset_ctr_map[2752512]: 1
+@z_reset_ctr_map[4849664]: 1
+@z_reset_ctr_map[6553600]: 1
+@z_reset_ctr_map[7602176]: 1
+@z_reset_ctr_map[3145728]: 1
+@z_reset_ctr_map[2359296]: 1
+@z_reset_ctr_map[5505024]: 1
+@z_reset_ctr_map[3670016]: 1
+@z_reset_ctr_map[5636096]: 1
+@z_reset_ctr_map[1310720]: 1
+@z_reset_ctr_map[6946816]: 1
+@z_reset_ctr_map[3407872]: 1
+@z_reset_ctr_map[917504]: 1
+@z_reset_ctr_map[3801088]: 1
+@z_reset_ctr_map[5111808]: 1
+@z_reset_ctr_map[3276800]: 1
+@z_reset_ctr_map[6160384]: 1
+@z_reset_ctr_map[3538944]: 1
+@z_reset_ctr_map[4456448]: 1
+@z_reset_ctr_map[6684672]: 1
+@z_reset_ctr_map[3014656]: 1
+@z_reset_ctr_map[7077888]: 1
+@z_reset_ctr_map[5898240]: 1
+@z_reset_ctr_map[5373952]: 1
+@z_reset_ctr_map[7340032]: 1
+@z_reset_ctr_map[7864320]: 1
+@z_reset_ctr_map[4587520]: 1
+@z_reset_ctr_map[7733248]: 1
+@z_reset_ctr_map[4325376]: 1
+@z_reset_ctr_map[7208960]: 1
+@z_reset_ctr_map[5242880]: 1
+@z_reset_ctr_map[7471104]: 1
+@z_reset_ctr_map[5767168]: 1
+@z_reset_ctr_map[2097152]: 1
+@z_reset_ctr_map[4194304]: 1
+@z_reset_ctr_map[3932160]: 1
+@z_reset_ctr_map[6291456]: 1
+@z_reset_ctr_map[1703936]: 2
+@z_reset_ctr_map[2883584]: 2
+@z_reset_ctr_map[786432]: 2
+@z_reset_ctr_map[2228224]: 2
+@z_reset_ctr_map[1835008]: 2
+@z_reset_ctr_map[524288]: 2
+@z_reset_ctr_map[1441792]: 2
+@z_reset_ctr_map[1572864]: 2
+@z_reset_ctr_map[2490368]: 2
+@z_reset_ctr_map[2621440]: 2
+@z_reset_ctr_map[1966080]: 2
+@z_reset_ctr_map[1179648]: 3
+@z_reset_ctr_map[131072]: 17
+
+@z_rw_ctr_map[393216, 2]: 1
+@z_rw_ctr_map[262144, 1]: 29
+@z_rw_ctr_map[0, 1]: 38
+@z_rw_ctr_map[4980736, 1]: 64
+@z_rw_ctr_map[6422528, 1]: 65
+@z_rw_ctr_map[5636096, 1]: 65
+@z_rw_ctr_map[7471104, 1]: 65
+@z_rw_ctr_map[6815744, 1]: 65
+@z_rw_ctr_map[6291456, 1]: 65
+@z_rw_ctr_map[5505024, 1]: 65
+@z_rw_ctr_map[7602176, 1]: 65
+@z_rw_ctr_map[8257536, 1]: 65
+@z_rw_ctr_map[6160384, 1]: 66
+@z_rw_ctr_map[5373952, 1]: 66
+@z_rw_ctr_map[8126464, 1]: 66
+@z_rw_ctr_map[6029312, 1]: 66
+@z_rw_ctr_map[6684672, 1]: 67
+@z_rw_ctr_map[6946816, 1]: 67
+@z_rw_ctr_map[7208960, 1]: 67
+@z_rw_ctr_map[5767168, 1]: 67
+@z_rw_ctr_map[4849664, 1]: 67
+@z_rw_ctr_map[7340032, 1]: 67
+@z_rw_ctr_map[7733248, 1]: 68
+@z_rw_ctr_map[7995392, 1]: 69
+@z_rw_ctr_map[1048576, 1]: 70
+@z_rw_ctr_map[5242880, 1]: 73
+@z_rw_ctr_map[7077888, 1]: 74
+@z_rw_ctr_map[6553600, 1]: 78
+@z_rw_ctr_map[5111808, 1]: 79
+@z_rw_ctr_map[5898240, 1]: 79
+@z_rw_ctr_map[393216, 1]: 80
+@z_rw_ctr_map[4718592, 1]: 86
+@z_rw_ctr_map[7864320, 1]: 89
+@z_rw_ctr_map[4456448, 1]: 113
+@z_rw_ctr_map[131072, 1]: 123
+@z_rw_ctr_map[2752512, 1]: 129
+@z_rw_ctr_map[524288, 1]: 129
+@z_rw_ctr_map[3407872, 1]: 130
+@z_rw_ctr_map[2621440, 1]: 130
+@z_rw_ctr_map[3014656, 1]: 130
+@z_rw_ctr_map[2359296, 1]: 131
+@z_rw_ctr_map[1835008, 1]: 131
+@z_rw_ctr_map[4587520, 1]: 131
+@z_rw_ctr_map[4325376, 1]: 132
+@z_rw_ctr_map[2097152, 1]: 133
+@z_rw_ctr_map[1703936, 1]: 133
+@z_rw_ctr_map[3670016, 1]: 133
+@z_rw_ctr_map[3276800, 1]: 133
+@z_rw_ctr_map[3801088, 1]: 133
+@z_rw_ctr_map[917504, 1]: 133
+@z_rw_ctr_map[1966080, 1]: 136
+@z_rw_ctr_map[4063232, 1]: 137
+@z_rw_ctr_map[3145728, 1]: 139
+@z_rw_ctr_map[1441792, 1]: 140
+@z_rw_ctr_map[2490368, 1]: 140
+@z_rw_ctr_map[2228224, 1]: 147
+@z_rw_ctr_map[3538944, 1]: 149
+@z_rw_ctr_map[3932160, 1]: 150
+@z_rw_ctr_map[2883584, 1]: 152
+@z_rw_ctr_map[1572864, 1]: 153
+@z_rw_ctr_map[786432, 1]: 155
+@z_rw_ctr_map[4194304, 1]: 156
+@z_rw_ctr_map[1179648, 1]: 196
+@z_rw_ctr_map[1310720, 1]: 197
