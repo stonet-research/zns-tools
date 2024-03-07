@@ -1,7 +1,6 @@
 zns-tools.fs/src/zns.fiemap
 zns-tools.fs/src/zns.segmap
 zns-tools.fs/src/zns.imap
-zns-tools.fs/src/zns.fpbench
 
 zns-tools.fs/Makefile
 zns-tools.fs/configure
@@ -48,6 +47,6 @@ conftest.dir/
 zns-tools.nvme/util/__pycache__/
 nvme*
 
-*/venv/*
+venv
 
 *.dat
