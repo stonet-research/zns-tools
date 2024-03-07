@@ -25,10 +25,11 @@ VMAX = 30
 
 def main(argv):
     try:
-        opts, args = getopt.getopt(argv, "hs:z:", ["zone_size=", "nr_zones"])
+        opts, args = getopt.getopt(
+            argv, "hs:z:v:", ["vmax=", "zone_size=", "nr_zones="])
     except getopt.GetoptError:
         print(
-            'Error. Usage: plot.py -s [ZONE_SIZE (in 512B sectors)] [-z NR_ZONES]')
+            'Error. Usage: plot.py -s [ZONE_SIZE (in 512B sectors)] [-z NR_ZONES] [-v MAX_VAL]')
         sys.exit(2)
     for opt, arg in opts:
         if opt == '-h':
@@ -41,6 +42,10 @@ def main(argv):
         elif opt in ("-z", "--nr_zones"):
             global NR_ZONES
             NR_ZONES = int(arg)
+        elif opt in ("-v", "--vmax"):
+            global VMAX
+            print(arg)
+            VMAX = int(arg)
 
 
 def plot_z_op_map(data, type):
@@ -144,9 +149,6 @@ def plot_z_reset_ctr_map(data):
             x_ind = key % dimension
             plt_data[math.floor(key/dimension)][x_ind] = entry
 
-    print(data)
-    print(plt_data)
-
     cmap = sns.color_palette('rocket_r', as_cmap=True).copy()
     cmap.set_under('#88CCEE')
     ax = sns.heatmap(plt_data, linewidth=0.1, xticklabels=False, cmap=cmap, mask=(plt_data == None), yticklabels=False,
@@ -155,8 +157,10 @@ def plot_z_reset_ctr_map(data):
     plt.ylim(0, dimension)
     plt.xlim(0, dimension)
 
+    # Annotation
     plt.text(0.3, 0.4, "0", weight="bold", color="white")
-    plt.text(7.2, 7.4, "63", weight="bold", color="white")
+    plt.text(dimension - 0.7, dimension - 0.6,
+             "63", weight="bold", color="white")
 
     plt.savefig(
         f"{file_path}/figs/{file_name}/z_reset_ctr_map-heatmap.pdf", bbox_inches="tight")
@@ -304,11 +308,6 @@ if __name__ == "__main__":
     for file in glob.glob(f"{file_path}/data/*"):
         z_counter = 0
         file_name = file.split('/')[-1]
-
-        if 'aged' in file:
-            VMAX = 100
-        else:
-            VMAX = 30
 
         os.makedirs(f"{file_path}/figs/{file_name}", exist_ok=True)
         with open(f"{file_path}/data/{file_name}") as data_file:
