@@ -1,0 +1,22 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+preferred-citation:
+  type: conference-paper
+  authors:
+  - family-names: "Tehrany"
+    given-names: "Nick"
+    orcid: "https://orcid.org/0000-0002-4907-8859"
+  - family-names: "Doekemeijer"
+    given-names: "Krijn"
+    orcid: "https://orcid.org/0009-0007-7530-4438"
+  - family-names: "Trivedi"
+    given-names: "Animesh"
+    orcid: "https://orcid.org/0000-0003-3586-7168"
+  title: "ZNS-tools: An eBPF-powered, Cross-Layer Storage Profiling Tool for NVMe ZNS SSDs"
+  version: 1.0.0
+  conference:
+      name: "4th Workshop on Challenges and Opportunities of Efficient and Performant Storage Systems ({CHEOPS'24})"
+      city: "Athens"
+      date-start: "2024-04-22"
+  year: 2024
+  month: "Apr"
