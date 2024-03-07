@@ -52,6 +52,11 @@ sudo make install
 
 The tools aim to further the understanding of the storage, identify how file placement decisions are made, and how I/O is done. We provide several examples how the tools can help our understanding of file systems and ZNS SSD.
 
+## How to reproduce the results of the zns-tools paper
+
+We provide a separate document on how to reproduce the results from the paper.
+Please follow the instructions at [AE.md](AE.md).
+
 ### How can the addresses of files be located on the ZNS SSD?
 
 It may be important to understand how and where file systems allocate space for the file data to be stored. For this, the tools interact with the file system to retrieve relevant information on physical block addresses of files, and provide these to the user in a comprehensible manner. For instance, locating a file called `to_be_located_file.txt` can be done as follows:
