@@ -51,7 +51,7 @@ Follow the instructions at [zns-tools.nvme/example-YCSB-heatmaps.md](zns-tools.n
 
 To reproduce figure 2, follow the instructions in [zns-tools.app/README.md](zns-tools.app/README.md).
 The tracing tool should be started in a separate terminal (session/process) from the application you want to trace.
-Important is to make sure to change the probe signatures `TRACETIME` and `INODE_TRACETIME` those are currently not automized. To ensure reproducibility, please use RocksDB v7.4.3 (it will lead into the same flush/compaction behavior).
+Important is to make sure to change the RocksDB probe signatures `FlushJob::Run` and `NotifyOnCompactionBegin` to the signatures of your compiled binary (see detailed instructions in [zns-tools.app/README.md](zns-tools.app/README.md)), this process is currently not automized. To ensure reproducibility, please use RocksDB v7.4.3 (it will lead into the same flush/compaction behavior).
 The workload uses the F2Fs file system (no data written yet, clean format) we used for the timeline is similar to:
 
 ```
@@ -84,7 +84,9 @@ First, make sure that zns-tools.fs is installed globally.
 
 ```bash
 cd zns-tools.fs
-make
+sh ./autogen.sh
+./configure
+make -j
 sudo make install
 ```
 
