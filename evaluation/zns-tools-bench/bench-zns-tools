@@ -2,8 +2,8 @@
 
 set -e
 
-if [ $# != 1 ]; then
-    echo "Usage: $0 <ZNS device (e.g., nvme0n2)>"
+if [ $# != 2 ]; then
+    echo "Usage: $0 <ZNS device (e.g., nvme0n2)> $1 <iteration>"
     exit 1
 fi
 
@@ -36,7 +36,7 @@ setup_f2fs ${ZNS}
 SIZE=$(echo "scale=0;10^2 * 4096" | bc)
 FILES=$(echo "scale=0;10^2" | bc)
 sudo env "NRFILES=${FILES}" "SIZE=${SIZE}" ${FIO_HOME}/fio job.fio
-command time -v -o time-100_files.dat sudo zns.segmap -d /mnt/f2fs -p -i > /dev/null 2>&1
+command time -v -o time-100_files.dat.$2 sudo zns.segmap -d /mnt/f2fs -p -i > /dev/null 2>&1
 sudo sync
 cleanup
 
@@ -44,7 +44,7 @@ setup_f2fs ${ZNS}
 SIZE=$(echo "scale=0;10^3 * 4096" | bc)
 FILES=$(echo "scale=0;10^3" | bc)
 sudo env "NRFILES=${FILES}" "SIZE=${SIZE}" ${FIO_HOME}/fio job.fio
-command time -v -o time-1K_files.dat sudo zns.segmap -d /mnt/f2fs -p -i > /dev/null 2>&1
+command time -v -o time-1K_files.dat.$2 sudo zns.segmap -d /mnt/f2fs -p -i > /dev/null 2>&1
 sudo sync
 cleanup
 
@@ -53,13 +53,30 @@ SIZE=$(echo "scale=0;10^4 * 4096" | bc)
 FILES=$(echo "scale=0;10^4" | bc)
 sudo env "NRFILES=${FILES}" "SIZE=${SIZE}" ${FIO_HOME}/fio job.fio
 sudo sync
-command time -v -o time-10K_files.dat sudo zns.segmap -d /mnt/f2fs -p -i > /dev/null 2>&1
+command time -v -o time-10K_files.dat.$2 sudo zns.segmap -d /mnt/f2fs -p -i > /dev/null 2>&1
 cleanup
 
 setup_f2fs ${ZNS}
 SIZE=$(echo "scale=0;25000 * 4096" | bc)
 FILES=$(echo "scale=0;25000" | bc)
 sudo env "NRFILES=${FILES}" "SIZE=${SIZE}" ${FIO_HOME}/fio job.fio
-command time -v -o time-25K_files.dat sudo zns.segmap -d /mnt/f2fs -p -i > /dev/null 2>&1
+command time -v -o time-25K_files.dat.$2 sudo zns.segmap -d /mnt/f2fs -p -i > /dev/null 2>&1
 sudo sync
+cleanup
+
+setup_f2fs ${ZNS}
+SIZE=$(echo "scale=0;50000 * 4096" | bc)
+FILES=$(echo "scale=0;50000" | bc)
+sudo env "NRFILES=${FILES}" "SIZE=${SIZE}" ${FIO_HOME}/fio job.fio
+command time -v -o time-50k_files.dat.$2 sudo zns.segmap -d /mnt/f2fs -p -i > /dev/null 2>&1
+sudo sync
+cleanup
+
+
+setup_f2fs ${ZNS}
+SIZE=$(echo "scale=0;10^5 * 4096" | bc)
+FILES=$(echo "scale=0;10^5" | bc)
+sudo env "NRFILES=${FILES}" "SIZE=${SIZE}" ${FIO_HOME}/fio job.fio
+sudo sync
+command time -v -o time-100K_files.dat.$2 sudo zns.segmap -d /mnt/f2fs -p -i > /dev/null 2>&1
 cleanup
