@@ -20,7 +20,7 @@ Below we illustrate an example timeline that the tools can generate to visualize
 ## Resources
 
 See the below papers for publications of this work, further reading from us on understanding the ecosystem around ZNS and Flash SSDs.
-
+- **zns-tools: An eBPF-powered, Cross-Layer Storage Profiling Tool for NVMe ZNS SSDs** Nick Tehrany, Krijn Doekemeijer, and Animesh Trivedi, 4th Workshop on Challenges and Opportunities of Efficient and Performant Storage Systems ([CHEOPS'24](https://cheops-workshop.github.io/2024.html)) co-located with EuroSys 2024, [PDF](https://atlarge-research.com/pdfs/2024-zns-tools.pdf).
 - **Understanding (Un)Written Contracts of NVMe ZNS Devices with zns-tools** Nick Tehrany, Krijn Doekemeijer, and Animesh Trivedi, <https://arxiv.org/abs/2307.11860>, (2023). [PDF](https://arxiv.org/pdf/2307.11860.pdf)
 - **Performance Characterization of NVMe Flash Devices with Zoned Namespaces (ZNS)** Krijn Doekemeijer, Nick Tehrany, Balakrishnan Chandrasekaran, Matias Bjørling, and Animesh Trivedi, <https://arxiv.org/abs/2206.01547>, (2023). [PDF](https://atlarge-research.com/pdfs/2023-cluster-zns-performance-kdoekemeijer.pdf)
 - **Understanding NVMe Zoned Namespace (ZNS) Flash SSD Storage Devices** Nick Tehrany and Animesh Trivedi, <https://arxiv.org/abs/2206.01547>, (2022). [PDF](https://arxiv.org/pdf/2206.01547.pdf)
