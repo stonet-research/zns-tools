@@ -72,8 +72,8 @@ def plot_z_op_map(data, type):
         difference = abs(NR_ZONES - dimension ** 2)
 
         for val in range(difference):
-            read_data[-1, -1 - val] = None
-            write_data[-1, -1 - val] = None
+            read_data[-1 - val//dimension, -1 - val%dimension] = None
+            write_data[-1 - val//dimension, -1 - val%dimension] = None
 
     for key, entry in data.items():
         if key >= dimension ** 2:
@@ -140,7 +140,7 @@ def plot_z_reset_ctr_map(data):
         difference = abs(NR_ZONES - dimension ** 2)
 
         for val in range(difference):
-            plt_data[-1, -1 - val] = None
+            plt_data[-1 - val//dimension, -1 - val%dimension] = None
 
     for key, entry in data.items():
         if key >= dimension ** 2:
@@ -185,7 +185,7 @@ def plot_z_reset_lat_map(data):
         difference = abs(NR_ZONES - dimension ** 2)
 
         for val in range(difference):
-            plt_data[-1, -1 - val] = None
+            plt_data[-1 - val//dimension, -1 - val%dimension] = None
 
     for key, entry in data.items():
         if key >= dimension ** 2:
@@ -250,8 +250,8 @@ def plot_avg_io_size(data, counter):
         difference = abs(NR_ZONES - dimension ** 2)
 
         for val in range(difference):
-            read_data[-1, -1 - val] = None
-            write_data[-1, -1 - val] = None
+            read_data[-1 - val//dimension, -1 - val%dimension] = None
+            write_data[-1 - val//dimension, -1 - val%dimension] = None
 
     for key, entry in data.items():
         if key >= dimension ** 2:
