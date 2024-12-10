@@ -1,6 +1,5 @@
 #include "zns-tools.h"
 #include <stdlib.h>
-
 struct control ctrl;
 
 /*
@@ -565,7 +564,8 @@ int get_extents(char *filename, int fd, struct stat *stats) {
     uint64_t ext_ctr = 0;
     struct file_counter_map *temp = NULL;
 
-    fiemap = (struct fiemap *)calloc(sizeof(struct fiemap), sizeof(char *));
+    fiemap = calloc(1, sizeof(struct fiemap)
+		    + sizeof(struct fiemap_extent) * stats->st_blocks);
     extent = calloc(1, sizeof(struct extent));
 
     fiemap->fm_flags = FIEMAP_FLAG_SYNC;
