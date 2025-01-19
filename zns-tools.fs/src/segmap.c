@@ -275,8 +275,9 @@ static unsigned int get_file_stats_index(char *filename) {
     uint32_t i = 0;
 
     for (i = 0; i < segmap_man.ctr; i++) {
-        if (strncmp(segmap_man.fs[i].filename, filename, MAX_FILE_LENGTH) ==
-            0) {
+        if (strlen(segmap_man.fs[i].filename) == strlen(filename) &&
+            strncmp(segmap_man.fs[i].filename, filename, MAX_FILE_LENGTH) ==
+                0) {
             return i;
         }
     }

@@ -564,8 +564,8 @@ int get_extents(char *filename, int fd, struct stat *stats) {
     uint64_t ext_ctr = 0;
     struct file_counter_map *temp = NULL;
 
-    fiemap = calloc(1, sizeof(struct fiemap)
-		    + sizeof(struct fiemap_extent) * stats->st_blocks);
+    fiemap = calloc(1, sizeof(struct fiemap) +
+                           sizeof(struct fiemap_extent) * stats->st_blocks);
     extent = calloc(1, sizeof(struct extent));
 
     fiemap->fm_flags = FIEMAP_FLAG_SYNC;
@@ -742,7 +742,8 @@ int contains_element(uint32_t list[], uint32_t element, uint32_t size) {
  * */
 uint32_t get_file_extent_count(char *file) {
     for (uint32_t i = 0; i < ctrl.file_counter_map->file_ctr; i++) {
-        if (strncmp(ctrl.file_counter_map->files[i].file, file,
+        if (strlen(ctrl.file_counter_map->files[i].file) == strlen(file) &&
+            strncmp(ctrl.file_counter_map->files[i].file, file,
                     strlen(ctrl.file_counter_map->files[i].file)) == 0) {
             return ctrl.file_counter_map->files[i].ext_ctr;
         }
@@ -767,7 +768,8 @@ void increase_file_segment_counter(char *file, unsigned int num_segments,
     enum type type = seg_i->type;
 
     for (i = 0; i < ctrl.file_counter_map->file_ctr; i++) {
-        if (strncmp(ctrl.file_counter_map->files[i].file, file,
+        if (strlen(ctrl.file_counter_map->files[i].file) == strlen(file) &&
+            strncmp(ctrl.file_counter_map->files[i].file, file,
                     strlen(ctrl.file_counter_map->files[i].file)) == 0) {
             goto found;
         }
